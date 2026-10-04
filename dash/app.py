@@ -18,7 +18,7 @@
      3. Figuras + interpretaciones: EDA Univariado
      4. Figuras + interpretaciones: EDA Multivariado
      5. Componentes de interfaz (tarjetas, KPIs, interpretaciones)
-     6. Páginas (Introducción, Univariado, Multivariado)
+     6. Páginas (Introducción, Problema, Marco, Univariado, Multivariado)
      7. Aplicación, CSS, navegación y callbacks
 ===============================================================================
 """
@@ -69,6 +69,10 @@ PALETTE = [DEEP_NAVY, WARM_GOLD, NAVY, PALE_GOLD, GREY_BLUE, "#8A6208"]
 SERIES6 = [DEEP_NAVY, NAVY, "#5A6FA8", PALE_GOLD, WARM_GOLD, "#8A6208"]  # 6 meses
 DIVERGING = [[0.0, DEEP_NAVY], [0.5, CREAM], [1.0, WARM_GOLD]]
 SEQ_GOLD = [[0.0, CREAM], [0.5, PALE_GOLD], [1.0, WARM_GOLD]]
+
+# Color único de las gráficas del EDA Univariado que no necesitan leyenda:
+# azul profundo en modo claro (en modo oscuro se cambia a dorado pálido en `themed`).
+MONO = DEEP_NAVY
 
 # --- Plantilla Plotly con la paleta -----------------------------------------
 pio.templates["navy_gold"] = pio.templates["plotly_white"]
@@ -272,12 +276,12 @@ GLOBAL_RATE = df[TARGET].mean()
 # 3. EDA UNIVARIADO: FIGURAS E INTERPRETACIONES
 # =============================================================================
 def fig_target():
-    """Barras de la variable objetivo con conteo y porcentaje."""
+    """Barras de la variable objetivo con conteo y porcentaje (un solo color)."""
     vc = df[TARGET].value_counts().sort_index()
     pr = vc / vc.sum()
     fig = go.Figure(go.Bar(
         x=["No default (0)", "Default (1)"], y=vc.values,
-        marker_color=[DEEP_NAVY, WARM_GOLD],
+        marker_color=MONO,
         text=[f"{v:,}<br><b>{p:.1%}</b>" for v, p in zip(vc.values, pr.values)],
         textposition="outside",
         hovertemplate="%{x}<br>%{y:,} clientes<extra></extra>"))
@@ -302,19 +306,13 @@ def interp_target():
 
 
 def fig_uni(col, clip):
-    """Distribución univariada de cualquier variable (numérica o categórica)."""
+    """Distribución univariada de cualquier variable (numérica o categórica), un solo color."""
     if col in DISCRETE:
         cats = as_cat(col)
         vc = pd.Series(cats).value_counts().reindex(list(cats.categories))
         pr = vc / vc.sum()
-        if col in PAY_COLS:
-            colors = [WARM_GOLD if int(k) >= 1 else NAVY for k in vc.index]
-        elif col == TARGET:
-            colors = [DEEP_NAVY, WARM_GOLD]
-        else:
-            colors = [NAVY] * len(vc)
         fig = go.Figure(go.Bar(
-            x=list(vc.index), y=vc.values, marker_color=colors,
+            x=list(vc.index), y=vc.values, marker_color=MONO,
             text=[f"{p:.1%}" for p in pr.values], textposition="outside",
             hovertemplate=f"{col}: %{{x}}<br>Clientes: %{{y:,}}<extra></extra>"))
         fig.update_layout(title=f"Frecuencia de {pretty(col)}",
@@ -328,10 +326,10 @@ def fig_uni(col, clip):
     view = s[s <= s.quantile(0.99)] if clip else s
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                         row_heights=[0.74, 0.26], vertical_spacing=0.03)
-    fig.add_trace(go.Histogram(x=view, nbinsx=60, marker_color=NAVY,
+    fig.add_trace(go.Histogram(x=view, nbinsx=60, marker_color=MONO,
                                marker_line_color=WHITE, marker_line_width=0.4,
                                name="Frecuencia", showlegend=False), row=1, col=1)
-    fig.add_trace(go.Box(x=view, name="", marker_color=WARM_GOLD, boxpoints=False,
+    fig.add_trace(go.Box(x=view, name="", marker_color=MONO, boxpoints=False,
                          boxmean=True, showlegend=False), row=2, col=1)
     fig.add_vline(x=s.median(), line_dash="dash", line_color=WARM_GOLD, row=1, col=1,
                   annotation_text="mediana", annotation_font_color=WARM_GOLD)
@@ -425,28 +423,36 @@ def kde_curve(x, lo, hi, n=220):
         return grid, np.zeros_like(grid)
 
 
+def _rgba(hex_color, a):
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{a})"
+
+
 def fig_quant(family, kind):
+    """LIMIT_BAL y AGE: un solo color. BILL_AMT y PAY_AMT: un color por mes (con leyenda)."""
     cols = FAMILIES[family]
     allv = df[cols].values.ravel()
     lo, hi = np.percentile(allv, 1), np.percentile(allv, 99)   # vista P1–P99
     fig = go.Figure()
     for i, c in enumerate(cols):
-        color = SERIES6[i % 6] if len(cols) > 1 else NAVY
-        lab = pretty(c).split("·")[-1].strip() if len(cols) > 1 else pretty(c)
-        name = c if len(cols) > 1 else c
+        color = SERIES6[i % 6] if len(cols) > 1 else MONO
+        name = c
         if kind == "hist":
             v = df[c][(df[c] >= lo) & (df[c] <= hi)]
             fig.add_trace(go.Histogram(x=v, nbinsx=50, name=name, marker_color=color,
-                                       opacity=0.65 if len(cols) > 1 else 0.95))
+                                       opacity=0.65 if len(cols) > 1 else 0.95,
+                                       showlegend=len(cols) > 1))
         elif kind == "box":
             fig.add_trace(go.Box(y=df[c], name=name, marker_color=color,
-                                 boxpoints=False, boxmean=True))
+                                 boxpoints=False, boxmean=True, showlegend=len(cols) > 1))
         else:  # densidad
             g, d = kde_curve(df[c], lo, hi)
             fig.add_trace(go.Scatter(x=g, y=d, name=name, mode="lines",
                                      line=dict(color=color, width=2.5),
                                      fill="tozeroy",
-                                     fillcolor=_rgba(color, 0.18)))
+                                     fillcolor=_rgba(color, 0.18),
+                                     showlegend=len(cols) > 1))
     if kind == "hist":
         fig.update_layout(barmode="overlay", xaxis_title=family, yaxis_title="Frecuencia")
         ttl = "Histograma"
@@ -460,13 +466,7 @@ def fig_quant(family, kind):
         ttl = "Densidad (KDE)"
     sub = "" if kind == "box" and family not in ("BILL_AMT", "PAY_AMT") else " · vista P1–P99"
     fig.update_layout(title=f"{ttl} de {family}{sub}")
-    return style_fig(fig, 480)
-
-
-def _rgba(hex_color, a):
-    h = hex_color.lstrip("#")
-    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-    return f"rgba({r},{g},{b},{a})"
+    return style_fig(fig, 480, legend_top=len(cols) > 1)
 
 
 def interp_quant(family):
@@ -503,27 +503,28 @@ def interp_quant(family):
 # =============================================================================
 # 4. EDA MULTIVARIADO: FIGURAS E INTERPRETACIONES
 # =============================================================================
-# ----- 4.1 Matriz de correlación (winsorizada P1–P99, como en el notebook) ----
-_W = df[NUM_COLS + [TARGET]].copy()
-_W[NUM_COLS] = _W[NUM_COLS].apply(winsorize)
-_W = _W.rename(columns={TARGET: "default"})
-CORR = {"pearson": _W.corr(method="pearson"), "spearman": _W.corr(method="spearman")}
+# ----- 4.1 Matriz de correlación: SOLO Spearman, sobre los datos originales ----
+# Spearman trabaja con rangos: no exige linealidad ni normalidad, resiste los
+# valores extremos y es adecuado para PAY_x (ordinales) y la variable objetivo
+# (binaria). Al ser invariante a transformaciones monótonas, no se winsoriza.
+_C = df[NUM_COLS + [TARGET]].rename(columns={TARGET: "default"})
+CORR = _C.corr(method="spearman")
 
 
-def fig_corr(method):
-    c = CORR[method]
+def fig_corr():
+    c = CORR
     fig = go.Figure(go.Heatmap(
         z=c.values, x=c.columns, y=c.columns, colorscale=DIVERGING, zmid=0, zmin=-1, zmax=1,
         text=c.round(2).values, texttemplate="%{text}", textfont=dict(size=8),
         colorbar=dict(title="ρ", thickness=14),
-        hovertemplate="%{y} vs %{x}<br>correlación: %{z:.3f}<extra></extra>"))
-    fig.update_layout(title=f"Matriz de correlación ({method.capitalize()}, datos winsorizados P1–P99)")
+        hovertemplate="%{y} vs %{x}<br>correlación (ρ): %{z:.3f}<extra></extra>"))
+    fig.update_layout(title="Matriz de correlación de Spearman (datos originales)")
     fig.update_yaxes(autorange="reversed")
     return style_fig(fig, 740, legend_top=False)
 
 
-def interp_corr(method):
-    c = CORR[method]
+def interp_corr():
+    c = CORR
     iu = np.triu_indices(6, 1)
     bill = c.loc[BILL_COLS, BILL_COLS].values[iu]
     pay = c.loc[PAY_COLS, PAY_COLS].values[iu]
@@ -534,11 +535,13 @@ def interp_corr(method):
              "deber mucho al siguiente, por eso aparece un gran bloque dorado. Los estados de pago (PAY) "
              "también se parecen entre sí. En cambio, lo que realmente se pagó (PAY_AMT) casi no se "
              f"relaciona con nada. La variable más ligada al incumplimiento es {tgt.index[0]}.")
-    tech = (f"{method.capitalize()}: correlación entre BILL_AMT1–6 de {bill.min():.2f} a {bill.max():.2f} "
+    tech = (f"Spearman (ρ): correlación entre BILL_AMT1–6 de {bill.min():.2f} a {bill.max():.2f} "
             f"(multicolinealidad severa; el VIF del notebook supera 20 en BILL_AMT2–5); entre PAY_x "
             f"de {pay.min():.2f} a {pay.max():.2f}; entre PAY_AMT de {pamt.min():.2f} a {pamt.max():.2f}. "
-            f"Mayor asociación con default (|ρ|): {tgt_txt}. Recomendación: no usar las seis BILL_AMT por "
-            "separado en modelos lineales (usar nivel promedio + tendencia, solo la más reciente o PCA).")
+            f"Mayor asociación con default (|ρ|): {tgt_txt}. Se usa Spearman y no Pearson porque las variables "
+            "monetarias son muy asimétricas y con colas extremas, PAY_x es ordinal y la variable objetivo es "
+            "binaria; los rangos no exigen linealidad ni normalidad. Recomendación: no usar las seis BILL_AMT "
+            "por separado en modelos lineales (usar nivel promedio + tendencia, solo la más reciente o PCA).")
     return basic, tech
 
 
@@ -693,7 +696,6 @@ def cross_fig(x, y, c, clip):
     cdisc = c not in (None, "none") and c in DISCRETE
     cnum = c not in (None, "none") and c not in DISCRETE
     xd, yd = x in DISCRETE, y in DISCRETE
-    note = ""
 
     # ------ numérica × numérica: dispersión + recta de tendencia --------------
     if not xd and not yd:
@@ -722,7 +724,7 @@ def cross_fig(x, y, c, clip):
         sentido = "positiva (suben juntas)" if rho > 0 else "negativa (una sube cuando la otra baja)"
         basic = (f"Entre {x} y {y} hay una relación {fuerza} y {sentido}. "
                  "Cada punto es un cliente; la línea dorada resume la tendencia general.")
-        tech = (f"Pearson r = {r:+.3f} ({sig(pr)}); Spearman ρ = {rho:+.3f} ({sig(ps)}); n = {len(df):,}. "
+        tech = (f"Spearman ρ = {rho:+.3f} ({sig(ps)}); Pearson r = {r:+.3f} ({sig(pr)}); n = {len(df):,}. "
                 f"Pendiente OLS = {m:.4g}." if x != y else "x e y son la misma variable.")
         return style_fig(fig, 520), basic, tech
 
@@ -847,7 +849,7 @@ def fig_splom(vars_):
 
 
 def interp_splom(vars_):
-    sub = _W[[("default" if v == TARGET else v) for v in vars_]]
+    sub = _C[[("default" if v == TARGET else v) for v in vars_]]
     c = sub.corr(method="spearman")
     iu = np.triu_indices(len(vars_), 1)
     pairs = [(c.index[i], c.columns[j], c.values[i, j]) for i, j in zip(*iu)]
@@ -856,7 +858,7 @@ def interp_splom(vars_):
     basic = (f"De las variables elegidas, las que más se parecen entre sí son {a} y {b} "
              f"(relación {'directa' if r > 0 else 'inversa'}). Si los puntos dorados (default) se "
              "agrupan en una zona, esa combinación de variables separa a los clientes de riesgo.")
-    tech = ("Spearman (winsorizado) de los pares más fuertes: " +
+    tech = ("Spearman de los pares más fuertes: " +
             "; ".join(f"{p[0]}–{p[1]} ρ = {p[2]:+.2f}" for p in pairs[:4]) +
             ". Útil para detectar colinealidad entre predictores y regiones del espacio donde se concentra la clase 1.")
     return basic, tech
@@ -864,19 +866,22 @@ def interp_splom(vars_):
 
 # ----- 4.6 Hallazgos clave (tarjetas finales) ---------------------------------
 def key_findings():
-    c = CORR["pearson"]
+    c = CORR
     bill = c.loc[BILL_COLS, BILL_COLS].values[np.triu_indices(6, 1)]
-    t_pay = c.loc["PAY_0", "default"]
+    t_ser = c["default"].drop("default")
+    t_top = t_ser.abs().idxmax()
+    t_rho = t_ser[t_top]
     g1 = df.loc[df[TARGET] == 1, "LIMIT_BAL"].median()
     g0 = df.loc[df[TARGET] == 0, "LIMIT_BAL"].median()
     r_pay0 = df.groupby(df["PAY_0"].ge(1))[TARGET].mean()
     te = rate_table("EDUCATION")["mean"]
     return [
         ("El historial de pagos domina",
-         f"PAY_0 es la variable más asociada al default (r = {t_pay:+.2f}). Los clientes con ≥1 mes de atraso "
-         f"incumplen en {r_pay0[True]:.1%} de los casos, frente a {r_pay0[False]:.1%} de quienes están al día."),
+         f"{t_top} es la variable más asociada al default (ρ de Spearman = {t_rho:+.2f}). Los clientes con "
+         f"≥1 mes de atraso en PAY_0 incumplen en {r_pay0[True]:.1%} de los casos, frente a "
+         f"{r_pay0[False]:.1%} de quienes están al día."),
         ("Multicolinealidad en la facturación",
-         f"Las seis BILL_AMT se correlacionan entre {bill.min():.2f} y {bill.max():.2f}. "
+         f"Las seis BILL_AMT se correlacionan (Spearman) entre {bill.min():.2f} y {bill.max():.2f}. "
          "Para modelos lineales conviene resumirlas (promedio + tendencia) o usar PCA."),
         ("Límite de crédito más bajo en default",
          f"Mediana de LIMIT_BAL: {nt(g1)} (default) vs. {nt(g0)} (no default). "
@@ -932,86 +937,6 @@ ALL_VARS = ["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BIL
 # =============================================================================
 # 6. PÁGINAS
 # =============================================================================
-def _page_intro_antigua():
-    n_def = int(df[TARGET].sum())
-    exposure = df.loc[df[TARGET] == 1, "LIMIT_BAL"].sum()
-    bill_def = df.loc[df[TARGET] == 1, "BILL_AMT1"].clip(lower=0).sum()
-    var_table = [
-        ("LIMIT_BAL", "Numérica continua", "Monto del crédito otorgado (individual + familiar/suplementario) en dólares taiwaneses (NT$)."),
-        ("SEX", "Categórica", "Género: 1 = hombre, 2 = mujer."),
-        ("EDUCATION", "Categórica ordinal", "1 = posgrado, 2 = universidad, 3 = secundaria, 4 = otros (los códigos 0, 5 y 6 no documentados se reagrupan en «Otros»)."),
-        ("MARRIAGE", "Categórica", "Estado civil: 1 = casado, 2 = soltero, 3 = otros (el código 0 se reagrupa en «Otros»)."),
-        ("AGE", "Numérica discreta", "Edad en años."),
-        ("PAY_0, PAY_2–PAY_6", "Ordinal", "Estado de pago mensual de septiembre (PAY_0) hacia abril (PAY_6). −2/−1/0 = sin atraso; 1 = un mes de atraso; …; 8–9 = ≥8–9 meses. (El dataset no incluye PAY_1.)"),
-        ("BILL_AMT1–6", "Numérica continua", "Monto facturado en el estado de cuenta de septiembre (1) a abril (6), en NT$. Puede ser negativo (saldo a favor)."),
-        ("PAY_AMT1–6", "Numérica continua", "Monto efectivamente pagado de septiembre (1) a abril (6), en NT$."),
-        ("default_payment_next_month", "Binaria (objetivo)", "1 = el cliente incumple el pago el mes siguiente (octubre 2005); 0 = no incumple."),
-    ]
-    rows = [html.Tr([html.Th("Variable"), html.Th("Tipo"), html.Th("Descripción")])]
-    for v, t, d in var_table:
-        rows.append(html.Tr([html.Td(html.Code(v)), html.Td(t), html.Td(d)]))
-
-    return html.Div([
-        page_title("Introducción y Contexto",
-                   "Por qué importa predecir el incumplimiento de pago en tarjetas de crédito"),
-        html.Div([
-            card("Introducción", [
-                html.P(f"El conjunto de datos Default of Credit Card Clients (UCI Machine Learning Repository) "
-                       f"reúne información de {DATA_INFO['filas_originales']:,} clientes de tarjetas de crédito en Taiwán, "
-                       "recolectada entre abril y septiembre de 2005: límite de crédito, características "
-                       "demográficas, historial de pagos de seis meses, montos facturados y montos pagados."),
-                html.P("Para una entidad financiera, otorgar crédito implica aceptar el riesgo de que el cliente "
-                       "no pague. Entender qué perfiles y comportamientos anticipan el incumplimiento permite "
-                       "fijar límites, provisionar pérdidas y priorizar la gestión de cobranza antes de que el "
-                       "problema se materialice."),
-                html.P(f"En este tablero se explora el conjunto de datos tras una limpieza básica: se eliminaron "
-                       f"{DATA_INFO['duplicados']} filas duplicadas exactas, se reagruparon "
-                       f"{DATA_INFO['edu_reagrupadas']} registros con códigos no documentados de EDUCATION y "
-                       f"{DATA_INFO['mar_reagrupadas']} de MARRIAGE en «Otros», y se conservaron los "
-                       f"{DATA_INFO['bill_neg_clientes']:,} clientes con saldos facturados negativos "
-                       "por ser económicamente válidos (saldo a favor)."),
-            ], cls="span-2"),
-            card("Objetivo", [
-                html.P(html.B("Objetivo general")),
-                html.P("Analizar los factores que inciden en el incumplimiento de pago (default) de los "
-                       "clientes de tarjetas de crédito mediante un análisis exploratorio de datos."),
-                html.P(html.B("Objetivos específicos")),
-                html.Ul([
-                    html.Li("Describir la calidad de los datos y la distribución de cada variable (análisis univariado)."),
-                    html.Li("Cuantificar el desbalance de clases de la variable objetivo."),
-                    html.Li("Comparar el comportamiento de clientes con y sin default según variables demográficas, de crédito y de pagos."),
-                    html.Li("Identificar relaciones y multicolinealidad entre variables (correlaciones, VIF)."),
-                    html.Li("Definir lineamientos de preprocesamiento para la etapa de modelado predictivo."),
-                ]),
-            ]),
-        ], className="grid g3"),
-        html.Div([
-            card("Problema de negocio", [
-                html.P("¿Qué características del cliente, de su línea de crédito y de su historial reciente de "
-                       "pagos permiten identificar anticipadamente a quienes no pagarán su tarjeta el mes siguiente?"),
-                html.P("El incumplimiento deteriora la cartera: genera pérdidas por deuda no recuperada, "
-                       "costos de cobranza y provisiones. En esta muestra:"),
-                html.Div([
-                    kpi("Clientes en default", f"{n_def:,}", f"{GLOBAL_RATE:.1%} de la muestra"),
-                    kpi("Límite total expuesto", f"NT${exposure / 1e6:,.0f} M", "suma de LIMIT_BAL de quienes incumplen"),
-                    kpi("Saldo facturado (Sep)", f"NT${bill_def / 1e6:,.0f} M", "BILL_AMT1 positivo de quienes incumplen"),
-                ], className="kpi-row k3"),
-                html.P("Además, los errores no son simétricos: no detectar a un cliente que incumplirá "
-                       "(falso negativo) suele costar más que revisar de más a uno que sí pagaría (falso positivo).",
-                       className="muted"),
-            ], cls="span-2"),
-            card("Fuente y alcance", [
-                html.P("Yeh, I-C. & Lien, C. (2009). The comparisons of data mining techniques for the predictive "
-                       "accuracy of probability of default of credit card clients. UCI Machine Learning Repository."),
-                html.P(f"Registros tras limpieza: {len(df):,} · Variables: 24 (23 predictoras + 1 objetivo)."),
-                html.P("Las cifras monetarias están en dólares taiwaneses (NT$).", className="muted"),
-            ]),
-        ], className="grid g3"),
-        card("Marco teórico: variables del dataset", html.Div(html.Table(rows, className="vtable"), className="table-wrap"),
-             subtitle="Variables explicativas y variable objetivo (default_payment_next_month)"),
-    ])
-
-
 def page_uni():
     b_t, t_t = interp_target()
     return html.Div([
@@ -1061,14 +986,11 @@ def page_multi():
     num_opts = var_options(NUM_COLS)
     return html.Div([
         page_title("EDA Multivariado", "Relaciones entre variables y su asociación con el incumplimiento"),
-        card("Matriz de correlación",
-             [html.Div([control("Coeficiente", dcc.RadioItems(
-                 id="corr-method", value="pearson", className="radio",
-                 options=[{"label": "Pearson", "value": "pearson"}, {"label": "Spearman", "value": "spearman"}]))],
-                 className="controls"),
-              dcc.Graph(id="corr-graph", config={"displaylogo": False}),
-              html.Div(id="corr-interp")],
-             subtitle="Variables numéricas winsorizadas (P1–P99) + variable objetivo (escala de #0C1A41 a #C9930C)"),
+        card("Matriz de correlación de Spearman",
+             [dcc.Graph(id="corr-graph", figure=fig_corr(), config={"displaylogo": False}),
+              interp_block(*interp_corr())],
+             subtitle="Correlación de Spearman (basada en rangos, robusta a valores extremos) sobre las variables "
+                      "numéricas y la variable objetivo (escala de #0C1A41 a #C9930C)"),
         html.Div([
             card("Incumplimiento por educación, estado civil y sexo",
                  [dcc.Graph(id="rates-graph", figure=fig_rates(), config={"displaylogo": False}),
@@ -1100,13 +1022,17 @@ def page_multi():
                  control("Color / grupo (opcional)", dcc.Dropdown(
                      id="c-var", options=[{"label": "(ninguna)", "value": "none"}] + var_options(ALL_VARS),
                      value=TARGET, clearable=False)),
-                 control("Opciones", dcc.Checklist(id="x-clip", options=[{"label": " Recortar al P99", "value": "clip"}],
-                                                   value=["clip"], className="check")),
+                 control("Opciones", dcc.Checklist(
+                     id="x-clip",
+                     options=[{"label": " Ejes ajustados al percentil 99 para facilitar la lectura", "value": "clip"}],
+                     value=["clip"], className="check")),
              ], className="controls"),
               dcc.Loading(dcc.Graph(id="x-graph", config={"displaylogo": False}), type="dot", color=WARM_GOLD),
               html.Div(id="x-interp")],
              subtitle="Cruza 2 variables y agrega una tercera como color. El tipo de gráfico se ajusta solo "
-                      "(dispersión · boxplot · barras de tasa · mapa de calor)"),
+                      "(dispersión · boxplot · barras de tasa · mapa de calor). La opción «ejes ajustados al "
+                      "percentil 99 para facilitar la lectura» corta la vista en el valor por debajo del cual "
+                      "está el 99% de los clientes, para que unos pocos montos extremos no aplasten el gráfico."),
         card("Matriz de dispersión: 2 o más variables numéricas",
              [html.Div([control("Variables (elige entre 2 y 6)", dcc.Dropdown(
                  id="s-vars", options=num_opts, multi=True,
@@ -1119,12 +1045,6 @@ def page_multi():
     ])
 
 
-# =============================================================================
-# 7. APLICACIÓN, CSS, NAVEGACIÓN Y CALLBACKS
-# =============================================================================
-# =============================================================================
-# 6b. PÁGINAS NUEVAS: Introducción · Problema y Objetivos · Marco Teórico
-# =============================================================================
 def _ul(items, ordered=False):
     return (html.Ol if ordered else html.Ul)([html.Li(i) for i in items])
 
@@ -1177,7 +1097,7 @@ def page_intro():
                 f"{I['mar_reagrupadas']} registros con MARRIAGE = 0 (no documentado) pasaron a «Otros».",
                 f"Se conservaron {I['bill_neg_clientes']:,} clientes con saldo facturado negativo (saldo a favor, económicamente válido).",
                 "El estado de pago de septiembre se llama PAY_0 (el dataset no incluye PAY_1).",
-                "Las correlaciones usan variables winsorizadas en P1–P99 para reducir la influencia de extremos.",
+                "La matriz de correlación usa Spearman sobre los datos originales: al basarse en rangos, es robusta a valores extremos y no requiere recortarlos.",
             ])),
             card("Cómo recorrer este tablero", _ul([
                 "Problema y Objetivos: qué se quiere responder, hipótesis y metas del análisis.",
@@ -1280,6 +1200,7 @@ def page_marco():
         "Cramér, H. (1946). Mathematical Methods of Statistics. Princeton University Press.",
         "Kruskal, W. H. & Wallis, W. A. (1952). Use of ranks in one-criterion variance analysis. Journal of the American Statistical Association, 47(260), 583–621.",
         "Mann, H. B. & Whitney, D. R. (1947). On a test of whether one of two random variables is stochastically larger than the other. Annals of Mathematical Statistics, 18(1), 50–60.",
+        "Spearman, C. (1904). The proof and measurement of association between two things. The American Journal of Psychology, 15(1), 72–101.",
         "Tukey, J. W. (1977). Exploratory Data Analysis. Addison-Wesley.",
         "Yeh, I-C. & Lien, C. (2009). The comparisons of data mining techniques for the predictive accuracy of probability of default of credit card clients. Expert Systems with Applications, 36(2), 2473–2480.",
     ]
@@ -1325,7 +1246,7 @@ def page_marco():
                 html.P("La asimetría (skewness) indica hacia dónde se alarga la cola de una distribución; la curtosis, "
                        "qué tan pesadas son sus colas. Los montos de dinero suelen ser muy asimétricos."),
                 F("Atípico (Tukey): x < Q1 − 1.5·IQR  ó  x > Q3 + 1.5·IQR,  con IQR = Q3 − Q1"),
-                html.P("La winsorización recorta los extremos a percentiles (aquí P1–P99) sin eliminar clientes. "
+                html.P("La winsorización recorta los extremos a percentiles (por ejemplo P1–P99) sin eliminar clientes. "
                        "La transformación logarítmica con signo suaviza colas largas cuando hay ceros o negativos."),
             ]),
             card("5. Desbalance de clases", [
@@ -1335,10 +1256,12 @@ def page_marco():
                      "Ajustar el umbral de decisión.",
                      "Evaluar con AUC-ROC, F1 y recall de la clase minoritaria en lugar de accuracy."]),
             ]),
-            card("6. Correlación y multicolinealidad", [
-                F("Pearson: r = Cov(X, Y) / (σX · σY)"),
-                html.P("Pearson mide asociación lineal y es sensible a extremos; Spearman usa rangos y capta relaciones "
-                       "monótonas de forma más robusta."),
+            card("6. Correlación de Spearman y multicolinealidad", [
+                F("Spearman: ρ = Pearson( rango(X), rango(Y) )"),
+                html.P("Spearman (1904) mide asociación monótona usando los rangos de los datos. No exige linealidad "
+                       "ni normalidad y resiste los valores extremos. Se eligió sobre Pearson porque los montos "
+                       "(BILL_AMT, PAY_AMT) son muy asimétricos y con colas largas, las variables PAY_x son ordinales "
+                       "y la variable objetivo es binaria."),
                 F("VIF_j = 1 / (1 − R²_j)"),
                 html.P("Hay multicolinealidad cuando las predictoras son casi redundantes: se inflan las varianzas de "
                        "los coeficientes. Un VIF > 10 (algunos autores usan > 5) es señal de alerta."),
@@ -1373,6 +1296,9 @@ def page_marco():
     ])
 
 
+# =============================================================================
+# 7. APLICACIÓN, CSS, NAVEGACIÓN Y CALLBACKS
+# =============================================================================
 EXTRA_CSS = """
 /* ---------- Barra superior: botones ---------- */
 .tb-left, .tb-right { display:flex; align-items:center; gap:14px; }
@@ -1559,25 +1485,13 @@ sidebar = html.Div([
     ], className="authors"),
 ], className="sidebar")
 
-topbar = html.Div([
-    html.Div([html.Div(PROJECT_TITLE, className="t1"), html.Div(COURSE, className="t2")]),
-    html.Div(f"{len(df):,} clientes · {GLOBAL_RATE:.1%} default", className="badge"),
-], className="topbar")
-
 # === CAMBIAR AQUÍ NOMBRES Y CORREOS (pie de página; se alimenta de AUTHORS) ===
 footer = html.Div([
     html.Div([html.B("Autores: "), " · ".join(f"{a['name']} ({a['email']})" for a in AUTHORS)]),
     html.Div(f"{INSTITUTION} · Datos: UCI Machine Learning Repository (Yeh & Lien, 2009)"),
 ], className="footer")
 
-_layout_viejo = html.Div([
-    dcc.Location(id="url"),
-    sidebar,
-    html.Div([topbar, html.Div(id="page", className="content"), footer], className="main"),
-])
 
-
-# ---------- Navegación ---------------------------------------------------------
 # ---------- Tema claro / oscuro para las figuras Plotly --------------------------
 DARK_CARD, DARK_PLOT = "#12214F", "#0D1A42"
 DARK_MAP = {          # tonos oscuros de la paleta -> versiones claras legibles sobre fondo oscuro
@@ -1591,12 +1505,21 @@ DARK_MAP = {          # tonos oscuros de la paleta -> versiones claras legibles 
 }
 
 
-def themed(fig, dark):
-    """Devuelve la figura adaptada al modo oscuro (colores oscuros -> claros, fondos y textos)."""
+def themed(fig, dark, mono=False):
+    """Adapta la figura al modo oscuro.
+
+    mono=True (gráficas de un solo color del EDA Univariado): el azul profundo pasa a
+    dorado pálido y la línea de la mediana (dorado cálido) pasa a crema para que contraste.
+    """
     if not dark or fig is None:
         return fig
+    mp = dict(DARK_MAP)
+    if mono:
+        mp[DEEP_NAVY] = PALE_GOLD
+        mp["rgba(12,26,65,"] = "rgba(232,200,113,"
+        mp[WARM_GOLD] = CREAM
     s = fig.to_json()
-    for a, b in DARK_MAP.items():
+    for a, b in mp.items():
         s = s.replace(a, b)
     f = pio.from_json(s)
     f.update_layout(
@@ -1611,17 +1534,22 @@ def themed(fig, dark):
     return f
 
 
-def graph_cb(*args):
-    """Como @app.callback, pero añade el tema como entrada y adapta la primera salida (la figura)."""
+def graph_cb(*args, mono=False):
+    """Como @app.callback, pero añade el tema como entrada y adapta la primera salida (la figura).
+
+    mono puede ser True/False o una función (con los mismos argumentos que el callback)
+    que devuelva True cuando la figura sea de un solo color.
+    """
     def deco(fn):
         @app.callback(*args, Input("theme", "data"))
         def wrapper(*vals):
             *vals, theme = vals
             res = fn(*vals)
             dark = theme == "dark"
+            m = mono(*vals) if callable(mono) else mono
             if isinstance(res, tuple):
-                return (themed(res[0], dark),) + res[1:]
-            return themed(res, dark)
+                return (themed(res[0], dark, m),) + res[1:]
+            return themed(res, dark, m)
         return wrapper
     return deco
 
@@ -1663,7 +1591,7 @@ app.clientside_callback(
     Output("shell", "className"), Input("sb-btn", "n_clicks"))
 
 
-@graph_cb(Output("target-graph", "figure"))
+@graph_cb(Output("target-graph", "figure"), mono=True)
 def cb_target():
     return fig_target()
 
@@ -1671,6 +1599,11 @@ def cb_target():
 @graph_cb(Output("rates-graph", "figure"))
 def cb_rates():
     return fig_rates()
+
+
+@graph_cb(Output("corr-graph", "figure"))
+def cb_corr():
+    return fig_corr()
 
 
 @app.callback(Output("page", "children"), Input("url", "pathname"))
@@ -1693,25 +1626,21 @@ def highlight(path):
     return ["active" if path == p else "" for p, _ in NAV]
 
 
-# ---------- Callbacks: Univariado ---------------------------------------------
+# ---------- Callbacks: Univariado (gráficas de un solo color) ------------------
 @graph_cb(Output("uni-graph", "figure"), Output("uni-interp", "children"),
-              Input("uni-var", "value"), Input("uni-clip", "value"))
+          Input("uni-var", "value"), Input("uni-clip", "value"), mono=True)
 def cb_uni(var, clip):
     return fig_uni(var, bool(clip)), interp_block(*interp_uni(var))
 
 
 @graph_cb(Output("q-graph", "figure"), Output("q-interp", "children"),
-              Input("q-family", "value"), Input("q-kind", "value"))
+          Input("q-family", "value"), Input("q-kind", "value"),
+          mono=lambda family, kind: family in ("LIMIT_BAL", "AGE"))
 def cb_quant(family, kind):
     return fig_quant(family, kind), interp_block(*interp_quant(family))
 
 
 # ---------- Callbacks: Multivariado -------------------------------------------
-@graph_cb(Output("corr-graph", "figure"), Output("corr-interp", "children"), Input("corr-method", "value"))
-def cb_corr(method):
-    return fig_corr(method), interp_block(*interp_corr(method))
-
-
 @graph_cb(Output("lim-graph", "figure"), Input("lim-scale", "value"))
 def cb_limit(scale):
     return fig_limit_box(scale)
@@ -1723,7 +1652,7 @@ def cb_age(view):
 
 
 @graph_cb(Output("x-graph", "figure"), Output("x-interp", "children"),
-              Input("x-var", "value"), Input("y-var", "value"), Input("c-var", "value"), Input("x-clip", "value"))
+          Input("x-var", "value"), Input("y-var", "value"), Input("c-var", "value"), Input("x-clip", "value"))
 def cb_cross(x, y, c, clip):
     fig, b, t = cross_fig(x, y, c, bool(clip))
     return fig, interp_block(b, t)
