@@ -1,0 +1,6 @@
+dash>=2.14
+pandas>=2.0
+numpy
+plotly>=5.18
+scipy
+xlrd>=2.0.1
