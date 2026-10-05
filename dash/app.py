@@ -1671,3 +1671,5 @@ def cb_splom(vars_):
 # =============================================================================
 if __name__ == "__main__":
     app.run(debug=True, port=8050)
+
+# Cambio de prueba para forzar commit
