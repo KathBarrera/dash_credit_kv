@@ -6,7 +6,7 @@
 
 ## Ver Dashboard en Vivo
 
-[![Ver Dashboard](https://dash-credit-kv.onrender.com/univariado)
+[![Ver Dashboard](https://dash-credit-kv.onrender.com/)
 
 
 
