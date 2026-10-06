@@ -12,19 +12,20 @@
      3) python app.py   ->   http://127.0.0.1:8050
 
  Estructura del código
-     0. Configuración (AUTORES, rutas, paleta)       <- editar nombres aquí
+     0. Configuración (AUTORES, ENLACES, rutas, paleta)  <- editar nombres y links aquí
      1. Carga y limpieza de datos (igual que el notebook 00_eda.ipynb)
      2. Utilidades (formato, estadísticos, estilos de figuras)
      3. Figuras + interpretaciones: EDA Univariado
      4. Figuras + interpretaciones: EDA Multivariado
      5. Componentes de interfaz (tarjetas, KPIs, interpretaciones)
-     6. Páginas (Introducción, Problema, Marco, Univariado, Multivariado)
+     6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Enlaces)
      7. Aplicación, CSS, navegación y callbacks
 ===============================================================================
 """
 
 import warnings
 from pathlib import Path
+from urllib.parse import quote
 
 import numpy as np
 import pandas as pd
@@ -42,8 +43,6 @@ warnings.filterwarnings("ignore")
 # =============================================================================
 
 # === CAMBIAR AQUÍ NOMBRES Y CORREOS ==========================================
-# Escribe tu nombre, el de tu compañera y los correos institucionales/personales.
-# Se muestran en la barra lateral (fija) y en el pie de página.
 AUTHORS = [
     {"name": "Katherin Barrera",
      "email": "lkatherin@uninorte.edu.co"},
@@ -52,21 +51,61 @@ AUTHORS = [
 ]
 INSTITUTION = "Universidad del Norte · Ciencia de Datos"   # <- editable
 COURSE = "Proyecto de Análisis Exploratorio de Datos (EDA)"  # <- editable
+
+# --- Enlaces: libro (Jupyter Book), notebooks y repositorios -------------------
+REPO_PROJECT = "https://github.com/valeriaflorezs/Credit_Card_Project"
+REPO_DASH = "https://github.com/KathBarrera/dash_credit_kv"
+BOOK_URL = "https://valeriaflorezs.github.io/Credit_Card_Project/"
+NOTEBOOK_URL = BOOK_URL + "notebooks/00_eda.html"
+NOTEBOOKS = [
+    ("00", "EDA: Análisis Exploratorio de Datos", "00_eda.html", "Calidad de los datos, distribuciones y relaciones entre variables."),
+    ("01", "Modelo base: Regresión Logística", "01_baseline_logistic.html", "Modelo de referencia contra el cual se comparan los demás."),
+    ("02", "Setup Check", "02_setup_check.html", "Verificación del entorno y de las dependencias."),
+    ("03", "Desarrollo y prueba del pipeline completo", "03_pipeline_dev.html", "Construcción y prueba del flujo de datos y modelado."),
+    ("04", "Ejecutar experimentos", "04_run_experiments.html", "Ejecución de los experimentos del diseño factorial."),
+    ("05", "Análisis de resultados", "05_results_analysis.html", "Comparación de los resultados de los experimentos."),
+    ("06", "Interpretabilidad (SHAP y LIME)", "06_interpretability.html", "Qué variables explican las predicciones del modelo."),
+]
+DATA_URL = "https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients"
+LINKS = [
+    {"icon": "book", "title": "Libro del proyecto", "url": BOOK_URL + "README.html",
+     "desc": "Jupyter Book con el README y los siete notebooks del pipeline."},
+    {"icon": "notebook", "title": "Notebook del EDA", "url": NOTEBOOK_URL,
+     "desc": "Análisis exploratorio completo del que sale este tablero (00_eda)."},
+    {"icon": "github", "title": "Repositorio del proyecto", "url": REPO_PROJECT,
+     "desc": "Pipeline de datos, notebooks, resultados de los experimentos y código fuente."},
+    {"icon": "github", "title": "Repositorio del tablero", "url": REPO_DASH,
+     "desc": "Código fuente de esta aplicación Dash."},
+    {"icon": "database", "title": "Datos originales (UCI)", "url": DATA_URL,
+     "desc": "Default of Credit Card Clients, UCI Machine Learning Repository."},
+]
 # =============================================================================
 
 PROJECT_TITLE = "Riesgo de Incumplimiento en Tarjetas de Crédito"
 PROJECT_SUBTITLE = "Análisis Exploratorio · Default of Credit Card Clients (UCI)"
 
-# --- Paleta obligatoria ------------------------------------------------------
-DEEP_NAVY = "#0C1A41"   # fondo / encabezados
-NAVY = "#1B3071"        # botones / bordes
-PALE_GOLD = "#E8C871"   # detalles / acentos suaves
-WARM_GOLD = "#C9930C"   # métricas / destacados / avisos
-CREAM = "#F9F0DE"       # fondo general
+
+# --- Paleta: los mismos colores de siempre, con la saturación reducida -------
+def _rgba_prefix(h):
+    r, g, b = (int(h[i:i + 2], 16) for i in (1, 3, 5))
+    return f"rgba({r},{g},{b},"
+
+
+DEEP_NAVY = "#1A233D"   # fondo / encabezados        (antes #0C1A41)
+NAVY = "#36456D"        # botones / bordes           (antes #1B3071)
+PALE_GOLD = "#D2BB89"   # detalles / acentos suaves  (antes #E8C871)
+WARM_GOLD = "#B88F3D"   # métricas / destacados      (antes #C9930C)
+CREAM = "#F3EFE7"       # fondo general              (antes #F9F0DE)
 WHITE = "#FFFFFF"
-GREY_BLUE = "#7A8AA8"   # color auxiliar neutro (derivado de la paleta)
-PALETTE = [DEEP_NAVY, WARM_GOLD, NAVY, PALE_GOLD, GREY_BLUE, "#8A6208"]
-SERIES6 = [DEEP_NAVY, NAVY, "#5A6FA8", PALE_GOLD, WARM_GOLD, "#8A6208"]  # 6 meses
+GREY_BLUE = "#8089A0"   # auxiliar neutro
+MID_BLUE = "#66749C"    # tonos intermedios para series con muchas categorías
+BROWN = "#8A6E3A"
+GOLD_SOFT = "#C9A85F"
+GOLD_MID = "#9A7A33"
+GOLD_DARK = "#6E5628"
+DEEP_RGBA = _rgba_prefix(DEEP_NAVY)   # para gridlines y rellenos translúcidos
+PALETTE = [DEEP_NAVY, WARM_GOLD, NAVY, PALE_GOLD, GREY_BLUE, BROWN]
+SERIES6 = [DEEP_NAVY, NAVY, MID_BLUE, PALE_GOLD, WARM_GOLD, BROWN]  # 6 meses
 DIVERGING = [[0.0, DEEP_NAVY], [0.5, CREAM], [1.0, WARM_GOLD]]
 SEQ_GOLD = [[0.0, CREAM], [0.5, PALE_GOLD], [1.0, WARM_GOLD]]
 
@@ -247,8 +286,8 @@ def style_fig(fig, h=460, legend_top=True, **kw):
     if legend_top:
         fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.0,
                                       xanchor="right", x=1))
-    fig.update_xaxes(gridcolor="rgba(12,26,65,0.08)", zeroline=False)
-    fig.update_yaxes(gridcolor="rgba(12,26,65,0.08)", zeroline=False)
+    fig.update_xaxes(gridcolor=f"{DEEP_RGBA}0.08)", zeroline=False)
+    fig.update_yaxes(gridcolor=f"{DEEP_RGBA}0.08)", zeroline=False)
     return fig
 
 
@@ -626,7 +665,7 @@ def fig_age(view):
     fig = go.Figure()
     if view == "lines":
         g = df.groupby("AGE_GRP", observed=True)[MONTH_ORDER].mean()
-        cols = [DEEP_NAVY, NAVY, "#5A6FA8", GREY_BLUE, PALE_GOLD, "#DDB04A", WARM_GOLD, "#A87508", "#6B4A05"]
+        cols = [DEEP_NAVY, NAVY, MID_BLUE, GREY_BLUE, PALE_GOLD, GOLD_SOFT, WARM_GOLD, GOLD_MID, GOLD_DARK]
         for i, grp in enumerate(g.index):
             fig.add_trace(go.Scatter(x=MONTH_LBL, y=g.loc[grp], mode="lines+markers", name=str(grp),
                                      line=dict(color=cols[i % len(cols)], width=2.4)))
@@ -893,6 +932,57 @@ def key_findings():
 
 
 # =============================================================================
+# 4b. ICONOS (SVG propios, sin dependencias ni emojis; toman el color del texto)
+# =============================================================================
+ICONS = {
+    "panel": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+    "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>',
+    "moon": '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>',
+    "home": '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+    "info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+    "target": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    "book": '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>',
+    "bars": '<path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/>',
+    "scatter": '<circle cx="7" cy="16" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="18" cy="14" r="2"/><path d="M8.4 14.3l2.3-4.5M13.5 9.4l3.3 3.2"/>',
+    "link": '<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/>',
+    "github": '<path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/>',
+    "notebook": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/>',
+    "external": '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    "database": '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    "users": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    "arrow": '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    "alert": '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    "calendar": '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    "columns": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
+    "coin": '<circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2.5 0 0 0-2.5-1.5c-1.4 0-2.5.9-2.5 2s1.1 1.7 2.5 2 2.5.9 2.5 2-1.1 2-2.5 2a2.5 2.5 0 0 1-2.5-1.5M12 6v1.5M12 16.5V18"/>',
+    "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    "mail": '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/>',
+    # --- nuevos: detalles de tarjeta de crédito ---
+    "card": '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/>',
+    "chip": '<rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 10h16M4 14h16M10 5v14M14 5v14"/>',
+    "contactless": '<path d="M8.5 8.5a5 5 0 0 1 0 7M12 6a9 9 0 0 1 0 12M15.5 3.5a13 13 0 0 1 0 17"/>',
+}
+
+
+def _icon_css():
+    out = []
+    for name, body in ICONS.items():
+        svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" '
+               'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>')
+        out.append(f'.ico-{name}{{--ico:url("data:image/svg+xml,{quote(svg)}");}}')
+    return "\n".join(out)
+
+
+def icon(name, cls=""):
+    """Ícono decorativo: <span class="ico ico-nombre">, coloreado con el color del texto."""
+    return html.Span(className=f"ico ico-{name} {cls}".strip(), **{"aria-hidden": "true"})
+
+
+PAGE_ICONS = {"Introducción": "info", "Problema y Objetivos": "target", "Marco Teórico": "book",
+              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Enlaces": "link"}
+
+
+# =============================================================================
 # 5. COMPONENTES DE INTERFAZ
 # =============================================================================
 def card(title, children, subtitle=None, cls=""):
@@ -903,8 +993,9 @@ def card(title, children, subtitle=None, cls=""):
                     className=f"card {cls}".strip())
 
 
-def kpi(label, value, note=""):
-    return html.Div([html.Div(label, className="kpi-label"),
+def kpi(label, value, note="", ico=None):
+    return html.Div([html.Div([icon(ico) if ico else None, html.Div(label, className="kpi-label")],
+                              className="kpi-head"),
                      html.Div(value, className="kpi-value"),
                      html.Div(note, className="kpi-note")], className="kpi")
 
@@ -924,7 +1015,9 @@ def control(label, comp):
 
 
 def page_title(title, sub):
-    return html.Div([html.H2(title), html.P(sub)], className="page-title")
+    ic = PAGE_ICONS.get(title)
+    return html.Div([html.H2([icon(ic, "pt-ico"), title] if ic else title), html.P(sub)],
+                    className="page-title")
 
 
 def var_options(cols):
@@ -942,10 +1035,10 @@ def page_uni():
     return html.Div([
         page_title("EDA Univariado", "Distribución y calidad de cada variable por separado"),
         html.Div([
-            kpi("Total de registros", f"{len(df):,}", "tras eliminar duplicados"),
-            kpi("Tasa global de default", f"{GLOBAL_RATE:.1%}", f"{int(df[TARGET].sum()):,} clientes"),
-            kpi("Límite de crédito promedio", nt(df["LIMIT_BAL"].mean()), f"mediana {nt(df['LIMIT_BAL'].median())}"),
-            kpi("Edad promedio", f"{df['AGE'].mean():.1f} años", f"mediana {df['AGE'].median():.0f}"),
+            kpi("Total de registros", f"{len(df):,}", "tras eliminar duplicados", ico="users"),
+            kpi("Tasa global de default", f"{GLOBAL_RATE:.1%}", f"{int(df[TARGET].sum()):,} clientes", ico="alert"),
+            kpi("Límite de crédito promedio", nt(df["LIMIT_BAL"].mean()), f"mediana {nt(df['LIMIT_BAL'].median())}", ico="coin"),
+            kpi("Edad promedio", f"{df['AGE'].mean():.1f} años", f"mediana {df['AGE'].median():.0f}", ico="clock"),
         ], className="kpi-row k4"),
         html.Div([
             card("Variable objetivo: Default vs. No Default",
@@ -990,7 +1083,7 @@ def page_multi():
              [dcc.Graph(id="corr-graph", figure=fig_corr(), config={"displaylogo": False}),
               interp_block(*interp_corr())],
              subtitle="Correlación de Spearman (basada en rangos, robusta a valores extremos) sobre las variables "
-                      "numéricas y la variable objetivo (escala de #0C1A41 a #C9930C)"),
+                      "numéricas y la variable objetivo (escala de azul a dorado)"),
         html.Div([
             card("Incumplimiento por educación, estado civil y sexo",
                  [dcc.Graph(id="rates-graph", figure=fig_rates(), config={"displaylogo": False}),
@@ -1060,11 +1153,12 @@ def page_intro():
     I = DATA_INFO
     return html.Div([
         page_title("Introducción", "Contexto general del proyecto y del conjunto de datos"),
+        quick_look(),
         html.Div([
-            kpi("Clientes analizados", f"{len(df):,}", "tras la limpieza"),
-            kpi("Variables", "24", "23 predictoras + 1 objetivo"),
-            kpi("Tasa de default", f"{GLOBAL_RATE:.1%}", f"{n_def:,} clientes"),
-            kpi("Periodo", "Abr–Sep 2005", "banco de Taiwán"),
+            kpi("Clientes analizados", f"{len(df):,}", "tras la limpieza", ico="users"),
+            kpi("Variables", "24", "23 predictoras + 1 objetivo", ico="columns"),
+            kpi("Tasa de default", f"{GLOBAL_RATE:.1%}", f"{n_def:,} clientes", ico="alert"),
+            kpi("Periodo", "Abr–Sep 2005", "banco de Taiwán", ico="calendar"),
         ], className="kpi-row k4"),
         html.Div([
             card("Introducción", [
@@ -1104,7 +1198,9 @@ def page_intro():
                 "Marco Teórico: conceptos y pruebas estadísticas usadas, más el diccionario de variables.",
                 "EDA Univariado: calidad y distribución de cada variable, y desbalance de la variable objetivo.",
                 "EDA Multivariado: correlaciones, perfiles de riesgo, cruces interactivos y hallazgos clave.",
-                "Usa ☰ para ocultar el menú lateral y el botón de modo claro/oscuro de la barra superior.",
+                "Enlaces: libro del proyecto, notebooks y repositorios.",
+                "Con el botón de panel de la barra superior ocultas el menú lateral; el interruptor de sol y luna cambia entre modo claro y oscuro.",
+                "Al final de cada página, los botones Anterior y Siguiente te llevan por el tablero en orden.",
             ])),
         ], className="grid g2"),
     ])
@@ -1296,159 +1392,457 @@ def page_marco():
     ])
 
 
+# ---------------------------------------------------------------- Portada y vistazo rápido
+def fig_home():
+    """Tasa de default según el estado de pago de septiembre (el hallazgo más claro del EDA)."""
+    g = df.groupby("PAY_0")[TARGET].agg(["mean", "size"])
+    g = g[g["size"] >= 100]
+    fig = go.Figure(go.Bar(
+        x=[str(int(i)) for i in g.index], y=g["mean"] * 100, marker_color=MONO, customdata=g["size"],
+        hovertemplate="PAY_0 = %{x}<br>Default: %{y:.1f}%<br>Clientes: %{customdata:,}<extra></extra>"))
+    fig.add_hline(y=GLOBAL_RATE * 100, line_dash="dash", line_color=WARM_GOLD, line_width=1.6,
+                  annotation_text=f"Tasa global {GLOBAL_RATE:.1%}", annotation_position="top left",
+                  annotation_font_color=WARM_GOLD)
+    style_fig(fig, 310, legend_top=False)
+    fig.update_layout(margin=dict(l=55, r=20, t=24, b=55), showlegend=False,
+                      xaxis_title="Estado de pago en septiembre (PAY_0)",
+                      yaxis_title="% que incumple el mes siguiente")
+    fig.update_xaxes(type="category")
+    return fig
+
+
+def link_cards(compact=False):
+    items = []
+    for L in LINKS:
+        body = [html.Div([html.Span(icon(L["icon"]), className="lc-ico"), icon("external", "lc-ext")],
+                         className="lc-top"),
+                html.Div(L["title"], className="lc-title")]
+        if not compact:
+            body.append(html.P(L["desc"]))
+        body.append(html.Div(L["url"].split("//", 1)[-1], className="lc-url"))
+        items.append(html.A(body, href=L["url"], target="_blank", rel="noopener noreferrer",
+                            className="link-card", title=f"Abrir: {L['title']}"))
+    return html.Div(items, className="link-grid")
+
+
+def quick_look():
+    """Gráfica de PAY_0 (antes en la portada), ahora al inicio de Introducción."""
+    r_late = df.loc[df["PAY_0"] >= 2, TARGET].mean()
+    r_ok = df.loc[df["PAY_0"] <= 0, TARGET].mean()
+    return card("Vistazo rápido: el atraso de septiembre anticipa el incumplimiento",
+                [dcc.Graph(id="home-graph", figure=fig_home(),
+                           config={"displaylogo": False, "displayModeBar": False}),
+                 html.P(f"Entre quienes tenían 2 o más meses de atraso en septiembre, {r_late:.0%} incumplió el mes "
+                        f"siguiente; entre quienes iban al día o pagaban el mínimo, {r_ok:.0%}.", className="muted")],
+                subtitle="Tasa de default según PAY_0 (grupos con al menos 100 clientes)")
+
+
+def _stat(label, value):
+    return html.Div([html.Span(label), html.B(value)], className="sig-stat")
+
+
+def page_home():
+    """Portada a pantalla completa: una tarjeta de crédito interactiva (inclina con el mouse, se voltea)."""
+    front = html.Div([
+        html.Div(className="cc-gloss"),
+        html.Div([html.Span("Riesgo de crédito", className="cc-brand"), icon("contactless", "cc-nfc")],
+                 className="cc-top"),
+        html.Div(className="cc-chip"),
+        html.Div("•••• •••• •••• 2005", className="cc-number"),
+        html.Div([
+            html.Div([html.Span("Titulares", className="cc-lbl"),
+                      *[html.Div(a["name"], className="cc-name") for a in AUTHORS]]),
+            html.Div([html.Span("Periodo de datos", className="cc-lbl"),
+                      html.Div("ABR 2005 – SEP 2005", className="cc-name")], className="cc-valid"),
+        ], className="cc-bottom"),
+    ], className="cc-face cc-front")
+    back = html.Div([
+        html.Div(className="cc-gloss"),
+        html.Div(className="cc-mag"),
+        html.Div([_stat("Clientes", f"{len(df):,}"), _stat("Default", f"{GLOBAL_RATE:.1%}"),
+                  _stat("Periodo", "Abr–Sep 2005")], className="cc-sig"),
+        html.P("Datos: UCI · Banco de Taiwán · Yeh & Lien (2009)", className="cc-fine"),
+    ], className="cc-face cc-back")
+    card3d = html.Div(html.Div([front, back], className="cc-inner"), id="cc", tabIndex=0, className="cc",
+                      **{"aria-label": "Tarjeta del proyecto. Púlsala para voltearla"})
+    return html.Div([
+        html.Div(className="bill-bg"),
+        html.Div([
+            html.Div(html.Div(card3d, className="cc-settle"), className="cc-scene"),
+            html.Div([
+                html.Div([icon("card"), "Proyecto EDA"], className="cover-tag"),
+                html.H1(PROJECT_TITLE),
+                html.P(f"Quién deja de pagar el mes siguiente y qué señales lo anticipan: {len(df):,} clientes de "
+                       "tarjeta de crédito de un banco de Taiwán, de abril a septiembre de 2005.", className="hero-lead"),
+                dcc.Link(["Iniciar recorrido", icon("arrow")], href="/introduccion", className="btn primary big"),
+                html.Div([html.Span("Haz clic o toca la tarjeta para voltearla."), html.Span(INSTITUTION)],
+                         className="cover-hint"),
+            ], className="cover-copy"),
+        ], className="cover-hero"),
+    ], className="cover")
+
+
+# ---------------------------------------------------------------- Enlaces
+def book_summary():
+    return card("Sobre el proyecto", [
+        html.P("Flujo completo de ciencia de datos y aprendizaje automático para predecir el incumplimiento de pago "
+               "en clientes de tarjetas de crédito, a partir de los 30,000 registros del repositorio UCI."),
+        html.P("Incluye un pipeline de extracción, limpieza y transformación (ETL), un análisis exploratorio centrado "
+               "en el desbalance de clases y la multicolinealidad severa entre los montos facturados, y un diseño "
+               "factorial de 112 configuraciones que compara algoritmos, representaciones de variables, técnicas de "
+               "balanceo y optimización (genética y bayesiana). El resultado mejora el F1 de la clase minoritaria y "
+               "reduce los falsos negativos frente a la regresión logística base."),
+    ], subtitle="Resumen basado en el README del Jupyter Book")
+
+
+def pipeline_card():
+    rows = [html.A([html.Span(n, className="nb-num"),
+                    html.Div([html.Div(t, className="nb-t"), html.P(d)], className="nb-body"),
+                    icon("external", "nb-ext")],
+                   href=BOOK_URL + "notebooks/" + f, target="_blank", rel="noopener noreferrer", className="nb-row")
+            for n, t, f, d in NOTEBOOKS]
+    return card("Pipeline completo", html.Div(rows, className="nb-list"),
+                subtitle="Los siete notebooks del libro, en el orden del flujo de trabajo")
+
+
+def page_links():
+    return html.Div([
+        page_title("Enlaces", "Libro del proyecto, notebooks, repositorios y fuente de los datos"),
+        book_summary(),
+        link_cards(),
+        pipeline_card(),
+        card("Reproducir el análisis", _ul([
+            ["Clona el repositorio del proyecto e instala las dependencias con ", html.Code("pip install -r requirements.txt"),
+             " (la guía del repositorio usa un entorno Conda con Python 3.12)."],
+            ["Abre el notebook del EDA desde la carpeta ", html.Code("notebooks/"), " y ejecútalo en VS Code."],
+            ["Para correr este tablero: ", html.Code("python app.py"), " y abre ", html.Code("http://127.0.0.1:8050"), "."],
+        ], ordered=True)),
+    ])
+
+
 # =============================================================================
 # 7. APLICACIÓN, CSS, NAVEGACIÓN Y CALLBACKS
 # =============================================================================
-EXTRA_CSS = """
-/* ---------- Barra superior: botones ---------- */
-.tb-left, .tb-right { display:flex; align-items:center; gap:14px; }
-.icon-btn { background:transparent; border:1.5px solid var(--pale); color:var(--pale); border-radius:10px;
-  padding:7px 13px; font-weight:700; font-size:13px; cursor:pointer; transition:all .15s; font-family:inherit; }
-.icon-btn:hover { background:var(--gold); color:var(--deep); border-color:var(--gold); }
-/* ---------- Barra lateral plegable ---------- */
-.sidebar { transition:transform .3s ease; }
-.main { transition:margin-left .3s ease; }
-.app.collapsed .sidebar { transform:translateX(-100%); }
-.app.collapsed .main { margin-left:0; }
-@media (max-width:900px) { .app.collapsed .sidebar { display:none; } }
-/* ---------- Contenido nuevo ---------- */
-.callout { background:#FFF8E6; border-left:6px solid var(--gold); border-radius:10px; padding:14px 18px; font-size:15.5px; font-weight:600; }
-.formula { background:#EEF1FA; border-left:5px solid var(--navy); border-radius:8px; padding:9px 14px; margin:8px 0;
-  font-family:Consolas,'Courier New',monospace; font-size:13.5px; overflow-x:auto; }
-.tag { display:inline-block; background:var(--navy); color:var(--pale); border-radius:999px; font-size:11.5px;
-  font-weight:700; padding:2px 10px; margin-left:8px; white-space:nowrap; }
-.card ol { margin:6px 0 6px 22px; padding:0; }
-.refs li { font-size:13.5px; }
-/* ================= MODO OSCURO (misma paleta, tonos ajustados) ================= */
-[data-theme="dark"] { color-scheme:dark; }
-[data-theme="dark"] body { background:#08112B; color:#F9F0DE; }
-[data-theme="dark"] .page-title h2, [data-theme="dark"] .card-title, [data-theme="dark"] .section-h { color:#F9F0DE; }
-[data-theme="dark"] .page-title p, [data-theme="dark"] .card-sub, [data-theme="dark"] .muted { color:#B9C3DE; }
-[data-theme="dark"] .card, [data-theme="dark"] .finding { background:#12214F; border-color:rgba(232,200,113,.18);
-  border-top-color:var(--gold); box-shadow:0 2px 14px rgba(0,0,0,.35); }
-[data-theme="dark"] .find-title { color:var(--pale); }
-[data-theme="dark"] .ctl-label { color:var(--pale); }
-[data-theme="dark"] .radio input, [data-theme="dark"] .check input { accent-color:var(--pale); }
-[data-theme="dark"] .interp p { color:#F9F0DE; }
-[data-theme="dark"] .interp.basic { background:rgba(201,147,12,.16); }
-[data-theme="dark"] .interp.basic summary { color:var(--pale); }
-[data-theme="dark"] .interp.tech { background:rgba(127,151,222,.16); border-left-color:#7F97DE; }
-[data-theme="dark"] .interp.tech summary { color:#A9B8E8; }
-[data-theme="dark"] .callout { background:rgba(201,147,12,.18); color:#F9F0DE; }
-[data-theme="dark"] .formula { background:rgba(127,151,222,.16); border-left-color:#7F97DE; color:#F9F0DE; }
-[data-theme="dark"] .vtable th { background:var(--navy); }
-[data-theme="dark"] .vtable td { border-bottom-color:rgba(249,240,222,.14); }
-[data-theme="dark"] .vtable tr:nth-child(even) td { background:rgba(255,255,255,.04); }
-[data-theme="dark"] code { background:rgba(232,200,113,.18); color:var(--pale); }
-[data-theme="dark"] .tag { background:var(--gold); color:var(--deep); }
-[data-theme="dark"] .kpi { border:1px solid rgba(232,200,113,.25); border-bottom:4px solid var(--gold); }
-/* Menús desplegables (dcc.Dropdown) en oscuro: versiones antigua y nueva de Dash */
-[data-theme="dark"] .Select-control, [data-theme="dark"] .Select-menu-outer, [data-theme="dark"] .Select-menu,
-[data-theme="dark"] .VirtualizedSelectOption, [data-theme="dark"] .dash-dropdown,
-[data-theme="dark"] .dash-dropdown-content { background:#0D1A42 !important; color:#F9F0DE !important;
-  border-color:rgba(249,240,222,.35) !important; }
-[data-theme="dark"] .Select-value-label, [data-theme="dark"] .Select-placeholder,
-[data-theme="dark"] .Select--single > .Select-control .Select-value, [data-theme="dark"] .Select-input > input,
-[data-theme="dark"] .dash-dropdown * { color:#F9F0DE !important; }
-[data-theme="dark"] .VirtualizedSelectFocusedOption, [data-theme="dark"] .Select-option.is-focused { background:var(--navy) !important; }
-[data-theme="dark"] .Select-value { background:transparent !important; }
-[data-theme="dark"] .Select-arrow { border-top-color:#F9F0DE !important; }
-"""
-
 app = Dash(__name__, suppress_callback_exceptions=True, title="EDA · Riesgo Crediticio")
 server = app.server   # <- para despliegue (gunicorn app:server)
 
-CSS = f"""
-:root {{ --deep:{DEEP_NAVY}; --navy:{NAVY}; --pale:{PALE_GOLD}; --gold:{WARM_GOLD}; --cream:{CREAM}; }}
-* {{ box-sizing: border-box; }}
-html, body {{ margin:0; padding:0; background:var(--cream); color:var(--deep);
-  font-family: Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:15px; line-height:1.55; }}
-/* ---------- Sidebar fija ---------- */
-.sidebar {{ position:fixed; top:0; left:0; bottom:0; width:285px; background:var(--deep); color:#fff;
-  padding:26px 22px; display:flex; flex-direction:column; border-right:4px solid var(--gold); overflow-y:auto; z-index:50; }}
-.brand-tag {{ color:var(--pale); font-size:11px; letter-spacing:.16em; text-transform:uppercase; font-weight:700; }}
-.brand-title {{ font-size:21px; line-height:1.25; font-weight:800; margin:8px 0 4px; color:#fff; }}
-.brand-sub {{ color:#B9C3DE; font-size:12.5px; margin:0 0 20px; }}
-.nav a {{ display:block; padding:11px 14px; margin:5px 0; border-radius:10px; color:#DDE3F3; text-decoration:none;
-  font-weight:600; border:1px solid transparent; transition:all .15s; }}
-.nav a:hover {{ background:var(--navy); color:#fff; }}
-.nav a.active {{ background:var(--navy); color:var(--pale); border-color:var(--gold); box-shadow:inset 4px 0 0 var(--gold); }}
-.authors {{ margin-top:auto; padding-top:18px; border-top:1px solid rgba(232,200,113,.35); }}
-.authors h4 {{ margin:0 0 10px; color:var(--pale); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }}
-.author {{ margin-bottom:11px; }}
-.author .nm {{ font-weight:700; font-size:13.5px; }}
-.author .em {{ font-size:12px; color:#B9C3DE; word-break:break-all; }}
-.inst {{ font-size:11.5px; color:#8E9BBE; margin-top:8px; }}
-/* ---------- Contenido ---------- */
-.main {{ margin-left:285px; min-height:100vh; display:flex; flex-direction:column; }}
-.topbar {{ background:var(--deep); color:#fff; padding:16px 34px; border-bottom:4px solid var(--gold);
-  display:flex; justify-content:space-between; align-items:center; gap:16px; position:sticky; top:0; z-index:40; }}
-.topbar .t1 {{ font-weight:800; font-size:17px; }}
-.topbar .t2 {{ color:var(--pale); font-size:12.5px; }}
-.badge {{ background:var(--gold); color:var(--deep); font-weight:800; font-size:12px; padding:5px 12px; border-radius:999px; white-space:nowrap; }}
-.content {{ padding:26px 34px 10px; flex:1; }}
-.page-title h2 {{ margin:0; font-size:28px; font-weight:800; color:var(--deep); }}
-.page-title h2:after {{ content:''; display:block; width:64px; height:4px; background:var(--gold); border-radius:4px; margin-top:8px; }}
-.page-title p {{ margin:10px 0 20px; color:#4B587F; }}
-/* ---------- Tarjetas ---------- */
-.card {{ background:#fff; border-radius:12px; padding:20px 22px; margin-bottom:20px;
-  box-shadow:0 2px 12px rgba(12,26,65,.08); border:1px solid rgba(12,26,65,.06); border-top:4px solid var(--navy); min-width:0; }}
-.card-title {{ margin:0 0 4px; font-size:18px; font-weight:800; color:var(--deep); }}
-.card-sub {{ margin:0 0 12px; color:#5B6890; font-size:13px; }}
-.card p {{ margin:8px 0; }}
-.card ul {{ margin:6px 0 6px 20px; padding:0; }} .card li {{ margin:4px 0; }}
-.muted {{ color:#5B6890; font-size:13.5px; }}
-.grid {{ display:grid; gap:20px; }} .g2 {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
-.g3 {{ grid-template-columns:repeat(3,minmax(0,1fr)); }} .g4 {{ grid-template-columns:repeat(4,minmax(0,1fr)); }}
-.span-2 {{ grid-column:span 2; }}
-/* ---------- KPIs ---------- */
-.kpi-row {{ display:grid; gap:16px; margin-bottom:20px; }} .k4 {{ grid-template-columns:repeat(4,minmax(0,1fr)); }}
-.k3 {{ grid-template-columns:repeat(3,minmax(0,1fr)); margin:12px 0; }}
-.kpi {{ background:linear-gradient(135deg,var(--deep),var(--navy)); color:#fff; border-radius:12px; padding:16px 18px;
-  box-shadow:0 2px 12px rgba(12,26,65,.18); border-bottom:4px solid var(--gold); }}
-.kpi-label {{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--pale); font-weight:700; }}
-.kpi-value {{ font-size:27px; font-weight:800; color:#fff; margin:4px 0 2px; }}
-.kpi-note {{ font-size:12px; color:#B9C3DE; }}
+CSS = """
+:root {
+  --deep:%%DEEP%%; --navy:%%NAVY%%; --pale:%%PALE%%; --gold:%%GOLD%%; --cream:%%CREAM%%;
+  --bg:%%CREAM%%; --surface:#FFFFFF; --surface-2:#F8F6F0;
+  --text:%%DEEP%%; --muted:#5D667F; --line:rgba(26,35,61,.10); --line-strong:rgba(26,35,61,.24);
+  --accent:%%NAVY%%; --on-accent:#FFFFFF; --accent-2:%%GOLD%%;
+  --side-bg:%%DEEP%%; --side-text:#D3D8E5; --side-muted:#9AA3BA; --side-line:rgba(255,255,255,.10);
+  --note-bg:#F6F0E1; --note-line:%%GOLD%%; --tech-bg:#ECEEF4; --tech-line:%%NAVY%%;
+  --code-bg:#EBE5D5; --th-bg:%%DEEP%%; --zebra:#FAF8F3; --focus:%%GOLD%%;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:#141A2B; --surface:#1B2338; --surface-2:#222B43;
+  --text:#E8E4DA; --muted:#A7B0C6; --line:rgba(232,228,218,.10); --line-strong:rgba(232,228,218,.26);
+  --accent:%%PALE%%; --on-accent:#1A233D; --accent-2:%%PALE%%;
+  --side-bg:#10162A; --side-text:#D3D8E5; --side-muted:#98A1B8; --side-line:rgba(255,255,255,.08);
+  --note-bg:rgba(210,187,137,.12); --note-line:%%PALE%%; --tech-bg:rgba(142,156,198,.14); --tech-line:#8E9CC6;
+  --code-bg:rgba(210,187,137,.16); --th-bg:#2A3552; --zebra:rgba(255,255,255,.03); --focus:%%PALE%%;
+}
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+html, body { margin:0; padding:0; background:var(--bg); color:var(--text);
+  font-family:Inter,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.55; }
+a { color:inherit; }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px; border-radius:6px; }
+
+/* ---------- Íconos ---------- */
+.ico { display:inline-block; flex:none; width:1.2em; height:1.2em; background-color:currentColor;
+  -webkit-mask:var(--ico) center/contain no-repeat; mask:var(--ico) center/contain no-repeat; }
+
+/* ---------- Barra lateral ---------- */
+.sidebar { position:fixed; top:0; left:0; bottom:0; width:272px; background:var(--side-bg); color:var(--side-text);
+  padding:24px 18px; display:flex; flex-direction:column; border-right:1px solid var(--side-line); overflow-y:auto;
+  z-index:50; transition:transform .3s ease; }
+.brand { display:block; color:inherit; text-decoration:none; padding:0 6px 18px; }
+.brand-tag { color:var(--pale); font-size:12px; font-weight:600; }
+.brand-title { font-size:20px; line-height:1.25; font-weight:700; margin:6px 0 4px; color:#fff; }
+.brand-sub { color:var(--side-muted); font-size:12.5px; margin:0; }
+.nav { border-top:1px solid var(--side-line); padding-top:12px; }
+.nav a { display:flex; align-items:center; gap:11px; padding:9px 12px; margin:2px 0; border-radius:8px; color:var(--side-text);
+  text-decoration:none; font-weight:500; position:relative; transition:background .15s, color .15s; }
+.nav a .ico { opacity:.8; }
+.nav a:hover { background:rgba(255,255,255,.07); color:#fff; }
+.nav a.active { background:rgba(255,255,255,.10); color:#fff; font-weight:600; }
+.nav a.active::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:3px; background:var(--pale); }
+.nav a.active .ico { opacity:1; color:var(--pale); }
+.authors { margin-top:auto; padding:16px 6px 0; border-top:1px solid var(--side-line); }
+.authors h4 { margin:0 0 10px; color:var(--pale); font-size:12.5px; font-weight:600; }
+.author { margin-bottom:10px; }
+.author .nm { font-weight:600; font-size:13.5px; color:#fff; }
+.author .em { font-size:12px; color:var(--side-muted); word-break:break-all; }
+.inst { font-size:11.5px; color:var(--side-muted); margin-top:8px; }
+.app.collapsed .sidebar { transform:translateX(-100%); }
+.app.collapsed .main { margin-left:0; }
+
+/* ---------- Estructura y barra superior ---------- */
+.main { margin-left:272px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s ease; }
+.topbar { background:var(--surface); color:var(--text); padding:12px 32px; border-bottom:1px solid var(--line);
+  display:flex; justify-content:space-between; align-items:center; gap:16px; position:sticky; top:0; z-index:40; }
+.tb-left, .tb-right { display:flex; align-items:center; gap:12px; }
+.topbar .t1 { font-weight:700; font-size:16px; }
+.topbar .t2 { color:var(--muted); font-size:12.5px; }
+.badge { color:var(--muted); font-size:12.5px; font-weight:500; padding:5px 12px; border-radius:999px;
+  border:1px solid var(--line-strong); white-space:nowrap; }
+.icon-btn { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; padding:0;
+  background:transparent; border:1px solid var(--line-strong); border-radius:8px; color:var(--text); cursor:pointer;
+  text-decoration:none; font-family:inherit; transition:background .15s, border-color .15s, color .15s; }
+.icon-btn .ico { width:18px; height:18px; }
+.icon-btn:hover { background:var(--surface-2); border-color:var(--accent-2); color:var(--accent-2); }
+.theme-toggle { position:relative; display:inline-flex; align-items:center; width:62px; height:32px; padding:3px;
+  border-radius:999px; border:1px solid var(--line-strong); background:var(--surface-2); cursor:pointer; }
+.theme-toggle::before { content:''; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%;
+  background:var(--accent); transition:transform .2s ease; }
+[data-theme="dark"] .theme-toggle::before { transform:translateX(30px); }
+.theme-toggle .ico { position:relative; z-index:1; width:24px; height:24px; -webkit-mask-size:14px; mask-size:14px; }
+.theme-toggle .t-sun { color:var(--on-accent); } .theme-toggle .t-moon { color:var(--muted); margin-left:6px; }
+[data-theme="dark"] .theme-toggle .t-sun { color:var(--muted); }
+[data-theme="dark"] .theme-toggle .t-moon { color:var(--on-accent); }
+.content { padding:28px 32px 10px; flex:1; }
+
+/* ---------- Títulos ---------- */
+.page-title h2 { margin:0; font-size:27px; font-weight:700; letter-spacing:-.01em; display:flex; align-items:center; gap:12px; }
+.page-title .pt-ico { width:26px; height:26px; color:var(--accent-2); }
+.page-title p { margin:6px 0 22px; color:var(--muted); }
+.section-h { font-size:18px; font-weight:700; margin:30px 0 12px; }
+
+/* ---------- Tarjetas y KPI ---------- */
+.card { background:var(--surface); border-radius:10px; padding:20px 22px; margin-bottom:20px; border:1px solid var(--line); min-width:0; }
+.card-title { margin:0 0 4px; font-size:17px; font-weight:700; }
+.card-sub { margin:0 0 12px; color:var(--muted); font-size:13px; }
+.card p { margin:8px 0; }
+.card ul { margin:6px 0 6px 20px; padding:0; } .card li { margin:4px 0; }
+.card ol { margin:6px 0 6px 22px; padding:0; }
+.muted { color:var(--muted); font-size:13.5px; }
+.refs li { font-size:13.5px; }
+.grid { display:grid; gap:20px; } .g2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.g3 { grid-template-columns:repeat(3,minmax(0,1fr)); } .g4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.span-2 { grid-column:span 2; }
+.kpi-row { display:grid; gap:16px; margin-bottom:20px; } .k4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.k3 { grid-template-columns:repeat(3,minmax(0,1fr)); margin:12px 0; }
+.kpi { background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent-2); border-radius:10px; padding:14px 16px; }
+.kpi-head { display:flex; align-items:center; gap:8px; color:var(--muted); }
+.kpi-head .ico { color:var(--accent-2); width:17px; height:17px; }
+.kpi-label { font-size:12.5px; font-weight:600; }
+.kpi-value { font-size:26px; font-weight:700; margin:6px 0 2px; letter-spacing:-.01em; }
+.kpi-note { font-size:12px; color:var(--muted); }
+
 /* ---------- Controles ---------- */
-.controls {{ display:flex; flex-wrap:wrap; gap:18px; margin:6px 0 12px; align-items:flex-end; }}
-.control {{ min-width:220px; flex:1; }} .ctl-label {{ display:block; font-size:12px; font-weight:800; color:var(--navy);
-  text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }}
-.radio label, .check label {{ display:inline-flex; align-items:center; gap:5px; margin-right:16px; cursor:pointer; font-size:14px; }}
-.radio input, .check input {{ accent-color:var(--navy); }}
+.controls { display:flex; flex-wrap:wrap; gap:18px; margin:6px 0 12px; align-items:flex-end; }
+.control { min-width:220px; flex:1; }
+.ctl-label { display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:5px; }
+.radio label, .check label { display:inline-flex; align-items:center; gap:5px; margin-right:16px; cursor:pointer; font-size:14px; }
+.radio input, .check input { accent-color:var(--accent); }
+
 /* ---------- Interpretaciones ---------- */
-.interp-wrap {{ margin-top:10px; display:grid; gap:10px; }}
-.interp {{ border-radius:10px; padding:10px 14px; }}
-.interp summary {{ cursor:pointer; font-weight:800; font-size:13.5px; }}
-.interp p {{ margin:8px 0 2px !important; font-size:14px; }}
-.interp.basic {{ background:#FFF8E6; border-left:5px solid var(--gold); }}
-.interp.basic summary {{ color:var(--gold); }}
-.interp.tech {{ background:#EEF1FA; border-left:5px solid var(--navy); }}
-.interp.tech summary {{ color:var(--navy); }}
-/* ---------- Tabla marco teórico ---------- */
-.table-wrap {{ overflow-x:auto; }}
-.vtable {{ border-collapse:collapse; width:100%; font-size:14px; }}
-.vtable th {{ background:var(--deep); color:#fff; text-align:left; padding:10px 12px; }}
-.vtable th:first-child {{ border-top-left-radius:8px; }} .vtable th:last-child {{ border-top-right-radius:8px; }}
-.vtable td {{ padding:9px 12px; border-bottom:1px solid #E7E2D2; vertical-align:top; }}
-.vtable tr:nth-child(even) td {{ background:#FCF8EE; }}
-code {{ background:#F3E7C2; color:var(--deep); padding:2px 6px; border-radius:6px; font-size:13px; }}
-/* ---------- Hallazgos ---------- */
-.section-h {{ font-size:20px; margin:8px 0 12px; }}
-.finding {{ background:#fff; border-radius:12px; padding:16px; border-top:4px solid var(--gold);
-  box-shadow:0 2px 12px rgba(12,26,65,.08); }}
-.find-title {{ font-weight:800; color:var(--deep); margin-bottom:4px; }} .finding p {{ margin:4px 0; font-size:14px; }}
-/* ---------- Footer ---------- */
-.footer {{ background:var(--deep); color:#B9C3DE; padding:16px 34px; border-top:4px solid var(--gold); font-size:12.5px;
-  display:flex; flex-wrap:wrap; gap:6px 24px; justify-content:space-between; margin-top:20px; }}
-.footer b {{ color:var(--pale); }}
-@media (max-width:1100px) {{ .g3,.g4,.k4 {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} .span-2 {{ grid-column:span 2; }} }}
-@media (max-width:900px) {{
-  .sidebar {{ position:static; width:100%; }} .main {{ margin-left:0; }}
-  .g2,.g3,.g4,.k4,.k3 {{ grid-template-columns:1fr; }} .span-2 {{ grid-column:auto; }}
-  .topbar {{ position:static; }} .content {{ padding:20px 16px; }} }}
+.interp-wrap { margin-top:10px; display:grid; gap:10px; }
+.interp { border-radius:8px; padding:10px 14px; }
+.interp summary { cursor:pointer; font-weight:700; font-size:13.5px; }
+.interp p { margin:8px 0 2px !important; font-size:14px; }
+.interp.basic { background:var(--note-bg); border-left:3px solid var(--note-line); }
+.interp.tech { background:var(--tech-bg); border-left:3px solid var(--tech-line); }
+
+/* ---------- Contenido de texto ---------- */
+.callout { background:var(--note-bg); border-left:3px solid var(--note-line); border-radius:8px; padding:14px 18px; font-size:15.5px; font-weight:600; }
+.formula { background:var(--tech-bg); border-left:3px solid var(--tech-line); border-radius:8px; padding:9px 14px; margin:8px 0;
+  font-family:Consolas,'Courier New',monospace; font-size:13.5px; overflow-x:auto; }
+.tag { display:inline-block; background:var(--accent); color:var(--on-accent); border-radius:999px; font-size:11.5px;
+  font-weight:600; padding:2px 10px; margin-left:8px; white-space:nowrap; }
+code { background:var(--code-bg); color:var(--text); padding:2px 6px; border-radius:6px; font-size:13px; }
+.table-wrap { overflow-x:auto; }
+.vtable { border-collapse:collapse; width:100%; font-size:14px; }
+.vtable th { background:var(--th-bg); color:#fff; text-align:left; padding:10px 12px; font-weight:600; }
+.vtable th:first-child { border-top-left-radius:8px; } .vtable th:last-child { border-top-right-radius:8px; }
+.vtable td { padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+.vtable tr:nth-child(even) td { background:var(--zebra); }
+.finding { background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent-2); border-radius:10px; padding:14px 16px; }
+.find-title { font-weight:700; margin-bottom:4px; } .finding p { margin:4px 0; font-size:14px; }
+
+/* ---------- Portada (texto) ---------- */
+.hero-lead { font-size:17px; color:var(--muted); max-width:52ch; margin:0 0 24px; }
+.btn { display:inline-flex; align-items:center; gap:9px; padding:10px 16px; border-radius:8px; font-weight:600; font-size:14.5px;
+  text-decoration:none; border:1px solid transparent; transition:background .15s, border-color .15s, transform .15s; }
+.btn .ico { width:17px; height:17px; }
+.btn.primary { background:var(--accent); color:var(--on-accent); }
+.btn.primary:hover { filter:brightness(1.12); } .btn.primary:hover .ico { transform:translateX(3px); }
+.btn.primary .ico { transition:transform .15s; }
+.btn.ghost { border-color:var(--line-strong); color:var(--text); }
+.btn.ghost:hover { background:var(--surface-2); border-color:var(--accent-2); }
+.link-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin-bottom:20px; }
+.link-card { display:flex; flex-direction:column; gap:8px; padding:16px; background:var(--surface); border:1px solid var(--line);
+  border-radius:10px; text-decoration:none; color:var(--text); transition:border-color .15s, background .15s; }
+.link-card:hover { border-color:var(--accent-2); background:var(--surface-2); }
+.lc-top { display:flex; justify-content:space-between; align-items:center; }
+.lc-ico { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px;
+  background:var(--surface-2); border:1px solid var(--line); color:var(--accent-2); }
+.lc-ext { width:16px; height:16px; color:var(--muted); transition:color .15s; }
+.link-card:hover .lc-ext { color:var(--accent-2); }
+.lc-title { font-weight:700; }
+.link-card p { margin:0; color:var(--muted); font-size:13.5px; }
+.lc-url { color:var(--muted); font-size:12px; word-break:break-all; margin-top:auto; }
+
+/* ---------- Pie ---------- */
+.footer { background:var(--surface); color:var(--muted); padding:16px 32px; border-top:1px solid var(--line); font-size:12.5px;
+  display:flex; flex-wrap:wrap; gap:8px 24px; justify-content:space-between; align-items:center; margin-top:24px; }
+.footer b { color:var(--text); }
+.footer-links { display:flex; flex-wrap:wrap; gap:6px 18px; }
+.footer-links a { display:inline-flex; align-items:center; gap:6px; color:var(--muted); text-decoration:none; }
+.footer-links a:hover { color:var(--accent-2); }
+.footer-links .ico { width:15px; height:15px; }
+
+/* ---------- Menús desplegables (Dash) en modo oscuro ---------- */
+[data-theme="dark"] .Select-control, [data-theme="dark"] .Select-menu-outer, [data-theme="dark"] .Select-menu,
+[data-theme="dark"] .VirtualizedSelectOption, [data-theme="dark"] .dash-dropdown,
+[data-theme="dark"] .dash-dropdown-content { background:var(--surface-2) !important; color:var(--text) !important;
+  border-color:var(--line-strong) !important; }
+[data-theme="dark"] .Select-value-label, [data-theme="dark"] .Select-placeholder,
+[data-theme="dark"] .Select--single > .Select-control .Select-value, [data-theme="dark"] .Select-input > input,
+[data-theme="dark"] .dash-dropdown * { color:var(--text) !important; }
+[data-theme="dark"] .VirtualizedSelectFocusedOption, [data-theme="dark"] .Select-option.is-focused { background:var(--th-bg) !important; }
+[data-theme="dark"] .Select-value { background:transparent !important; }
+[data-theme="dark"] .Select-arrow { border-top-color:var(--text) !important; }
+
+/* ---------- Adaptación a pantallas pequeñas ---------- */
+@media (max-width:1100px) { .g3,.g4,.k4 { grid-template-columns:repeat(2,minmax(0,1fr)); } .span-2 { grid-column:span 2; } }
+@media (max-width:900px) {
+  .sidebar { position:static; width:100%; } .main { margin-left:0; } .app.collapsed .sidebar { display:none; }
+  .g2,.g3,.g4,.k4,.k3 { grid-template-columns:1fr; } .span-2 { grid-column:auto; }
+  .topbar { position:static; flex-wrap:wrap; padding:12px 16px; } .content { padding:20px 16px; } .footer { padding:16px; } }
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; scroll-behavior:auto !important; } }
+"""
+for _tok, _val in {"%%DEEP%%": DEEP_NAVY, "%%NAVY%%": NAVY, "%%PALE%%": PALE_GOLD,
+                   "%%GOLD%%": WARM_GOLD, "%%CREAM%%": CREAM}.items():
+    CSS = CSS.replace(_tok, _val)
+
+# ---------- CSS nuevo: detalles de tarjeta, portada, Anterior/Siguiente, pipeline ----------
+NEW_CSS = """
+/* ---- detalles sobrios de tarjeta ---- */
+.kpi-value { font-variant-numeric:tabular-nums; letter-spacing:.04em; }
+.brand-tag { display:flex; align-items:center; gap:7px; }
+.badge { display:inline-flex; align-items:center; gap:7px; }
+.brand-tag .ico { width:15px; height:15px; color:var(--pale); }
+.badge .ico { width:15px; height:15px; color:var(--accent-2); }
+
+/* ---- portada: sin menú, barra superior ni pie ---- */
+.app.cover .sidebar, .app.cover .topbar, .app.cover .footer { display:none; }
+.app.cover .main { margin-left:0; } .app.cover .content { padding:0; }
+.cover-toggle { display:none; }
+.app.cover .cover-toggle { display:inline-flex; position:fixed; top:18px; right:22px; z-index:60; }
+.cover { position:relative; min-height:100vh; display:flex; align-items:center; overflow:hidden; }
+.bill-bg { position:absolute; inset:0; opacity:.7; pointer-events:none;
+  background:repeating-linear-gradient(115deg, var(--line) 0 1px, transparent 1px 13px),
+             repeating-linear-gradient(35deg, var(--line) 0 1px, transparent 1px 17px);
+  -webkit-mask-image:radial-gradient(ellipse at 30% 50%, #000 20%, transparent 80%);
+  mask-image:radial-gradient(ellipse at 30% 50%, #000 20%, transparent 80%); }
+.cover-hero { position:relative; width:100%; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);
+  gap:56px; align-items:center; padding:56px 7vw; }
+.cover-tag { display:inline-flex; align-items:center; gap:8px; color:var(--accent-2); font-weight:700; font-size:14px; margin-bottom:14px; }
+.cover-copy h1 { font-size:clamp(32px,4.2vw,50px); line-height:1.1; letter-spacing:-.02em; margin:0 0 16px; }
+.btn.big { padding:14px 24px; font-size:16px; }
+.cover-hint { display:flex; flex-direction:column; gap:3px; margin-top:22px; font-size:12.5px; color:var(--muted); }
+
+/* ---- tarjeta ---- */
+.cc-scene { perspective:1200px; display:flex; justify-content:center; }
+.cc-settle, .cc, .cc-inner { transform-style:preserve-3d; }
+.cc-settle { width:min(540px,88vw); animation:cc-settle .9s cubic-bezier(.2,.8,.2,1) both; }
+.cc { position:relative; aspect-ratio:1.586; border-radius:22px; cursor:pointer; outline:none;
+  transition:transform .18s ease-out; transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)); }
+.cc:focus-visible { box-shadow:0 0 0 3px var(--focus); }
+.cc-inner { position:absolute; inset:0; transition:transform .8s cubic-bezier(.3,.7,.2,1); }
+.cc.flipped .cc-inner { transform:rotateY(180deg); }
+.cc-face { position:absolute; inset:0; border-radius:22px; overflow:hidden; color:#F3EFE7; padding:6.5% 7%;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden; border:1px solid rgba(210,187,137,.38);
+  background:repeating-radial-gradient(circle at 88% 12%, rgba(210,187,137,.08) 0 1px, transparent 1px 8px),
+             linear-gradient(135deg, #2A3860 0%, #1A233D 60%, #141B30 100%);
+  box-shadow:0 34px 60px -24px rgba(8,12,30,.6), inset 0 1px 0 rgba(255,255,255,.08); }
+.cc-front { display:flex; flex-direction:column; justify-content:space-between; }
+.cc-back { transform:rotateY(180deg); padding:0; display:flex; flex-direction:column; }
+.cc-gloss { position:absolute; inset:0; pointer-events:none; mix-blend-mode:soft-light; opacity:.9;
+  background:radial-gradient(circle at var(--mx,28%) var(--my,18%), rgba(255,255,255,.5), transparent 46%); }
+.cc-top { display:flex; justify-content:space-between; align-items:center; }
+.cc-brand { font-size:clamp(11px,1.5vw,13px); font-weight:700; letter-spacing:.14em; color:#D2BB89; }
+.cc-nfc { width:26px; height:26px; color:#D2BB89; }
+.cc-chip { position:relative; width:17%; aspect-ratio:1.25; border-radius:9px;
+  background:linear-gradient(135deg, #E6D3A3, #B88F3D 60%, #D2BB89); }
+.cc-chip::before { content:''; position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(26,35,61,.45);
+  box-shadow:0 -9px 0 rgba(26,35,61,.35), 0 9px 0 rgba(26,35,61,.35); }
+.cc-chip::after { content:''; position:absolute; top:0; bottom:0; left:50%; width:1px; background:rgba(26,35,61,.45); }
+.cc-number { font-family:Consolas,'Courier New',monospace; font-size:clamp(17px,3.3vw,27px); letter-spacing:.14em;
+  font-variant-numeric:tabular-nums; text-shadow:0 1px 0 rgba(0,0,0,.45), 0 -1px 0 rgba(255,255,255,.14); }
+.cc-bottom { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; }
+.cc-lbl { display:block; font-size:10px; letter-spacing:.1em; color:#9AA3BA; margin-bottom:2px; }
+.cc-name { font-size:clamp(11px,1.7vw,14px); font-weight:600; letter-spacing:.1em; text-transform:uppercase; }
+.cc-valid { text-align:right; }
+.cc-mag { height:17%; margin-top:8%; background:#0B1020; }
+.cc-sig { margin:7% 7% 0; padding:3.5% 4%; border-radius:6px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  background:repeating-linear-gradient(135deg, #F3EFE7 0 6px, #E9E3D3 6px 12px); color:#1A233D; }
+.sig-stat { display:flex; flex-direction:column; }
+.sig-stat span { font-size:10px; letter-spacing:.06em; color:#5D667F; }
+.sig-stat b { font-size:clamp(12px,2.2vw,17px); font-variant-numeric:tabular-nums; }
+.cc-fine { margin:auto 7% 6%; font-size:10.5px; color:#9AA3BA; }
+@keyframes cc-settle { from { opacity:0; transform:translateY(-26px) rotate(-3deg) scale(.96); } to { opacity:1; transform:none; } }
+
+/* ---- Anterior / Siguiente ---- */
+.pn-row { display:flex; justify-content:space-between; gap:16px; margin:8px 0 18px; }
+.pn { display:inline-flex; align-items:center; gap:12px; padding:12px 18px; border:1px solid var(--line-strong); border-radius:10px;
+  background:var(--surface); color:var(--text); text-decoration:none; transition:border-color .15s, background .15s; }
+.pn:hover { border-color:var(--accent-2); background:var(--surface-2); }
+.pn small { display:block; font-size:11.5px; color:var(--muted); } .pn b { font-size:14.5px; }
+.pn .ico { color:var(--accent-2); } .pn .flip { transform:scaleX(-1); }
+.pn.next { text-align:right; margin-left:auto; }
+
+/* ---- Pipeline completo ---- */
+.nb-list { display:grid; gap:10px; }
+.nb-row { display:flex; align-items:center; gap:14px; padding:12px 14px; border:1px solid var(--line); border-radius:10px;
+  background:var(--surface); color:var(--text); text-decoration:none; transition:border-color .15s, background .15s; }
+.nb-row:hover { border-color:var(--accent-2); background:var(--surface-2); }
+.nb-num { flex:none; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px;
+  background:var(--accent); color:var(--on-accent); font-weight:700; font-size:13px; font-variant-numeric:tabular-nums; }
+.nb-body { flex:1; min-width:0; } .nb-t { font-weight:700; } .nb-body p { margin:2px 0 0; color:var(--muted); font-size:13.5px; }
+.nb-ext { width:16px; height:16px; color:var(--muted); } .nb-row:hover .nb-ext { color:var(--accent-2); }
+
+@media (max-width:900px) { .cover-hero { grid-template-columns:1fr; gap:32px; padding:72px 6vw 40px; } .cc-scene { order:-1; } }
+@media (prefers-reduced-motion:reduce) { .cc-settle { animation:none; } }
 """
 
-CSS += EXTRA_CSS
+# ---------- JS de la portada: inclinación con el mouse, brillo y volteo ----------
+COVER_JS = """
+(function () {
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  function cc() { return document.getElementById('cc'); }
+  function setRole() { var c = cc(); if (c && !c.getAttribute('role')) c.setAttribute('role', 'button'); }
+  function reset(c) { ['--rx', '--ry', '--mx', '--my'].forEach(function (k) { c.style.removeProperty(k); }); }
+  document.addEventListener('mousemove', function (e) {
+    var c = cc(); if (!c) return; setRole();
+    if (reduce || !fine) return;
+    var r = c.getBoundingClientRect();
+    var x = Math.min(1.3, Math.max(-0.3, (e.clientX - r.left) / r.width));
+    var y = Math.min(1.3, Math.max(-0.3, (e.clientY - r.top) / r.height));
+    c.style.setProperty('--rx', ((0.5 - y) * 14).toFixed(2) + 'deg');
+    c.style.setProperty('--ry', ((x - 0.5) * 18).toFixed(2) + 'deg');
+    c.style.setProperty('--mx', (x * 100).toFixed(1) + '%');
+    c.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+  });
+  document.documentElement.addEventListener('mouseleave', function () { var c = cc(); if (c) reset(c); });
+  function flip() { var c = cc(); if (!c) return; c.classList.toggle('flipped');
+    c.setAttribute('aria-pressed', c.classList.contains('flipped') ? 'true' : 'false'); }
+  document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#cc')) flip(); });
+  document.addEventListener('keydown', function (e) {
+    var a = document.activeElement;
+    if ((e.key === 'Enter' || e.key === ' ') && a && a.id === 'cc') { e.preventDefault(); flip(); }
+  });
+})();
+"""
+CSS += NEW_CSS
+CSS += _icon_css()
+
 
 app.index_string = f"""<!DOCTYPE html>
 <html lang="es">
@@ -1463,19 +1857,24 @@ app.index_string = f"""<!DOCTYPE html>
 </head>
 <body>
   {{%app_entry%}}
+  <script>{COVER_JS}</script>
   {{%config%}}{{%scripts%}}{{%renderer%}}
 </body>
 </html>"""
 
 # ---------- Barra lateral fija: título, navegación y AUTORES ------------------
-NAV = [("/", "Introducción"), ("/problema", "Problema y Objetivos"), ("/marco", "Marco Teórico"),
-       ("/univariado", "EDA Univariado"), ("/multivariado", "EDA Multivariado")]
+NAV = [("/", "Inicio", "home"), ("/introduccion", "Introducción", "info"),
+       ("/problema", "Problema y Objetivos", "target"), ("/marco", "Marco Teórico", "book"),
+       ("/univariado", "EDA Univariado", "bars"), ("/multivariado", "EDA Multivariado", "scatter"),
+       ("/enlaces", "Enlaces", "link")]
 
 sidebar = html.Div([
-    html.Div("Proyecto EDA", className="brand-tag"),
-    html.Div(PROJECT_TITLE, className="brand-title"),
-    html.P(PROJECT_SUBTITLE, className="brand-sub"),
-    html.Div([dcc.Link(lbl, href=path, id=f"nav-{i}") for i, (path, lbl) in enumerate(NAV)], className="nav"),
+    dcc.Link([html.Div([icon("card"), "Proyecto EDA"], className="brand-tag"),
+              html.Div(PROJECT_TITLE, className="brand-title"),
+              html.P(PROJECT_SUBTITLE, className="brand-sub")], href="/", className="brand",
+             title="Ir a la portada"),
+    html.Div([dcc.Link([icon(ic), html.Span(lbl)], href=path, id=f"nav-{i}")
+              for i, (path, lbl, ic) in enumerate(NAV)], className="nav"),
     # === CAMBIAR AQUÍ NOMBRES Y CORREOS (se editan en AUTHORS, al inicio del archivo) ===
     html.Div([
         html.H4("Autores"),
@@ -1487,21 +1886,25 @@ sidebar = html.Div([
 
 # === CAMBIAR AQUÍ NOMBRES Y CORREOS (pie de página; se alimenta de AUTHORS) ===
 footer = html.Div([
-    html.Div([html.B("Autores: "), " · ".join(f"{a['name']} ({a['email']})" for a in AUTHORS)]),
-    html.Div(f"{INSTITUTION} · Datos: UCI Machine Learning Repository (Yeh & Lien, 2009)"),
+    html.Div([
+        html.Div([html.B("Autores: "), " · ".join(f"{a['name']} ({a['email']})" for a in AUTHORS)]),
+        html.Div(f"{INSTITUTION} · Datos: UCI Machine Learning Repository (Yeh & Lien, 2009)"),
+    ]),
+    html.Div([html.A([icon(L["icon"]), L["title"]], href=L["url"], target="_blank", rel="noopener noreferrer")
+              for L in LINKS], className="footer-links"),
 ], className="footer")
 
 
 # ---------- Tema claro / oscuro para las figuras Plotly --------------------------
-DARK_CARD, DARK_PLOT = "#12214F", "#0D1A42"
+DARK_CARD, DARK_PLOT = "#1B2338", "#151C2E"
 DARK_MAP = {          # tonos oscuros de la paleta -> versiones claras legibles sobre fondo oscuro
-    DEEP_NAVY: "#A9B8E8",
-    NAVY: "#7F97DE",
-    "#5A6FA8": "#5C78CF",
-    "#8A6208": "#B88A22",
-    "#A87508": "#C28A18",
-    "#6B4A05": "#9B6F12",
-    "rgba(12,26,65,": "rgba(169,184,232,",
+    DEEP_NAVY: "#AEB8D6",
+    NAVY: "#8E9CC6",
+    MID_BLUE: "#7F8EB9",
+    BROWN: "#B39A63",
+    GOLD_MID: "#BFA25A",
+    GOLD_DARK: "#9C8250",
+    DEEP_RGBA: "rgba(174,184,214,",
 }
 
 
@@ -1516,7 +1919,7 @@ def themed(fig, dark, mono=False):
     mp = dict(DARK_MAP)
     if mono:
         mp[DEEP_NAVY] = PALE_GOLD
-        mp["rgba(12,26,65,"] = "rgba(232,200,113,"
+        mp[DEEP_RGBA] = _rgba_prefix(PALE_GOLD)
         mp[WARM_GOLD] = CREAM
     s = fig.to_json()
     for a, b in mp.items():
@@ -1557,38 +1960,58 @@ def graph_cb(*args, mono=False):
 # ---------- Layout final: tema, barra lateral plegable, botones -------------------
 topbar = html.Div([
     html.Div([
-        html.Button("☰", id="sb-btn", className="icon-btn", title="Mostrar / ocultar el menú lateral"),
+        html.Button(icon("panel"), id="sb-btn", className="icon-btn", title="Mostrar u ocultar el menú lateral",
+                    **{"aria-label": "Mostrar u ocultar el menú lateral"}),
         html.Div([html.Div(PROJECT_TITLE, className="t1"), html.Div(COURSE, className="t2")]),
     ], className="tb-left"),
     html.Div([
-        html.Div(f"{len(df):,} clientes · {GLOBAL_RATE:.1%} default", className="badge"),
-        html.Button("🌙 Modo oscuro", id="theme-btn", n_clicks=0, className="icon-btn"),
+        html.Div([icon("chip"), f"{len(df):,} clientes · {GLOBAL_RATE:.1%} default"], className="badge"),
+        html.A(icon("notebook"), href=NOTEBOOK_URL, target="_blank", rel="noopener noreferrer",
+               className="icon-btn", title="Abrir el notebook del EDA", **{"aria-label": "Abrir el notebook del EDA"}),
+        html.A(icon("github"), href=REPO_PROJECT, target="_blank", rel="noopener noreferrer",
+               className="icon-btn", title="Abrir el repositorio del proyecto",
+               **{"aria-label": "Abrir el repositorio del proyecto"}),
+        html.Button([icon("sun", "t-sun"), icon("moon", "t-moon")], id="theme-btn", n_clicks=0,
+                    className="theme-toggle", title="Cambiar a modo oscuro",
+                    **{"aria-label": "Cambiar entre modo claro y oscuro"}),
     ], className="tb-right"),
 ], className="topbar")
 
 app.layout = html.Div([
     dcc.Location(id="url"),
     dcc.Store(id="theme", storage_type="local", data="light"),
+    # interruptor de tema de la portada (solo visible en la portada, ver CSS)
+    html.Button([icon("sun", "t-sun"), icon("moon", "t-moon")], id="theme-btn2", n_clicks=0,
+                className="theme-toggle cover-toggle", title="Cambiar entre modo claro y oscuro",
+                **{"aria-label": "Cambiar entre modo claro y oscuro"}),
     sidebar,
     html.Div([topbar, html.Div(id="page", className="content"), footer], className="main"),
 ], id="shell", className="app")
 
 
-@app.callback(Output("theme", "data"), Input("theme-btn", "n_clicks"), State("theme", "data"),
-              prevent_initial_call=True)
-def toggle_theme(n, t):
+@app.callback(Output("theme", "data"), Input("theme-btn", "n_clicks"), Input("theme-btn2", "n_clicks"),
+              State("theme", "data"), prevent_initial_call=True)
+def toggle_theme(n, n2, t):
     return "light" if t == "dark" else "dark"
 
 
 app.clientside_callback(
     """function(t) { t = t || 'light'; document.documentElement.setAttribute('data-theme', t);
-         return t === 'dark' ? '☀️ Modo claro' : '🌙 Modo oscuro'; }""",
-    Output("theme-btn", "children"), Input("theme", "data"))
+         return t === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'; }""",
+    Output("theme-btn", "title"), Input("theme", "data"))
 
+# Estado de pantalla unificado: portada sin marco (/) o dash con menú plegable
 app.clientside_callback(
-    """function(n) { setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 350);
+    """function(n, p) { p = p || '/'; if (p.length > 1 && p.slice(-1) === '/') p = p.slice(0, -1);
+         if (p === '/') return 'app cover';
+         setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 350);
          return (n || 0) % 2 === 1 ? 'app collapsed' : 'app'; }""",
-    Output("shell", "className"), Input("sb-btn", "n_clicks"))
+    Output("shell", "className"), Input("sb-btn", "n_clicks"), Input("url", "pathname"))
+
+
+@graph_cb(Output("home-graph", "figure"), mono=True)
+def cb_home():
+    return fig_home()
 
 
 @graph_cb(Output("target-graph", "figure"), mono=True)
@@ -1606,9 +2029,28 @@ def cb_corr():
     return fig_corr()
 
 
+def nav_buttons(path):
+    """Botones Anterior / Siguiente para recorrer el tablero en orden."""
+    order = [p for p, _, _ in NAV]
+    i = order.index(path) if path in order else 0
+    left = right = html.Span()
+    if i > 0:
+        left = dcc.Link([icon("arrow", "flip"), html.Div([html.Small("Anterior"), html.B(NAV[i - 1][1])])],
+                        href=order[i - 1], className="pn prev")
+    if i < len(order) - 1:
+        right = dcc.Link([html.Div([html.Small("Siguiente"), html.B(NAV[i + 1][1])]), icon("arrow")],
+                         href=order[i + 1], className="pn next")
+    return html.Div([left, right], className="pn-row")
+
+
 @app.callback(Output("page", "children"), Input("url", "pathname"))
 def route(path):
     path = (path or "/").rstrip("/") or "/"
+    body = _route(path)
+    return body if path == "/" else html.Div([body, nav_buttons(path)])
+
+
+def _route(path):
     if path == "/univariado":
         return page_uni()
     if path == "/multivariado":
@@ -1617,13 +2059,17 @@ def route(path):
         return page_problem()
     if path == "/marco":
         return page_marco()
-    return page_intro()
+    if path == "/introduccion":
+        return page_intro()
+    if path == "/enlaces":
+        return page_links()
+    return page_home()
 
 
 @app.callback([Output(f"nav-{i}", "className") for i in range(len(NAV))], Input("url", "pathname"))
 def highlight(path):
     path = (path or "/").rstrip("/") or "/"
-    return ["active" if path == p else "" for p, _ in NAV]
+    return ["active" if path == p else "" for p, _, _i in NAV]
 
 
 # ---------- Callbacks: Univariado (gráficas de un solo color) ------------------
@@ -1672,4 +2118,4 @@ def cb_splom(vars_):
 if __name__ == "__main__":
     app.run(debug=True, port=8050)
 
-# Cambio de prueba para forzar commit
+# Cambio de prueba 
