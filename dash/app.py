@@ -18,7 +18,7 @@
      3. Figuras + interpretaciones: EDA Univariado
      4. Figuras + interpretaciones: EDA Multivariado
      5. Componentes de interfaz (tarjetas, KPIs, interpretaciones)
-     6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Enlaces)
+     6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Enlaces, Equipo)
      7. Aplicación, CSS, navegación y callbacks
 ===============================================================================
 """
@@ -51,6 +51,27 @@ AUTHORS = [
 ]
 INSTITUTION = "Universidad del Norte · Ciencia de Datos"   # <- editable
 COURSE = "Proyecto de Análisis Exploratorio de Datos (EDA)"  # <- editable
+
+# === CAMBIAR AQUÍ EL EQUIPO (página /equipo) ===================================
+# Fotos en assets/team/ (Dash sirve la carpeta assets/ automáticamente).
+TEAM = [
+    {"name": "Katherin Barrera López", "short": "Kath",
+     "role": "Estudiante de Ciencia de Datos · Directora de Logística en Singularity",
+     "bio": "Me gusta convertir datos en historias claras: del ETL y el análisis exploratorio "
+            "a tableros interactivos como este.",
+     "photo": "team/katherin.jpg", "card_no": "0001",
+     "github": "https://github.com/KathBarrera",
+     "linkedin": "https://www.linkedin.com/in/katherin-barrera-lopez-454b47392/",
+     "email": "lkatherin@uninorte.edu.co"},
+    {"name": "Valeria Florez Sarmiento", "short": "Valeria",
+     "role": "Estudiante de Ciencia de Datos · Universidad del Norte",
+     "bio": "Me apasiona el aprendizaje automático reproducible: del pipeline de modelado "
+            "al Jupyter Book que documenta el proyecto.",
+     "photo": "team/valeria.jpg", "card_no": "0002",
+     "github": "https://github.com/valeriaflorezs",
+     "linkedin": "https://www.linkedin.com/in/valeriaflorezs/",
+     "email": "florezvaleria@uninorte.edu.co"},
+]
 
 # --- Enlaces: libro (Jupyter Book), notebooks y repositorios -------------------
 REPO_PROJECT = "https://github.com/valeriaflorezs/Credit_Card_Project"
@@ -957,6 +978,8 @@ ICONS = {
     "coin": '<circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2.5 0 0 0-2.5-1.5c-1.4 0-2.5.9-2.5 2s1.1 1.7 2.5 2 2.5.9 2.5 2-1.1 2-2.5 2a2.5 2.5 0 0 1-2.5-1.5M12 6v1.5M12 16.5V18"/>',
     "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     "mail": '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/>',
+    "linkedin": '<path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>',
+    "flip": '<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/>',
     # --- nuevos: detalles de tarjeta de crédito ---
     "card": '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/>',
     "chip": '<rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 10h16M4 14h16M10 5v14M14 5v14"/>',
@@ -979,7 +1002,7 @@ def icon(name, cls=""):
 
 
 PAGE_ICONS = {"Introducción": "info", "Problema y Objetivos": "target", "Marco Teórico": "book",
-              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Enlaces": "link"}
+              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Enlaces": "link", "Equipo": "users"}
 
 
 # =============================================================================
@@ -1520,6 +1543,51 @@ def page_links():
     ])
 
 
+# ---------------------------------------------------------------- Equipo
+def _team_link(ic, label, href):
+    ext = {} if href.startswith("mailto:") else {"target": "_blank", "rel": "noopener noreferrer"}
+    return html.A([icon(ic), html.Span(label)], href=href, className="tc-link", title=label, **ext)
+
+
+def team_card(m, i):
+    """Tarjeta de crédito vertical: frente con foto y rol; reverso con bio y enlaces (se voltea)."""
+    front = html.Div([
+        html.Div(className="cc-gloss"),
+        html.Div([html.Span("Equipo · Uninorte", className="cc-brand"), icon("contactless", "cc-nfc")],
+                 className="cc-top"),
+        html.Div(html.Img(src=app.get_asset_url(m["photo"]), alt=f"Foto de {m['name']}", loading="lazy"),
+                 className="tc-photo"),
+        html.Div([html.Div(className="cc-chip tc-chip"),
+                  html.Div(f"•••• •••• •••• {m['card_no']}", className="tc-number")], className="tc-mid"),
+        html.Div([html.Span("Titular", className="cc-lbl"), html.Div(m["name"], className="tc-name"),
+                  html.Div(m["role"], className="tc-role")]),
+        html.Div([icon("flip"), "Toca para ver contacto"], className="tc-hint"),
+    ], className="cc-face tc-front")
+    back = html.Div([
+        html.Div(className="cc-gloss"),
+        html.Div(className="cc-mag tc-mag"),
+        html.Div([html.Span("Firma autorizada", className="tc-sig-lbl"),
+                  html.Div(m["short"], className="tc-sig-name")], className="tc-sig"),
+        html.P(m["bio"], className="tc-bio"),
+        html.Div([_team_link("github", "GitHub", m["github"]),
+                  _team_link("linkedin", "LinkedIn", m["linkedin"]),
+                  _team_link("mail", m["email"], "mailto:" + m["email"])], className="tc-links"),
+        html.P("Universidad del Norte · Ciencia de Datos", className="cc-fine tc-fine"),
+    ], className="cc-face tc-back")
+    return html.Div(html.Div([front, back], className="tc-inner"), className="tc", tabIndex=0,
+                    **{"role": "button", "aria-pressed": "false",
+                       "aria-label": f"Tarjeta de {m['name']}. Púlsala para ver su contacto"})
+
+
+def page_team():
+    return html.Div([
+        page_title("Equipo", "Quiénes hicimos este análisis y cómo contactarnos"),
+        html.Div([html.Div(team_card(m, i), className="tc-scene") for i, m in enumerate(TEAM)],
+                 className="team-grid"),
+        html.P("Haz clic o toca una tarjeta para voltearla y ver la bio y los enlaces.", className="muted team-hint"),
+    ])
+
+
 # =============================================================================
 # 7. APLICACIÓN, CSS, NAVEGACIÓN Y CALLBACKS
 # =============================================================================
@@ -1809,6 +1877,52 @@ NEW_CSS = """
 
 @media (max-width:900px) { .cover-hero { grid-template-columns:1fr; gap:32px; padding:72px 6vw 40px; } .cc-scene { order:-1; } }
 @media (prefers-reduced-motion:reduce) { .cc-settle { animation:none; } }
+
+/* ---- Equipo: tarjetas de crédito verticales ---- */
+.team-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,330px)); justify-content:center;
+  gap:clamp(24px,4vw,56px); margin:8px 0 6px; }
+.tc-scene { perspective:1200px; animation:cc-settle .8s cubic-bezier(.2,.8,.2,1) both; animation-delay:var(--d,0s); }
+.tc-scene:nth-child(2) { animation-delay:.12s; }
+.tc, .tc-inner { transform-style:preserve-3d; }
+.tc { position:relative; aspect-ratio:0.63; border-radius:22px; cursor:pointer; outline:none;
+  transition:transform .18s ease-out; transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)); }
+.tc:focus-visible { box-shadow:0 0 0 3px var(--focus); }
+.tc-inner { position:absolute; inset:0; transition:transform .8s cubic-bezier(.3,.7,.2,1); }
+.tc.flipped .tc-inner, .tc:has(.tc-link:focus-visible) .tc-inner { transform:rotateY(180deg); }
+.tc .cc-face { padding:8% 8.5%; display:flex; flex-direction:column; }
+.tc-front { gap:4.5%; }
+.tc-front .cc-top, .tc-front .tc-photo, .tc-front .tc-mid { position:relative; }
+.tc-photo { flex:1; min-height:0; border-radius:14px; overflow:hidden; border:1px solid rgba(210,187,137,.45);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.2); background:#141B30; }
+.tc-photo img { width:100%; height:100%; object-fit:cover; object-position:50% 22%; display:block;
+  filter:saturate(.92) contrast(1.03); }
+.tc-mid { display:flex; align-items:center; gap:12px; }
+.tc-chip { width:44px; flex:none; border-radius:7px; }
+.tc-chip::before { box-shadow:0 -6px 0 rgba(26,35,61,.35), 0 6px 0 rgba(26,35,61,.35); }
+.tc-number { font-family:Consolas,'Courier New',monospace; font-size:clamp(13px,1.35vw,15.5px); letter-spacing:.12em;
+  white-space:nowrap; text-shadow:0 1px 0 rgba(0,0,0,.45), 0 -1px 0 rgba(255,255,255,.14); }
+.tc-name { font-size:15px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; line-height:1.25; }
+.tc-role { margin-top:4px; font-size:12.5px; color:#D2BB89; line-height:1.4; }
+.tc-hint { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#9AA3BA; letter-spacing:.04em; }
+.tc-hint .ico { width:13px; height:13px; }
+.tc-back { transform:rotateY(180deg); padding:0 !important; }
+.tc-mag { height:auto; aspect-ratio:5.2; margin-top:12%; flex:none; }
+.tc-sig { margin:7% 8.5% 0; padding:9px 12px; border-radius:6px; color:#1A233D;
+  background:repeating-linear-gradient(135deg, #F3EFE7 0 6px, #E9E3D3 6px 12px); }
+.tc-sig-lbl { display:block; font-size:9.5px; letter-spacing:.08em; color:#5D667F; text-transform:uppercase; }
+.tc-sig-name { font-family:'Brush Script MT','Segoe Script',cursive; font-size:24px; line-height:1.15; }
+.tc-bio { position:relative; margin:7% 8.5% 0; font-size:13.5px; line-height:1.55; color:#E3DED3; }
+.tc-links { position:relative; display:grid; gap:8px; margin:auto 8.5% 0; }
+.tc-link { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; min-width:0;
+  border:1px solid rgba(210,187,137,.32); background:rgba(255,255,255,.04); color:#F3EFE7; text-decoration:none;
+  font-size:13px; transition:background .15s, border-color .15s; }
+.tc-link span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tc-link .ico { color:#D2BB89; }
+.tc-link:hover, .tc-link:focus-visible { background:rgba(210,187,137,.14); border-color:#D2BB89; }
+.tc-fine { position:relative; margin:5% 8.5% 7% !important; }
+.team-hint { text-align:center; font-size:13px; margin:18px 0 8px; }
+@media (max-width:600px) { .team-grid { grid-template-columns:minmax(0,320px); } }
+@media (prefers-reduced-motion:reduce) { .tc-scene { animation:none; } .tc-inner { transition:none; } }
 """
 
 # ---------- JS de la portada: inclinación con el mouse, brillo y volteo ----------
@@ -1839,6 +1953,37 @@ COVER_JS = """
     if ((e.key === 'Enter' || e.key === ' ') && a && a.id === 'cc') { e.preventDefault(); flip(); }
   });
 })();
+
+// ---------- Equipo: tarjetas verticales (.tc) — inclinación, brillo y volteo ----------
+(function () {
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  function clear(c) { ['--rx', '--ry', '--mx', '--my'].forEach(function (k) { c.style.removeProperty(k); }); }
+  document.addEventListener('mousemove', function (e) {
+    if (reduce || !fine) return;
+    var hit = e.target.closest ? e.target.closest('.tc') : null;
+    document.querySelectorAll('.tc').forEach(function (c) {
+      if (c !== hit) { clear(c); return; }
+      var r = c.getBoundingClientRect();
+      var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      c.style.setProperty('--rx', ((0.5 - y) * 10).toFixed(2) + 'deg');
+      c.style.setProperty('--ry', ((x - 0.5) * 12).toFixed(2) + 'deg');
+      c.style.setProperty('--mx', (x * 100).toFixed(1) + '%');
+      c.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+    });
+  });
+  function flip(c) { c.classList.toggle('flipped');
+    c.setAttribute('aria-pressed', c.classList.contains('flipped') ? 'true' : 'false'); }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || e.target.closest('a')) return;   // los enlaces funcionan sin voltear
+    var c = e.target.closest('.tc'); if (c) flip(c);
+  });
+  document.addEventListener('keydown', function (e) {
+    var a = document.activeElement;
+    if ((e.key === 'Enter' || e.key === ' ') && a && a.classList && a.classList.contains('tc')) {
+      e.preventDefault(); flip(a); }
+  });
+})();
 """
 CSS += NEW_CSS
 CSS += _icon_css()
@@ -1866,7 +2011,7 @@ app.index_string = f"""<!DOCTYPE html>
 NAV = [("/", "Inicio", "home"), ("/introduccion", "Introducción", "info"),
        ("/problema", "Problema y Objetivos", "target"), ("/marco", "Marco Teórico", "book"),
        ("/univariado", "EDA Univariado", "bars"), ("/multivariado", "EDA Multivariado", "scatter"),
-       ("/enlaces", "Enlaces", "link")]
+       ("/enlaces", "Enlaces", "link"), ("/equipo", "Equipo", "users")]
 
 sidebar = html.Div([
     dcc.Link([html.Div([icon("card"), "Proyecto EDA"], className="brand-tag"),
@@ -2063,6 +2208,8 @@ def _route(path):
         return page_intro()
     if path == "/enlaces":
         return page_links()
+    if path == "/equipo":
+        return page_team()
     return page_home()
 
 
