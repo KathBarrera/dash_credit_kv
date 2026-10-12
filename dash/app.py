@@ -56,14 +56,14 @@ COURSE = "Proyecto de Análisis Exploratorio de Datos (EDA)"  # <- editable
 # Fotos en assets/team/ (Dash sirve la carpeta assets/ automáticamente).
 TEAM = [
     {"name": "Katherin Barrera López", "short": "Kath",
-     "role": "Estudiante de Ciencia de Datos · Directora de Logística en Singularity",
+     "role": "Estudiante de Ciencia de Datos · Universidad del Norte",
      "bio": "Me gusta convertir datos en historias claras: del ETL y el análisis exploratorio "
             "a tableros interactivos como este.",
      "photo": "team/katherin.jpg", "card_no": "0001",
      "github": "https://github.com/KathBarrera",
      "linkedin": "https://www.linkedin.com/in/katherin-barrera-l%C3%B3pez-454b47392/",
      "email": "lkatherin@uninorte.edu.co"},
-    {"name": "Valeria Florez Sarmiento", "short": "Valeria",
+    {"name": "Valeria Florez Sarmiento", "short": "Vale",
      "role": "Estudiante de Ciencia de Datos · Universidad del Norte",
      "bio": "Me apasiona el aprendizaje automático reproducible: del pipeline de modelado "
             "al Jupyter Book que documenta el proyecto.",
