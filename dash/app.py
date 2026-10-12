@@ -61,7 +61,7 @@ TEAM = [
             "a tableros interactivos como este.",
      "photo": "team/katherin.jpg", "card_no": "0001",
      "github": "https://github.com/KathBarrera",
-     "linkedin": "https://www.linkedin.com/in/katherin-barrera-lopez-454b47392/",
+     "linkedin": "https://www.linkedin.com/in/katherin-barrera-l%C3%B3pez-454b47392/",
      "email": "lkatherin@uninorte.edu.co"},
     {"name": "Valeria Florez Sarmiento", "short": "Valeria",
      "role": "Estudiante de Ciencia de Datos · Universidad del Norte",
@@ -1549,6 +1549,14 @@ def _team_link(ic, label, href):
     return html.A([icon(ic), html.Span(label)], href=href, className="tc-link", title=label, **ext)
 
 
+def _copy_email(email):
+    """Botón que copia el correo al portapapeles (ver TEAM_JS) y avisa con «¡Correo copiado!»."""
+    return html.Button([icon("mail"), html.Span(email, className="tc-copy-txt"),
+                        html.Span("¡Correo copiado!", className="tc-copy-ok", **{"aria-live": "polite"})],
+                       className="tc-link tc-copy", title=f"Copiar {email}", n_clicks=0,
+                       **{"data-email": email, "type": "button"})
+
+
 def team_card(m, i):
     """Tarjeta de crédito vertical: frente con foto y rol; reverso con bio y enlaces (se voltea)."""
     front = html.Div([
@@ -1571,7 +1579,7 @@ def team_card(m, i):
         html.P(m["bio"], className="tc-bio"),
         html.Div([_team_link("github", "GitHub", m["github"]),
                   _team_link("linkedin", "LinkedIn", m["linkedin"]),
-                  _team_link("mail", m["email"], "mailto:" + m["email"])], className="tc-links"),
+                  _copy_email(m["email"])], className="tc-links"),
         html.P("Universidad del Norte · Ciencia de Datos", className="cc-fine tc-fine"),
     ], className="cc-face tc-back")
     return html.Div(html.Div([front, back], className="tc-inner"), className="tc", tabIndex=0,
@@ -1919,6 +1927,12 @@ NEW_CSS = """
 .tc-link span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tc-link .ico { color:#D2BB89; }
 .tc-link:hover, .tc-link:focus-visible { background:rgba(210,187,137,.14); border-color:#D2BB89; }
+button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; cursor:pointer; }
+.tc-copy { position:relative; }
+.tc-copy-ok { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:6px;
+  border-radius:10px; background:#D2BB89; color:#1A233D; font-weight:700; opacity:0; transform:scale(.96);
+  transition:opacity .2s, transform .2s; pointer-events:none; }
+.tc-copy.copied .tc-copy-ok { opacity:1; transform:none; }
 .tc-fine { position:relative; margin:5% 8.5% 7% !important; }
 .team-hint { text-align:center; font-size:13px; margin:18px 0 8px; }
 @media (max-width:600px) { .team-grid { grid-template-columns:minmax(0,320px); } }
@@ -1972,10 +1986,24 @@ COVER_JS = """
       c.style.setProperty('--my', (y * 100).toFixed(1) + '%');
     });
   });
+  function copyEmail(btn) {
+    var email = btn.getAttribute('data-email');
+    function done() { btn.classList.add('copied'); clearTimeout(btn._t);
+      btn._t = setTimeout(function () { btn.classList.remove('copied'); }, 1800); }
+    function fallback() { var t = document.createElement('textarea'); t.value = email;
+      t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); done(); } catch (err) { window.prompt('Copia el correo:', email); }
+      document.body.removeChild(t); }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(email).then(done, fallback);
+    else fallback();
+  }
   function flip(c) { c.classList.toggle('flipped');
     c.setAttribute('aria-pressed', c.classList.contains('flipped') ? 'true' : 'false'); }
   document.addEventListener('click', function (e) {
-    if (!e.target.closest || e.target.closest('a')) return;   // los enlaces funcionan sin voltear
+    if (!e.target.closest) return;
+    var cp = e.target.closest('.tc-copy');
+    if (cp) { copyEmail(cp); return; }
+    if (e.target.closest('a, button')) return;   // los enlaces funcionan sin voltear
     var c = e.target.closest('.tc'); if (c) flip(c);
   });
   document.addEventListener('keydown', function (e) {
