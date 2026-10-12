@@ -1555,7 +1555,7 @@ def team_card(m, i):
         html.Div(className="cc-gloss"),
         html.Div([html.Span("Equipo · Uninorte", className="cc-brand"), icon("contactless", "cc-nfc")],
                  className="cc-top"),
-        html.Div(html.Img(src=app.get_asset_url(m["photo"]), alt=f"Foto de {m['name']}", loading="lazy"),
+        html.Div(html.Img(src=app.get_asset_url(m["photo"]), alt=f"Foto de {m['name']}"),
                  className="tc-photo"),
         html.Div([html.Div(className="cc-chip tc-chip"),
                   html.Div(f"•••• •••• •••• {m['card_no']}", className="tc-number")], className="tc-mid"),
