@@ -18,12 +18,16 @@
      3. Figuras + interpretaciones: EDA Univariado
      4. Figuras + interpretaciones: EDA Multivariado
         4a. Modelos (resultados de results/model_results.csv)
+        4a-bis. Predecir (carga el modelo serializado modelo/modelo_credito.pkl)
      5. Componentes de interfaz (tarjetas, KPIs, interpretaciones)
-     6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Modelos, Enlaces, Equipo)
+     6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Modelos, Predecir,
+        Enlaces, Equipo)
      7. Aplicación, CSS, navegación y callbacks
 ===============================================================================
 """
 
+import json
+import sys
 import warnings
 from pathlib import Path
 from urllib.parse import quote
@@ -35,7 +39,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 from scipy import stats
-from dash import Dash, Input, Output, State, dcc, html
+from dash import Dash, Input, Output, State, ctx, dcc, html
 
 warnings.filterwarnings("ignore")
 
@@ -1074,6 +1078,81 @@ def fig_best_cm():
 
 
 # =============================================================================
+# 4a-bis. PREDECIR: modelo serializado con joblib (modelo/modelo_credito.pkl)
+# =============================================================================
+# El .pkl lo genera `python -m modelo.entrenar` (ver modelo/entrenar.py). Es un
+# Pipeline completo: transforma las 23 variables originales, aplica one-hot y
+# predice con un Random Forest con pesos de clase. Aquí solo se CARGA y se usa.
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))   # para que joblib encuentre modelo.features
+MODEL_FILE = BASE_DIR / "modelo" / "modelo_credito.pkl"
+MODEL_META_FILE = BASE_DIR / "modelo" / "modelo_credito.json"
+try:
+    import joblib
+    from modelo.features import INPUT_COLS
+    MODELO = joblib.load(MODEL_FILE)
+    MODELO_META = json.loads(MODEL_META_FILE.read_text(encoding="utf-8"))
+    MODELO_ERROR = None
+except Exception as _e:   # el tablero sigue funcionando aunque falte el modelo
+    MODELO, MODELO_META, MODELO_ERROR = None, {}, f"{type(_e).__name__}: {_e}"
+    INPUT_COLS = (["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BILL_COLS + PAYAMT_COLS)
+    print(f"[modelo] no se pudo cargar {MODEL_FILE.name}: {MODELO_ERROR}")
+
+PAY_STATUS = [(-2, "Sin consumo"), (-1, "Pagó todo"), (0, "Pago mínimo")] + \
+             [(i, f"{i} {'mes' if i == 1 else 'meses'} de atraso") for i in range(1, 9)]
+# Columnas del formulario en orden cronológico (Abr ... Sep)
+PAY_CHRONO = MONTH_ORDER                                         # PAY_6 ... PAY_0
+BILL_CHRONO = [f"BILL_AMT{i}" for i in range(6, 0, -1)]          # BILL_AMT6 = abril
+PAYAMT_CHRONO = [f"PAY_AMT{i}" for i in range(6, 0, -1)]
+
+
+def _profile_typical():
+    """Cliente «típico»: mediana de las numéricas y moda de las categóricas."""
+    out = {c: int(df[c].mode()[0]) for c in CAT_COLS + PAY_COLS}
+    out.update({c: int(round(df[c].median(), -2)) for c in ["LIMIT_BAL"] + BILL_COLS + PAYAMT_COLS})
+    out["AGE"] = int(df["AGE"].median())
+    return out
+
+
+PROFILES = {
+    "tipico": ("Cliente típico", _profile_typical()),
+    "al-dia": ("Al día, cupo alto", {
+        "LIMIT_BAL": 360000, "SEX": 2, "EDUCATION": 1, "MARRIAGE": 2, "AGE": 36,
+        **{c: -1 for c in PAY_COLS},
+        **dict(zip(BILL_COLS, [18500, 21000, 15800, 19200, 12400, 16900])),
+        **dict(zip(PAYAMT_COLS, [21000, 15800, 19200, 12400, 16900, 14000]))}),
+    "atrasos": ("Atrasos recientes", {
+        "LIMIT_BAL": 50000, "SEX": 1, "EDUCATION": 3, "MARRIAGE": 1, "AGE": 47,
+        **dict(zip(PAY_COLS, [2, 2, 2, 0, 0, 0])),
+        **dict(zip(BILL_COLS, [49200, 48100, 46800, 45100, 44300, 43000])),
+        **dict(zip(PAYAMT_COLS, [0, 0, 1500, 1600, 1700, 1800]))}),
+}
+
+
+def predict_risk(values):
+    """values: dict con las 23 variables -> puntaje de riesgo (0-1) del modelo serializado."""
+    row = pd.DataFrame([[values[c] for c in INPUT_COLS]], columns=INPUT_COLS)
+    return float(MODELO.predict_proba(row)[0, 1])
+
+
+def fig_risk_gauge(score=None):
+    """Indicador del puntaje de riesgo con el umbral de decisión (0.5)."""
+    thr = MODELO_META.get("umbral", 0.5) * 100
+    val = 0 if score is None else score * 100
+    color = WARM_GOLD if val >= thr else NAVY
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number", value=val, number=dict(suffix="%", valueformat=".0f", font=dict(size=46)),
+        gauge=dict(
+            axis=dict(range=[0, 100], ticksuffix="%", tickwidth=1, tickcolor=GREY_BLUE),
+            bar=dict(color=color, thickness=.32), bgcolor="rgba(0,0,0,0)", borderwidth=0,
+            steps=[dict(range=[0, thr], color=f"{DEEP_RGBA}0.06)"), dict(range=[thr, 100], color="rgba(184,143,61,0.16)")],
+            threshold=dict(line=dict(color=DEEP_NAVY, width=3), thickness=.85, value=thr))))
+    fig.update_layout(height=250, margin=dict(l=30, r=30, t=20, b=10), paper_bgcolor=WHITE,
+                      font=dict(color=DEEP_NAVY, family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"))
+    return fig
+
+
+# =============================================================================
 # 4b. ICONOS (SVG propios, sin dependencias ni emojis; toman el color del texto)
 # =============================================================================
 ICONS = {
@@ -1109,6 +1188,8 @@ ICONS = {
     "layers": '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
     "trophy": '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
     "chevron": '<path d="m9 6 6 6-6 6"/>',
+    "gauge": '<path d="M3.5 18a9.5 9.5 0 1 1 17 0"/><path d="m12 13 4.5-4.5"/><circle cx="12" cy="13" r="1.4"/>',
+    "save": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
 }
 
 
@@ -1127,7 +1208,7 @@ def icon(name, cls=""):
 
 
 PAGE_ICONS = {"Introducción": "info", "Problema y Objetivos": "target", "Marco Teórico": "book",
-              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Modelos": "layers", "Enlaces": "link", "Equipo": "users"}
+              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Modelos": "layers", "Predecir": "gauge", "Enlaces": "link", "Equipo": "users"}
 
 
 # =============================================================================
@@ -1795,6 +1876,145 @@ def page_models():
     ])
 
 
+# ---------------------------------------------------------------- Predecir
+def _pf_field(label, comp, hint=None, cls=""):
+    return html.Div([html.Label(label, htmlFor=getattr(comp, "id", None), className="ctl-label"), comp,
+                     html.Div(hint, className="pf-hint") if hint else None], className=f"pf-field {cls}".strip())
+
+
+def _num(id_, value, step="any", min_=None):
+    return dcc.Input(id=f"pf-{id_}", type="number", value=value, step=step, min=min_, debounce=True,
+                     className="pf-input", placeholder=pretty(id_))
+
+
+def _dd(id_, options, value):
+    return dcc.Dropdown(id=f"pf-{id_}", options=options, value=value, clearable=False, className="pf-dd")
+
+
+def _cat_opts(col):
+    return [{"label": v, "value": k} for k, v in CAT_LABELS[col].items()]
+
+
+SERIALIZE_CODE = """import joblib
+
+# 1) Entrenar y guardar (modelo/entrenar.py)
+modelo = busqueda.best_estimator_            # Pipeline: variables + one-hot + Random Forest
+joblib.dump(modelo, "modelo/modelo_credito.pkl", compress=3)
+
+# 2) Cargar en el tablero (app.py), una sola vez al arrancar
+modelo = joblib.load("modelo/modelo_credito.pkl")
+
+# 3) Predecir con los datos del formulario
+cliente = pd.DataFrame([valores], columns=INPUT_COLS)
+riesgo = modelo.predict_proba(cliente)[0, 1]  # puntaje de 0 a 1"""
+
+
+def model_info_card():
+    m = MODELO_META
+    pr = m.get("prueba", {})
+    hp = m.get("hiperparametros", {})
+    ver = m.get("versiones", {})
+    rows = [("Modelo", f"{m.get('modelo', '—')} · {m.get('balanceo', '')}"),
+            ("Búsqueda", m.get("busqueda", "—")),
+            ("Hiperparámetros", ", ".join(f"{k} = {v}" for k, v in hp.items()) or "—"),
+            ("Prueba (20 %)", f"F1 {pr.get('f1', 0):.3f} · recall {pr.get('recall', 0):.3f} · precisión "
+                              f"{pr.get('precision', 0):.3f} · ROC-AUC {pr.get('roc_auc', 0):.3f}" if pr else "—"),
+            ("Entrenado", f"{m.get('n_entrenamiento', 0):,} clientes · {m.get('fecha', '—')}"),
+            ("Versiones", f"scikit-learn {ver.get('scikit-learn', '—')} · joblib {ver.get('joblib', '—')}")]
+    return card("Cómo se serializó el modelo", [
+        html.P(["Serializar es guardar el modelo ya entrenado en un archivo para usarlo después sin volver a "
+                "entrenarlo. Se entrenó una vez con ", html.Code("modelo/entrenar.py"), ", se guardó con ",
+                html.Code("joblib.dump"), " en ", html.Code("modelo_credito.pkl"), " y el tablero lo carga con ",
+                html.Code("joblib.load"), " al arrancar."]),
+        html.Pre(SERIALIZE_CODE, className="formula pf-code"),
+        html.Div(_tbl(["Detalle", "Valor"], rows), className="table-wrap"),
+        html.P(["El archivo guarda todo el pipeline, incluidas las transformaciones del proyecto (logaritmos y "
+                "resumen de las facturas), que viven en ", html.Code("modelo/features.py"),
+                ". Para cargarlo hay que usar la misma versión de scikit-learn con la que se guardó."],
+               className="muted"),
+    ], subtitle="Entrenar → guardar (.pkl) → cargar → predecir")
+
+
+def page_predict():
+    head = page_title("Predecir", "Estima el riesgo de incumplimiento de un cliente con el modelo serializado")
+    if MODELO is None:
+        return html.Div([head, card("El modelo no está disponible", [
+            html.P(["No se encontró ", html.Code("modelo/modelo_credito.pkl"), " o no se pudo cargar."]),
+            html.P(["Para generarlo, desde la carpeta ", html.Code("dash/"), " ejecuta ",
+                    html.Code("python -m modelo.entrenar"), "."]),
+            html.P(MODELO_ERROR, className="muted")])])
+    base = PROFILES["tipico"][1]
+    pay_opts = [{"label": f"{k} · {v}", "value": k} for k, v in PAY_STATUS]
+    form = card("Datos del cliente", [
+        html.Div([html.Span("Cargar un ejemplo:", className="pf-hint"),
+                  *[html.Button(lbl, id=f"pf-prof-{k}", n_clicks=0, className="btn ghost pf-prof", type="button")
+                    for k, (lbl, _v) in PROFILES.items()]], className="pf-profiles"),
+        html.H4("Perfil", className="pf-h"),
+        html.Div([
+            _pf_field("Cupo (NT$)", _num("LIMIT_BAL", base["LIMIT_BAL"], min_=0), cls="pf-wide"),
+            _pf_field("Edad", _num("AGE", base["AGE"], 1, 18)),
+            _pf_field("Sexo", _dd("SEX", _cat_opts("SEX"), base["SEX"])),
+            _pf_field("Educación", _dd("EDUCATION", _cat_opts("EDUCATION"), base["EDUCATION"])),
+            _pf_field("Estado civil", _dd("MARRIAGE", _cat_opts("MARRIAGE"), base["MARRIAGE"])),
+        ], className="pf-grid pf-g5"),
+        html.H4("Estado de pago por mes (2005)", className="pf-h"),
+        html.Div([_pf_field(m, _dd(c, pay_opts, base[c])) for m, c in zip(MONTH_LBL, PAY_CHRONO)],
+                 className="pf-grid pf-g3"),
+        html.H4("Montos por mes (NT$)", className="pf-h"),
+        html.Div(html.Div([
+            html.Span(), *[html.Span(m, className="pf-mh") for m in MONTH_LBL],
+            html.Span("Facturado", className="pf-rh"), *[_num(c, base[c]) for c in BILL_CHRONO],
+            html.Span("Pagado", className="pf-rh"), *[_num(c, base[c], min_=0) for c in PAYAMT_CHRONO],
+        ], className="pf-amounts"), className="table-wrap"),
+        html.P("Los cambios se reflejan en el resultado al salir de cada campo.", className="muted"),
+    ], cls="pf-form")
+    result = card("Resultado", [
+        dcc.Graph(id="pf-gauge", figure=fig_risk_gauge(), config={"displaylogo": False, "displayModeBar": False}),
+        html.Div(id="pf-verdict"),
+    ], subtitle="Puntaje de riesgo del modelo y decisión con umbral 0.5", cls="pf-result")
+    return html.Div([
+        head,
+        html.Div([form, html.Div(result, className="pf-side")], className="pf-layout"),
+        model_info_card(),
+    ])
+
+
+def predict_verdict(values, score):
+    thr = MODELO_META.get("umbral", 0.5)
+    high = score >= thr
+    pr = MODELO_META.get("prueba", {})
+    late = [m for m, c in zip(MONTH_LBL, PAY_CHRONO) if (values.get(c) or 0) >= 1]
+    signals = []
+    if (values.get("PAY_0") or 0) >= 1:
+        n = values["PAY_0"]
+        signals.append(f"Tiene {n} {'mes' if n == 1 else 'meses'} de atraso en septiembre, la señal que más pesa "
+                       "en el modelo.")
+    elif late:
+        signals.append(f"Registra atrasos en {', '.join(late)}, aunque en septiembre está al día.")
+    else:
+        signals.append("No registra atrasos en los seis meses, lo que reduce el riesgo.")
+    bills = [values.get(c) or 0 for c in BILL_COLS]
+    paid = [values.get(c) or 0 for c in PAYAMT_COLS]
+    if sum(bills) > 0:
+        signals.append(f"Pagó el equivalente al {min(sum(paid) / sum(bills), 9.99):.0%} de lo facturado en el periodo.")
+    lim = values.get("LIMIT_BAL") or 0
+    q = (df["LIMIT_BAL"] < lim).mean()
+    signals.append(f"Su cupo es mayor que el de {q:.0%} de los clientes del banco (un cupo alto se asocia con menos riesgo).")
+    return html.Div([
+        html.Div([icon("alert" if high else "target"),
+                  html.Div([html.B("Riesgo alto: probable incumplimiento" if high else "Riesgo bajo: probable pago"),
+                            html.Span(f"Puntaje {score:.0%} · umbral {thr:.0%}")])],
+                 className="pf-badge " + ("hi" if high else "lo")),
+        html.Ul([html.Li(s) for s in signals], className="pf-signals"),
+        html.P(f"Con este umbral el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
+               f"{pr.get('precision', 0):.0%} de los clientes que marca como riesgosos (datos de prueba)."
+               if pr else "", className="muted"),
+        html.P("El puntaje no es una probabilidad calibrada: el modelo se entrenó con pesos de clase, que lo hacen "
+               "sobrestimar el riesgo frente a la tasa real de default (22 %). Sirve para ordenar y clasificar "
+               "clientes, no para leerlo como «X % de probabilidad».", className="muted"),
+    ])
+
+
 # ---------------------------------------------------------------- Enlaces
 def book_summary():
     return card("Sobre el proyecto", [
@@ -2315,6 +2535,42 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
   .mc-slide.best, .mc-slide.best::after { animation:none; }
   .mc-slide.best { box-shadow:0 0 0 1px rgba(210,187,137,.7), 0 0 30px 2px rgba(210,187,137,.45); }
   .mc-track { scroll-behavior:auto; } }
+
+/* ---- Predecir: formulario + resultado ---- */
+.pf-layout { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr); gap:20px; align-items:start; }
+.pf-side { position:sticky; top:84px; }
+.pf-profiles { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:4px 0 6px; }
+.pf-prof { padding:6px 12px; font-size:13px; cursor:pointer; background:transparent; font-family:inherit; }
+.pf-h { margin:18px 0 10px; font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--accent-2); display:flex; align-items:center; gap:10px; }
+.pf-h::after { content:''; flex:1; height:1px; background:var(--line); }
+.pf-grid { display:grid; gap:12px 14px; } .pf-g5 { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.pf-g3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.pf-field { min-width:0; } .pf-field .ctl-label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pf-hint { font-size:12.5px; color:var(--muted); }
+.pf-input { width:100%; height:36px; padding:6px 10px; border-radius:6px; border:1px solid var(--line-strong);
+  background:var(--surface); color:var(--text); font:inherit; font-size:14px; font-variant-numeric:tabular-nums; }
+.pf-input:focus { outline:none; border-color:var(--accent-2); box-shadow:0 0 0 3px rgba(184,143,61,.18); }
+.pf-dd .Select-control { min-height:36px; border-radius:6px; }
+.pf-amounts { display:grid; grid-template-columns:78px repeat(6,minmax(0,1fr)); gap:8px; align-items:center; }
+.pf-amounts .pf-input { padding:6px 7px; font-size:13px; }
+.pf-mh { font-size:12.5px; font-weight:600; color:var(--muted); text-align:center; }
+.pf-rh { font-size:12.5px; font-weight:600; color:var(--muted); }
+.pf-result { border-top:3px solid var(--accent-2); }
+.pf-badge { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin:4px 0 10px; }
+.pf-badge .ico { width:24px; height:24px; flex:none; }
+.pf-badge b { display:block; font-size:15px; } .pf-badge span { font-size:12.5px; color:var(--muted); }
+.pf-badge.hi { background:rgba(184,143,61,.14); border:1px solid rgba(184,143,61,.55); }
+.pf-badge.hi .ico { color:var(--accent-2); }
+.pf-badge.lo { background:var(--tech-bg); border:1px solid var(--line-strong); }
+.pf-badge.lo .ico { color:var(--tech-line); }
+.pf-signals { margin:0 0 6px 18px; padding:0; font-size:13.5px; } .pf-signals li { margin:5px 0; }
+.pf-code { white-space:pre; line-height:1.55; margin:12px 0 !important; }
+@media (max-width:1250px) { .pf-layout { grid-template-columns:1fr; } .pf-side { position:static; }
+  .pf-g5 { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:700px) { .pf-g5 { grid-template-columns:repeat(2,minmax(0,1fr)); } .pf-wide { grid-column:span 2; }
+  .pf-g3 { grid-template-columns:1fr; }
+  .pf-amounts { min-width:600px; } }
 """
 
 # ---------- JS de la portada: inclinación con el mouse, brillo y volteo ----------
@@ -2470,7 +2726,8 @@ app.index_string = f"""<!DOCTYPE html>
 NAV = [("/", "Inicio", "home"), ("/introduccion", "Introducción", "info"),
        ("/problema", "Problema y Objetivos", "target"), ("/marco", "Marco Teórico", "book"),
        ("/univariado", "EDA Univariado", "bars"), ("/multivariado", "EDA Multivariado", "scatter"),
-       ("/modelos", "Modelos", "layers"), ("/enlaces", "Enlaces", "link"), ("/equipo", "Equipo", "users")]
+       ("/modelos", "Modelos", "layers"), ("/predecir", "Predecir", "gauge"),
+       ("/enlaces", "Enlaces", "link"), ("/equipo", "Equipo", "users")]
 
 sidebar = html.Div([
     dcc.Link([html.Div([icon("card"), "Proyecto EDA"], className="brand-tag"),
@@ -2649,6 +2906,29 @@ def cb_best_cm():
     return fig_best_cm()
 
 
+# ---------- Callbacks: Predecir -----------------------------------------------
+@app.callback([Output(f"pf-{c}", "value") for c in INPUT_COLS],
+              [Input(f"pf-prof-{k}", "n_clicks") for k in PROFILES], prevent_initial_call=True)
+def cb_profile(*_clicks):
+    key = str(ctx.triggered_id or "pf-prof-tipico").replace("pf-prof-", "")
+    prof = PROFILES.get(key, PROFILES["tipico"])[1]
+    return [prof[c] for c in INPUT_COLS]
+
+
+@graph_cb(Output("pf-gauge", "figure"), Output("pf-verdict", "children"),
+          *[Input(f"pf-{c}", "value") for c in INPUT_COLS])
+def cb_predict(*vals):
+    if MODELO is None:
+        return fig_risk_gauge(), ""
+    values = dict(zip(INPUT_COLS, vals))
+    missing = [pretty(c) for c, v in values.items() if v is None]
+    if missing:
+        return fig_risk_gauge(), html.P("Completa los campos: " + ", ".join(missing[:4]) +
+                                        ("…" if len(missing) > 4 else ""), className="callout")
+    score = predict_risk(values)
+    return fig_risk_gauge(score), predict_verdict(values, score)
+
+
 def nav_buttons(path):
     """Botones Anterior / Siguiente para recorrer el tablero en orden."""
     order = [p for p, _, _ in NAV]
@@ -2683,6 +2963,8 @@ def _route(path):
         return page_intro()
     if path == "/modelos":
         return page_models()
+    if path == "/predecir":
+        return page_predict()
     if path == "/enlaces":
         return page_links()
     if path == "/equipo":

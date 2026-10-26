@@ -24,6 +24,7 @@ El análisis incluye:
 - Pruebas estadísticas: χ² con V de Cramér, Mann-Whitney, t de Welch y Kruskal-Wallis
 - Diagnóstico de multicolinealidad entre las variables de facturación (BILL_AMT)
 - Análisis del desbalance de clases de la variable objetivo
+- Sección **Predecir**: formulario con los datos de un cliente que devuelve su puntaje de riesgo usando un Random Forest **serializado con `joblib`** (`dash/modelo/modelo_credito.pkl`)
 - Modo claro y oscuro, y menú lateral plegable
 - Sección **Modelos**: carrusel deslizable con los siete clasificadores del proyecto (mejor combinación de cada uno), el mejor modelo resaltado, F1 por técnica de balanceo, F1 frente a ROC-AUC de las 112 combinaciones, matriz de confusión del mejor modelo y resumen de SHAP
 
@@ -49,11 +50,34 @@ dash_credit_kv/
     ├── app.py                               # Aplicación completa (datos, figuras, páginas y callbacks)
     ├── results/
     │   └── model_results.csv                # 112 combinaciones de modelos (del repositorio Credit_Card_Project)
+    └── modelo/
+        ├── features.py                      # Transformaciones de variables del proyecto (las usa el .pkl)
+        ├── entrenar.py                      # Entrena y serializa el modelo (python -m modelo.entrenar)
+        ├── modelo_credito.pkl               # Modelo serializado con joblib
+        └── modelo_credito.json              # Métricas, hiperparámetros y versiones
     ├── requirements.txt                     # Dependencias del proyecto
     └── default_of_credit_card_clients.xls   # Dataset
 ```
 
-La aplicación tiene estas secciones: Introducción, Problema y Objetivos, Marco Teórico, EDA Univariado, EDA Multivariado, Modelos, Enlaces y Equipo.
+La aplicación tiene estas secciones: Introducción, Problema y Objetivos, Marco Teórico, EDA Univariado, EDA Multivariado, Modelos, Predecir, Enlaces y Equipo.
+
+### Modelo serializado (sección Predecir)
+
+El modelo se entrena una sola vez y se guarda en disco con `joblib`; el tablero solo lo carga y predice:
+
+```bash
+cd dash
+python -m modelo.entrenar        # entrena, guarda modelo/modelo_credito.pkl y verifica que cargue
+```
+
+```python
+import joblib
+joblib.dump(modelo, "modelo/modelo_credito.pkl", compress=3)   # serializar
+modelo = joblib.load("modelo/modelo_credito.pkl")              # cargar en app.py
+riesgo = modelo.predict_proba(cliente)[0, 1]                   # predecir
+```
+
+El `.pkl` guarda el pipeline completo (transformaciones del proyecto + one-hot + Random Forest con `class_weight="balanced"`), así que recibe las 23 variables originales del dataset. Debe cargarse con la misma versión de scikit-learn con la que se guardó (fijada en `requirements.txt`).
 
 `results/model_results.csv` resume los resultados de [Credit_Card_Project](https://github.com/valeriaflorezs/Credit_Card_Project) (`results/experiments_posthoc_metrics.csv` para los 96 experimentos locales y `results/svm_gpu_results_colab.csv` para SVM): F1, precisión, recall, ROC-AUC y PR-AUC medios de cada combinación modelo × técnica de balanceo × método de optimización.
 
