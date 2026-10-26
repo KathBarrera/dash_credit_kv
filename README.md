@@ -133,9 +133,9 @@ El repositorio ya trae la configuración (`railway.json`, `requirements.txt` y `
    `gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 2 --preload --timeout 120`.
 3. En **Settings → Networking** pulsa **Generate Domain** para obtener la URL pública.
 
-Si el dataset no está en `dash/`, la aplicación lo descarga de UCI al arrancar (una sola vez gracias a `--preload`).
+El dataset está en `dash/`; si faltara, la aplicación lo descarga de UCI al arrancar (una sola vez gracias a `--preload`).
 
-Durante el build, si `dash/modelo/modelo_credito.pkl` no está en el repositorio, Railway lo entrena y lo serializa con `python -m modelo.entrenar 12` (descarga los datos de UCI). Para fijar un modelo concreto, entrénalo localmente y sube el `.pkl` y el `.json`.
+El modelo de la sección Predecir ya viene serializado en `dash/modelo/modelo_credito.pkl`, así que Railway no entrena nada: solo instala dependencias y arranca. Para reentrenarlo, ejecuta `python -m modelo.entrenar` dentro de `dash/` y sube el `.pkl` y el `.json` nuevos.
 
 ---
 
