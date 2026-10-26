@@ -9,9 +9,10 @@ lo encuentra, lo descarga del repositorio UCI.
 
 Modelo: Random Forest con pesos de clase (class_weight="balanced"), la técnica
 de balanceo con la que ganó en el proyecto Credit_Card_Project. Los
-hiperparámetros se buscan con RandomizedSearchCV (F1, 3 folds) en el mismo
-espacio que usa el proyecto (src/models.py). Se evalúa en un 20 % de prueba
-que no participa en la búsqueda.
+hiperparámetros se buscan con RandomizedSearchCV (F1, 3 folds) en el espacio
+del proyecto (src/models.py), acotado para que el .pkl pese poco: hasta 300
+árboles, profundidad máxima 20 y al menos 5 clientes por hoja. Se evalúa en un
+20 % de prueba que no participa en la búsqueda.
 
 Salidas (junto a este archivo):
     modelo_credito.pkl    pipeline completo (variables + one-hot + bosque), con joblib
@@ -44,8 +45,29 @@ DASH_DIR = HERE.parent
 MODEL_PATH = HERE / "modelo_credito.pkl"
 META_PATH = HERE / "modelo_credito.json"
 TARGET = "default_payment_next_month"
-UCI_URL = ("https://archive.ics.uci.edu/ml/machine-learning-databases/00350/"
-           "default%20of%20credit%20card%20clients.xls")
+UCI_URLS = [
+    "https://archive.ics.uci.edu/ml/machine-learning-databases/00350/default%20of%20credit%20card%20clients.xls",
+    "https://archive.ics.uci.edu/static/public/350/default+of+credit+card+clients.zip",
+]
+
+
+def descargar_uci():
+    """Descarga el .xls de UCI (URL directa o, si falla, el .zip actual del sitio)."""
+    import io
+    import urllib.request
+    import zipfile
+    for url in UCI_URLS:
+        try:
+            raw = urllib.request.urlopen(url, timeout=120).read()
+            if url.endswith(".zip"):
+                with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                    name = next(n for n in z.namelist() if n.lower().endswith((".xls", ".xlsx")))
+                    raw = z.read(name)
+            print(f"[datos] descargado de {url}")
+            return pd.read_excel(io.BytesIO(raw), header=1)
+        except Exception as e:  # prueba la siguiente URL
+            print(f"[datos] falló {url}: {e}")
+    sys.exit("No se pudo descargar el dataset de UCI.")
 RANDOM_STATE = 42
 
 
@@ -63,7 +85,7 @@ def cargar_datos():
             break
     else:
         print("[datos] archivo local no encontrado; descargando desde UCI ...")
-        d = pd.read_excel(UCI_URL, header=1)
+        d = descargar_uci()
     tcol = [c for c in d.columns if "default" in str(c).lower()][0]
     d = d.rename(columns={tcol: TARGET, "PAY_1": "PAY_0"}).drop(columns=["ID"], errors="ignore")
     # mismo orden del proyecto: reagrupar categorías y luego quitar duplicados exactos
@@ -82,14 +104,14 @@ def construir_pipeline():
     ])
 
 
-def main(n_iter=20):
+def main(n_iter=25):
     X, y = cargar_datos()
     X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, stratify=y, random_state=RANDOM_STATE)
-    espacio = {   # mismo espacio de src/models.py del proyecto
-        "modelo__n_estimators": randint(100, 501),
-        "modelo__max_depth": randint(3, 31),
+    espacio = {   # espacio de src/models.py del proyecto, acotado para que el .pkl pese poco
+        "modelo__n_estimators": randint(100, 301),
+        "modelo__max_depth": randint(3, 21),
         "modelo__min_samples_split": randint(2, 51),
-        "modelo__min_samples_leaf": randint(1, 21),
+        "modelo__min_samples_leaf": randint(5, 21),
         "modelo__max_features": ["sqrt", "log2"],
     }
     busqueda = RandomizedSearchCV(construir_pipeline(), espacio, n_iter=n_iter, scoring="f1",
@@ -109,6 +131,8 @@ def main(n_iter=20):
         "modelo": "Random Forest",
         "balanceo": "class_weight='balanced'",
         "busqueda": f"RandomizedSearchCV, {n_iter} combinaciones, F1, 3 folds",
+        "espacio": "n_estimators 100-300, max_depth 3-20, min_samples_split 2-50, min_samples_leaf 5-20, "
+                   "max_features sqrt/log2",
         "hiperparametros": {k.replace("modelo__", ""): (v.item() if hasattr(v, "item") else v)
                             for k, v in busqueda.best_params_.items()},
         "f1_cv": round(float(busqueda.best_score_), 4),
@@ -139,4 +163,4 @@ def main(n_iter=20):
 
 
 if __name__ == "__main__":
-    main(int(sys.argv[1]) if len(sys.argv) > 1 else 20)
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else 25)
