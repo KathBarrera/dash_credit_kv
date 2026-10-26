@@ -100,6 +100,19 @@ http://localhost:8050/
 
 ---
 
+## Despliegue en Railway
+
+El repositorio ya trae la configuración (`railway.json`, `requirements.txt` y `.python-version` en la raíz):
+
+1. En [railway.com](https://railway.com) crea un proyecto con **New Project → Deploy from GitHub repo** y elige `KathBarrera/dash_credit_kv` (rama `main`).
+2. No hace falta cambiar el *Root Directory*: Railway instala `dash/requirements.txt` y arranca con
+   `gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 2 --preload --timeout 120`.
+3. En **Settings → Networking** pulsa **Generate Domain** para obtener la URL pública.
+
+Si el dataset no está en `dash/`, la aplicación lo descarga de UCI al arrancar (una sola vez gracias a `--preload`).
+
+---
+
 ## Equipo
 
 Este proyecto fue desarrollado por:
