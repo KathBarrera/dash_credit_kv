@@ -1,0 +1,65 @@
+{
+  "modelo": "Random Forest",
+  "balanceo": "class_weight='balanced'",
+  "busqueda": "RandomizedSearchCV, 25 combinaciones, F1, 3 folds",
+  "espacio": "n_estimators 100-300, max_depth 3-20, min_samples_split 2-50, min_samples_leaf 5-20, max_features sqrt/log2",
+  "hiperparametros": {
+    "max_depth": 14,
+    "max_features": "log2",
+    "min_samples_leaf": 10,
+    "min_samples_split": 3,
+    "n_estimators": 291
+  },
+  "f1_cv": 0.5463,
+  "prueba": {
+    "n": 5993,
+    "f1": 0.5333,
+    "precision": 0.4832,
+    "recall": 0.595,
+    "roc_auc": 0.774,
+    "pr_auc": 0.553,
+    "matriz_confusion": {
+      "tn": 3823,
+      "fp": 844,
+      "fn": 537,
+      "tp": 789
+    }
+  },
+  "n_entrenamiento": 23972,
+  "tasa_default_entrenamiento": 0.2213,
+  "umbral": 0.5,
+  "entradas": [
+    "LIMIT_BAL",
+    "SEX",
+    "EDUCATION",
+    "MARRIAGE",
+    "AGE",
+    "PAY_0",
+    "PAY_2",
+    "PAY_3",
+    "PAY_4",
+    "PAY_5",
+    "PAY_6",
+    "BILL_AMT1",
+    "BILL_AMT2",
+    "BILL_AMT3",
+    "BILL_AMT4",
+    "BILL_AMT5",
+    "BILL_AMT6",
+    "PAY_AMT1",
+    "PAY_AMT2",
+    "PAY_AMT3",
+    "PAY_AMT4",
+    "PAY_AMT5",
+    "PAY_AMT6"
+  ],
+  "versiones": {
+    "python": "3.13.17",
+    "scikit-learn": "1.9.1",
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "joblib": "1.6.0"
+  },
+  "fecha": "2026-10-26",
+  "segundos_entrenamiento": 90.7
+}
