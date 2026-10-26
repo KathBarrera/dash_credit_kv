@@ -95,7 +95,7 @@ cd dash_credit_kv
 **2. (Opcional) Crear un entorno virtual**
 
 ```bash
-conda create -n mi_env python=3.11
+conda create -n mi_env python=3.13
 conda activate mi_env
 ```
 
