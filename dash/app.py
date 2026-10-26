@@ -1098,8 +1098,6 @@ except Exception as _e:   # el tablero sigue funcionando aunque falte el modelo
     INPUT_COLS = (["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BILL_COLS + PAYAMT_COLS)
     print(f"[modelo] no se pudo cargar {MODEL_FILE.name}: {MODELO_ERROR}")
 
-PAY_STATUS = [(-2, "Sin consumo"), (-1, "Pagó todo"), (0, "Pago mínimo")] + \
-             [(i, f"{i} {'mes' if i == 1 else 'meses'} de atraso") for i in range(1, 9)]
 # Columnas del formulario en orden cronológico (Abr ... Sep)
 PAY_CHRONO = MONTH_ORDER                                         # PAY_6 ... PAY_0
 BILL_CHRONO = [f"BILL_AMT{i}" for i in range(6, 0, -1)]          # BILL_AMT6 = abril
@@ -1109,7 +1107,8 @@ PAYAMT_CHRONO = [f"PAY_AMT{i}" for i in range(6, 0, -1)]
 def _profile_typical():
     """Cliente «típico»: mediana de las numéricas y moda de las categóricas."""
     out = {c: int(df[c].mode()[0]) for c in CAT_COLS + PAY_COLS}
-    out.update({c: int(round(df[c].median(), -2)) for c in ["LIMIT_BAL"] + BILL_COLS + PAYAMT_COLS})
+    out.update({c: int(round(df[c].median(), -2)) for c in BILL_COLS + PAYAMT_COLS})
+    out["LIMIT_BAL"] = int(round(df["LIMIT_BAL"].median(), -4))
     out["AGE"] = int(df["AGE"].median())
     return out
 
@@ -1129,10 +1128,54 @@ PROFILES = {
 }
 
 
+SEX_OTHER = 3   # «Otro»: el dataset solo registra 1 = hombre y 2 = mujer
+# Grupos de variables para «¿Qué empuja su riesgo?»
+DRIVER_GROUPS = [("Historial de pagos", PAY_COLS), ("Montos pagados", PAYAMT_COLS), ("Facturación", BILL_COLS),
+                 ("Cupo de crédito", ["LIMIT_BAL"]), ("Perfil demográfico", ["AGE", "SEX", "EDUCATION", "MARRIAGE"])]
+# Variables del simulador «¿Qué pasaría si…?»: (etiqueta corta, valores, título del eje)
+WHATIF = {
+    "PAY_0": ("Atraso en septiembre", list(range(-2, 9)), "Estado de pago en septiembre"),
+    "LIMIT_BAL": ("Cupo", list(range(10000, 1000001, 30000)), "Cupo de crédito (NT$)"),
+    "PAY_AMT1": ("Pago de septiembre", [0] + sorted({int(round(v, -2)) for v in np.geomspace(500, 200000, 22)}),
+                 "Monto pagado en septiembre (NT$)"),
+    "AGE": ("Edad", list(range(21, 76, 2)), "Edad (años)"),
+}
+PAY_SHORT = {-2: "Sin uso", -1: "Al día", 0: "Mínimo"}
+
+
+def _pay_short(v):
+    return PAY_SHORT.get(v, f"{v} m atraso")
+
+
+def predict_scores(rows):
+    """Lista de dicts con las 23 variables -> puntajes (0-1) del modelo serializado.
+
+    Para SEX = 3 («Otro») promedia las predicciones como hombre y como mujer, porque el
+    modelo solo aprendió esas dos categorías.
+    """
+    d = pd.DataFrame([[r[c] for c in INPUT_COLS] for r in rows], columns=INPUT_COLS)
+    other = (d["SEX"] == SEX_OTHER).to_numpy()
+    d.loc[other, "SEX"] = 1
+    p = MODELO.predict_proba(d)[:, 1]
+    if other.any():
+        d2 = d[other].copy()
+        d2["SEX"] = 2
+        p[other] = (p[other] + MODELO.predict_proba(d2)[:, 1]) / 2
+    return p
+
+
 def predict_risk(values):
-    """values: dict con las 23 variables -> puntaje de riesgo (0-1) del modelo serializado."""
-    row = pd.DataFrame([[values[c] for c in INPUT_COLS]], columns=INPUT_COLS)
-    return float(MODELO.predict_proba(row)[0, 1])
+    return float(predict_scores([values])[0])
+
+
+def tree_votes(values):
+    """Cuántos árboles del bosque dan probabilidad ≥ 0.5 de incumplir (los «votos»)."""
+    rows = [values] if values["SEX"] != SEX_OTHER else [{**values, "SEX": 1}, {**values, "SEX": 2}]
+    X = pd.DataFrame([[r[c] for c in INPUT_COLS] for r in rows], columns=INPUT_COLS)
+    Xt = MODELO[:-1].transform(X)
+    trees = MODELO[-1].estimators_
+    yes = np.mean([np.mean(t.predict_proba(Xt)[:, 1] >= 0.5) for t in trees]) * len(trees)
+    return int(round(yes)), len(trees)
 
 
 def fig_risk_gauge(score=None):
@@ -1147,8 +1190,82 @@ def fig_risk_gauge(score=None):
             bar=dict(color=color, thickness=.32), bgcolor="rgba(0,0,0,0)", borderwidth=0,
             steps=[dict(range=[0, thr], color=f"{DEEP_RGBA}0.06)"), dict(range=[thr, 100], color="rgba(184,143,61,0.16)")],
             threshold=dict(line=dict(color=DEEP_NAVY, width=3), thickness=.85, value=thr))))
-    fig.update_layout(height=250, margin=dict(l=30, r=30, t=20, b=10), paper_bgcolor=WHITE,
+    fig.update_layout(height=240, margin=dict(l=30, r=30, t=16, b=6), paper_bgcolor=WHITE,
                       font=dict(color=DEEP_NAVY, family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"))
+    return fig
+
+
+def fig_client_history(values):
+    """Facturado vs. pagado por mes y estado de pago (eje derecho)."""
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig.add_trace(go.Bar(x=MONTH_LBL, y=[values[c] or 0 for c in BILL_CHRONO], name="Facturado",
+                         marker_color=NAVY, hovertemplate="%{x} · facturado: NT$ %{y:,.0f}<extra></extra>"))
+    fig.add_trace(go.Bar(x=MONTH_LBL, y=[values[c] or 0 for c in PAYAMT_CHRONO], name="Pagado",
+                         marker_color=PALE_GOLD, hovertemplate="%{x} · pagado: NT$ %{y:,.0f}<extra></extra>"))
+    st = [values[c] for c in PAY_CHRONO]
+    fig.add_trace(go.Scatter(
+        x=MONTH_LBL, y=st, name="Estado de pago", mode="lines+markers", customdata=[_pay_short(v) for v in st],
+        line=dict(color=WARM_GOLD, width=2.5),
+        marker=dict(size=12, color=[WARM_GOLD if v >= 1 else GREY_BLUE for v in st], line=dict(width=1.5, color=WHITE)),
+        hovertemplate="%{x} · estado: %{customdata}<extra></extra>"), secondary_y=True)
+    style_fig(fig, 340)
+    fig.update_layout(barmode="group", bargap=.28, margin=dict(l=60, r=55, t=40, b=36))
+    fig.update_yaxes(title_text="NT$", secondary_y=False, tickformat="~s")
+    fig.update_yaxes(title_text="Estado de pago", secondary_y=True, range=[-2.8, 9.2], showgrid=False,
+                     tickvals=[-2, -1, 0, 2, 4, 6, 8],
+                     ticktext=["Sin uso", "Al día", "Mínimo", "2 m", "4 m", "6 m", "8 m"])
+    return fig
+
+
+def fig_drivers(values, score):
+    """Cuánto cambia el puntaje si cada grupo de variables fuera el de un cliente típico."""
+    typical = PROFILES["tipico"][1]
+    rows = [{**values, **{c: typical[c] for c in cols}} for _, cols in DRIVER_GROUPS]
+    alt = predict_scores(rows)
+    d = pd.DataFrame({"grupo": [g for g, _ in DRIVER_GROUPS], "aporte": (score - alt) * 100})
+    d = d.reindex(d["aporte"].abs().sort_values().index)
+    fig = go.Figure(go.Bar(
+        x=d["aporte"], y=d["grupo"], orientation="h",
+        marker_color=[WARM_GOLD if v > 0 else NAVY for v in d["aporte"]],
+        text=[f"{v:+.1f} pts" for v in d["aporte"]], textposition="outside", cliponaxis=False,
+        hovertemplate="%{y}: %{x:+.1f} puntos frente a un cliente típico<extra></extra>"))
+    lim = max(5, d["aporte"].abs().max() * 1.6)
+    fig.add_vline(x=0, line_color=GREY_BLUE, line_width=1)
+    style_fig(fig, 340, legend_top=False)
+    fig.update_layout(margin=dict(l=150, r=30, t=20, b=46), showlegend=False,
+                      xaxis_title="Puntos de riesgo que suma (+) o resta (−)")
+    fig.update_xaxes(range=[-lim, lim], zeroline=False)
+    return fig
+
+
+def fig_whatif(values, var, score):
+    """Puntaje del cliente si solo cambiara una variable."""
+    lbl, grid, xtitle = WHATIF[var]
+    p = predict_scores([{**values, var: x} for x in grid]) * 100
+    thr = MODELO_META.get("umbral", 0.5) * 100
+    cur = values[var]
+    is_pay = var == "PAY_0"
+    xs = [_pay_short(x) if is_pay else x for x in grid]
+    fig = go.Figure()
+    fig.add_hrect(y0=thr, y1=100, fillcolor="rgba(184,143,61,0.10)", line_width=0)
+    fig.add_trace(go.Scatter(x=xs, y=p, mode="lines+markers", line=dict(color=NAVY, width=3, shape="spline" if not is_pay else "linear"),
+                             marker=dict(size=7, color=NAVY), name=lbl,
+                             hovertemplate=f"{xtitle}: %{{x}}<br>Puntaje: %{{y:.0f}}%<extra></extra>"))
+    fig.add_trace(go.Scatter(x=[_pay_short(cur) if is_pay else cur], y=[score * 100], mode="markers+text",
+                             marker=dict(symbol="star", size=20, color=PALE_GOLD, line=dict(width=1.5, color=GOLD_DARK)),
+                             text=["Este cliente"], textposition="top center", textfont=dict(color=GOLD_DARK),
+                             name="Este cliente", hovertemplate="Este cliente: %{y:.0f}%<extra></extra>"))
+    fig.add_hline(y=thr, line_dash="dash", line_color=WARM_GOLD, line_width=1.5,
+                  annotation_text=f"Umbral {thr:.0f}%: por encima, «riesgo alto»", annotation_position="top left",
+                  annotation_font_color=GOLD_MID)
+    style_fig(fig, 360, legend_top=False)
+    fig.update_layout(margin=dict(l=60, r=24, t=24, b=50), showlegend=False,
+                      xaxis_title=xtitle, yaxis_title="Puntaje de riesgo (%)")
+    fig.update_yaxes(range=[0, 100], ticksuffix="%")
+    if is_pay:
+        fig.update_xaxes(type="category")
+    elif var != "AGE":
+        fig.update_xaxes(tickformat="~s")
     return fig
 
 
@@ -1189,6 +1306,15 @@ ICONS = {
     "trophy": '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
     "chevron": '<path d="m9 6 6 6-6 6"/>',
     "gauge": '<path d="M3.5 18a9.5 9.5 0 1 1 17 0"/><path d="m12 13 4.5-4.5"/><circle cx="12" cy="13" r="1.4"/>',
+    "male": '<circle cx="10" cy="14" r="6"/><path d="M14.5 9.5 20 4M15 4h5v5"/>',
+    "female": '<circle cx="12" cy="9" r="6"/><path d="M12 15v7M9 19h6"/>',
+    "gender": '<circle cx="11" cy="12" r="5"/><path d="M14.5 8.5 19 4M15 4h4v4M11 17v5M8.5 19.5h5"/>',
+    "cap": '<path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5M22 9v6"/>',
+    "pencil": '<path d="M17 3l4 4L8 20H4v-4z"/><path d="m14 6 4 4"/>',
+    "dots": '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+    "rings": '<circle cx="9" cy="14" r="5.5"/><circle cx="15" cy="14" r="5.5"/><path d="m10 5 2-2 2 2-2 2z"/>',
+    "person": '<circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>',
+    "tree": '<path d="M12 22v-5"/><path d="M12 17H6l3-4H7l3-4H8.5L12 3l3.5 6H14l3 4h-2l3 4z"/>',
     "save": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
 }
 
@@ -1887,12 +2013,23 @@ def _num(id_, value, step="any", min_=None):
                      className="pf-input", placeholder=pretty(id_))
 
 
-def _dd(id_, options, value):
-    return dcc.Dropdown(id=f"pf-{id_}", options=options, value=value, clearable=False, className="pf-dd")
+def _tiles(id_, options, value):
+    """Opciones como tarjetas con ícono (RadioItems con estilo)."""
+    return dcc.RadioItems(
+        id=f"pf-{id_}", value=value, className="pf-tiles", inputClassName="pf-tile-in", labelClassName="pf-tile",
+        options=[{"label": html.Span([icon(ic, "pf-tile-ico"), html.Span(txt, className="pf-tile-txt")]), "value": v}
+                 for v, txt, ic in options])
 
 
-def _cat_opts(col):
-    return [{"label": v, "value": k} for k, v in CAT_LABELS[col].items()]
+SEX_TILES = [(1, "Hombre", "male"), (2, "Mujer", "female"), (SEX_OTHER, "Otro", "gender")]
+EDU_TILES = [(1, "Posgrado", "cap"), (2, "Universidad", "book"), (3, "Secundaria", "pencil"), (4, "Otros", "dots")]
+MAR_TILES = [(1, "Casado", "rings"), (2, "Soltero", "person"), (3, "Otros", "dots")]
+
+
+def _pay_slider(col, value):
+    return dcc.Slider(id=f"pf-{col}", min=-2, max=8, step=1, value=value, included=False,
+                      marks={i: {"label": str(i)} for i in range(-2, 9)}, className="pf-pay-slider",
+                      allow_direct_input=False)
 
 
 SERIALIZE_CODE = """import joblib
@@ -1921,18 +2058,39 @@ def model_info_card():
                               f"{pr.get('precision', 0):.3f} · ROC-AUC {pr.get('roc_auc', 0):.3f}" if pr else "—"),
             ("Entrenado", f"{m.get('n_entrenamiento', 0):,} clientes · {m.get('fecha', '—')}"),
             ("Versiones", f"scikit-learn {ver.get('scikit-learn', '—')} · joblib {ver.get('joblib', '—')}")]
+    steps = [("Entrenar", "Se ajusta el bosque con los datos históricos (modelo/entrenar.py).", "tree"),
+             ("Guardar", "joblib.dump escribe el modelo en un archivo .pkl.", "save"),
+             ("Cargar", "El tablero lo lee con joblib.load al arrancar, sin reentrenar.", "notebook"),
+             ("Predecir", "Cada cambio del formulario llama a predict_proba.", "gauge")]
     return card("Cómo se serializó el modelo", [
-        html.P(["Serializar es guardar el modelo ya entrenado en un archivo para usarlo después sin volver a "
-                "entrenarlo. Se entrenó una vez con ", html.Code("modelo/entrenar.py"), ", se guardó con ",
-                html.Code("joblib.dump"), " en ", html.Code("modelo_credito.pkl"), " y el tablero lo carga con ",
-                html.Code("joblib.load"), " al arrancar."]),
-        html.Pre(SERIALIZE_CODE, className="formula pf-code"),
+        html.P("Serializar es guardar un modelo ya entrenado en un archivo para usarlo después sin volver a "
+               "entrenarlo. Así funciona esta sección:"),
+        html.Div([html.Div([html.Span(f"{i + 1}", className="pf-step-n"), icon(ic, "pf-step-ico"),
+                            html.B(t), html.P(d)], className="pf-step") for i, (t, d, ic) in enumerate(steps)],
+                 className="pf-steps"),
+        html.Details([html.Summary("Ver el código"), html.Pre(SERIALIZE_CODE, className="formula pf-code")],
+                     className="pf-details"),
         html.Div(_tbl(["Detalle", "Valor"], rows), className="table-wrap"),
         html.P(["El archivo guarda todo el pipeline, incluidas las transformaciones del proyecto (logaritmos y "
                 "resumen de las facturas), que viven en ", html.Code("modelo/features.py"),
                 ". Para cargarlo hay que usar la misma versión de scikit-learn con la que se guardó."],
                className="muted"),
     ], subtitle="Entrenar → guardar (.pkl) → cargar → predecir")
+
+
+def _flow():
+    n = len(MODELO[-1].estimators_) if MODELO is not None else 0
+    items = [("users", "1. Datos del cliente", "Perfil, pagos y montos de abril a septiembre."),
+             ("layers", "2. Se transforman", "Logaritmos y resumen de las facturas, igual que en el proyecto."),
+             ("tree", f"3. {n} árboles opinan", "Cada árbol del bosque estima si el cliente incumplirá."),
+             ("gauge", "4. Puntaje y decisión", "Se promedian sus opiniones; desde 50 % es «riesgo alto».")]
+    out = []
+    for i, (ic, t, d) in enumerate(items):
+        out.append(html.Div([html.Span(icon(ic), className="pf-flow-ico"), html.Div([html.B(t), html.P(d)])],
+                            className="pf-flow-item"))
+        if i < len(items) - 1:
+            out.append(html.Span(icon("chevron"), className="pf-flow-arrow"))
+    return html.Div(out, className="pf-flow")
 
 
 def page_predict():
@@ -1944,39 +2102,101 @@ def page_predict():
                     html.Code("python -m modelo.entrenar"), "."]),
             html.P(MODELO_ERROR, className="muted")])])
     base = PROFILES["tipico"][1]
-    pay_opts = [{"label": f"{k} · {v}", "value": k} for k, v in PAY_STATUS]
+    gcfg = {"displaylogo": False, "displayModeBar": False}
     form = card("Datos del cliente", [
-        html.Div([html.Span("Cargar un ejemplo:", className="pf-hint"),
-                  *[html.Button(lbl, id=f"pf-prof-{k}", n_clicks=0, className="btn ghost pf-prof", type="button")
-                    for k, (lbl, _v) in PROFILES.items()]], className="pf-profiles"),
-        html.H4("Perfil", className="pf-h"),
+        html.Div([html.Span("Prueba un ejemplo:", className="pf-hint"),
+                  *[html.Button([icon(ic), lbl], id=f"pf-prof-{k}", n_clicks=0, className="btn ghost pf-prof",
+                                type="button")
+                    for (k, (lbl, _v)), ic in zip(PROFILES.items(), ["users", "target", "alert"])]],
+                 className="pf-profiles"),
+        html.H4([icon("users"), "Perfil"], className="pf-h"),
         html.Div([
-            _pf_field("Cupo (NT$)", _num("LIMIT_BAL", base["LIMIT_BAL"], min_=0), cls="pf-wide"),
-            _pf_field("Edad", _num("AGE", base["AGE"], 1, 18)),
-            _pf_field("Sexo", _dd("SEX", _cat_opts("SEX"), base["SEX"])),
-            _pf_field("Educación", _dd("EDUCATION", _cat_opts("EDUCATION"), base["EDUCATION"])),
-            _pf_field("Estado civil", _dd("MARRIAGE", _cat_opts("MARRIAGE"), base["MARRIAGE"])),
-        ], className="pf-grid pf-g5"),
-        html.H4("Estado de pago por mes (2005)", className="pf-h"),
-        html.Div([_pf_field(m, _dd(c, pay_opts, base[c])) for m, c in zip(MONTH_LBL, PAY_CHRONO)],
-                 className="pf-grid pf-g3"),
-        html.H4("Montos por mes (NT$)", className="pf-h"),
+            _pf_field("Cupo de crédito", dcc.Slider(
+                id="pf-LIMIT_BAL", min=10000, max=1000000, step=10000, value=base["LIMIT_BAL"],
+                marks={10000: "10 mil", 250000: "250 mil", 500000: "500 mil", 750000: "750 mil", 1000000: "1 M"},
+                tooltip={"placement": "top", "always_visible": True, "template": "NT$ {value}"},
+                className="pf-slider", allow_direct_input=False)),
+            _pf_field("Edad", dcc.Slider(
+                id="pf-AGE", min=21, max=79, step=1, value=base["AGE"],
+                marks={i: str(i) for i in range(30, 80, 10)},
+                tooltip={"placement": "top", "always_visible": True, "template": "{value} años"},
+                className="pf-slider", allow_direct_input=False)),
+        ], className="pf-grid pf-g2"),
+        _pf_field("Sexo", _tiles("SEX", SEX_TILES, base["SEX"])),
+        html.P("El dataset solo registra hombre y mujer; con «Otro» el modelo promedia ambas predicciones.",
+               className="pf-hint pf-note"),
+        _pf_field("Educación", _tiles("EDUCATION", EDU_TILES, base["EDUCATION"]), cls="pf-row"),
+        _pf_field("Estado civil", _tiles("MARRIAGE", MAR_TILES, base["MARRIAGE"]), cls="pf-row"),
+        html.H4([icon("calendar"), "Estado de pago por mes (2005)"], className="pf-h"),
+        html.Div([html.Span("−2 sin consumo", className="pf-key k-ok"), html.Span("−1 pagó todo", className="pf-key k-ok"),
+                  html.Span("0 pago mínimo", className="pf-key k-mid"),
+                  html.Span("1 a 8: meses de atraso", className="pf-key k-late")], className="pf-keys"),
+        html.Div([html.Div([html.Span(m, className="pf-pay-m"), _pay_slider(c, base[c])], className="pf-pay-row")
+                  for m, c in zip(MONTH_LBL, PAY_CHRONO)], className="pf-pay"),
+        html.H4([icon("coin"), "Montos por mes (NT$)"], className="pf-h"),
         html.Div(html.Div([
             html.Span(), *[html.Span(m, className="pf-mh") for m in MONTH_LBL],
             html.Span("Facturado", className="pf-rh"), *[_num(c, base[c]) for c in BILL_CHRONO],
             html.Span("Pagado", className="pf-rh"), *[_num(c, base[c], min_=0) for c in PAYAMT_CHRONO],
         ], className="pf-amounts"), className="table-wrap"),
-        html.P("Los cambios se reflejan en el resultado al salir de cada campo.", className="muted"),
     ], cls="pf-form")
     result = card("Resultado", [
-        dcc.Graph(id="pf-gauge", figure=fig_risk_gauge(), config={"displaylogo": False, "displayModeBar": False}),
+        dcc.Graph(id="pf-gauge", figure=fig_risk_gauge(), config=gcfg),
         html.Div(id="pf-verdict"),
-    ], subtitle="Puntaje de riesgo del modelo y decisión con umbral 0.5", cls="pf-result")
+        html.Div(id="pf-trees"),
+    ], subtitle="Se actualiza en vivo con cada cambio", cls="pf-result")
     return html.Div([
         head,
+        _flow(),
         html.Div([form, html.Div(result, className="pf-side")], className="pf-layout"),
+        html.Div([
+            card("Historial del cliente", [
+                dcc.Graph(id="pf-history", config=gcfg),
+                interp_block(
+                    "Las barras comparan lo que le facturaron con lo que pagó cada mes; la línea dorada muestra su "
+                    "estado de pago. Cuando la línea sube por encima de 0 hay atraso, y cuando las barras doradas "
+                    "son mucho más bajas que las azules, el cliente está pagando poco de su deuda.",
+                    "El modelo no usa las seis facturas por separado: las resume en nivel medio (log con signo), "
+                    "tendencia mensual y número de meses con saldo a favor, como en el proyecto. Los estados de "
+                    "pago (PAY_0 … PAY_6) sí entran uno por uno y son las variables más importantes según SHAP."),
+            ], subtitle="Facturado, pagado y estado de pago de abril a septiembre"),
+            card("¿Qué empuja su riesgo?", [
+                dcc.Graph(id="pf-drivers", config=gcfg),
+                interp_block(
+                    "Cada barra responde: «si en este grupo de datos el cliente fuera como un cliente típico, ¿cuánto "
+                    "cambiaría su puntaje?». Las barras doradas suben el riesgo y las azules lo bajan.",
+                    "Explicación local por sustitución: se reemplaza cada grupo de variables por los valores del "
+                    "cliente típico (mediana o moda) y se mide la diferencia en el puntaje. Es aproximada: no suma "
+                    "exactamente el total porque los grupos interactúan dentro del bosque (a diferencia de SHAP)."),
+            ], subtitle="Aporte de cada grupo de variables frente a un cliente típico"),
+        ], className="grid g2"),
+        card("¿Qué pasaría si…?", [
+            dcc.RadioItems(id="pf-whatif-var", value="PAY_0", className="pf-tiles pf-seg", inputClassName="pf-tile-in",
+                           labelClassName="pf-tile", options=[{"label": v[0], "value": k} for k, v in WHATIF.items()]),
+            dcc.Graph(id="pf-whatif", config=gcfg),
+            interp_block(
+                "La línea muestra el puntaje que tendría este mismo cliente si solo cambiara la variable elegida; "
+                "la estrella es su situación actual. Por ejemplo, con «Atraso en septiembre» se ve cuánto sube el "
+                "riesgo con cada mes de atraso.",
+                "Es una curva de dependencia individual (ICE): se fija el resto de variables y se recorre una sola. "
+                "En un bosque la curva tiene escalones porque cada árbol corta la variable en umbrales; no implica "
+                "causalidad, solo describe cómo responde el modelo."),
+        ], subtitle="Mueve una sola variable y mira cómo cambia el puntaje de este cliente"),
         model_info_card(),
     ])
+
+
+def trees_block(values):
+    yes, n = tree_votes(values)
+    share = yes / n if n else 0
+    cells = int(round(share * 100))
+    return html.Div([
+        html.Div([icon("tree"), html.B(f"{yes} de {n} árboles votan «incumple»")], className="pf-trees-h"),
+        html.Div([html.Span(className="pf-cell" + (" on" if i < cells else "")) for i in range(100)],
+                 className="pf-waffle", title=f"{share:.0%} de los árboles"),
+        html.P("Cada cuadro es 1 % del bosque. El puntaje promedia las probabilidades de todos los árboles, "
+               "por eso puede diferir un poco de esta proporción.", className="muted"),
+    ], className="pf-trees")
 
 
 def predict_verdict(values, score):
@@ -1987,31 +2207,30 @@ def predict_verdict(values, score):
     signals = []
     if (values.get("PAY_0") or 0) >= 1:
         n = values["PAY_0"]
-        signals.append(f"Tiene {n} {'mes' if n == 1 else 'meses'} de atraso en septiembre, la señal que más pesa "
-                       "en el modelo.")
+        signals.append(("alert", f"{n} {'mes' if n == 1 else 'meses'} de atraso en septiembre: la señal que más "
+                                 "pesa en el modelo."))
     elif late:
-        signals.append(f"Registra atrasos en {', '.join(late)}, aunque en septiembre está al día.")
+        signals.append(("calendar", f"Tuvo atrasos en {', '.join(late)}, aunque en septiembre está al día."))
     else:
-        signals.append("No registra atrasos en los seis meses, lo que reduce el riesgo.")
-    bills = [values.get(c) or 0 for c in BILL_COLS]
-    paid = [values.get(c) or 0 for c in PAYAMT_COLS]
-    if sum(bills) > 0:
-        signals.append(f"Pagó el equivalente al {min(sum(paid) / sum(bills), 9.99):.0%} de lo facturado en el periodo.")
-    lim = values.get("LIMIT_BAL") or 0
-    q = (df["LIMIT_BAL"] < lim).mean()
-    signals.append(f"Su cupo es mayor que el de {q:.0%} de los clientes del banco (un cupo alto se asocia con menos riesgo).")
+        signals.append(("target", "Sin atrasos en los seis meses."))
+    bills = sum(values.get(c) or 0 for c in BILL_COLS)
+    paid = sum(values.get(c) or 0 for c in PAYAMT_COLS)
+    if bills > 0:
+        signals.append(("coin", f"Pagó el {min(paid / bills, 9.99):.0%} de lo facturado en el periodo."))
+    q = (df["LIMIT_BAL"] < (values.get("LIMIT_BAL") or 0)).mean()
+    signals.append(("card", f"Su cupo supera al de {q:.0%} de los clientes."))
     return html.Div([
         html.Div([icon("alert" if high else "target"),
                   html.Div([html.B("Riesgo alto: probable incumplimiento" if high else "Riesgo bajo: probable pago"),
                             html.Span(f"Puntaje {score:.0%} · umbral {thr:.0%}")])],
                  className="pf-badge " + ("hi" if high else "lo")),
-        html.Ul([html.Li(s) for s in signals], className="pf-signals"),
-        html.P(f"Con este umbral el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
-               f"{pr.get('precision', 0):.0%} de los clientes que marca como riesgosos (datos de prueba)."
-               if pr else "", className="muted"),
-        html.P("El puntaje no es una probabilidad calibrada: el modelo se entrenó con pesos de clase, que lo hacen "
-               "sobrestimar el riesgo frente a la tasa real de default (22 %). Sirve para ordenar y clasificar "
-               "clientes, no para leerlo como «X % de probabilidad».", className="muted"),
+        html.Ul([html.Li([icon(ic), html.Span(s)]) for ic, s in signals], className="pf-signals"),
+        html.Details([html.Summary("¿Cómo leer el puntaje?"), html.P(
+            (f"Con el umbral de 50 % el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
+             f"{pr.get('precision', 0):.0%} de los clientes que marca como riesgosos (datos de prueba). " if pr else "")
+            + "No es una probabilidad calibrada: el modelo se entrenó con pesos de clase, que lo hacen sobrestimar "
+              "el riesgo frente a la tasa real (22 %). Sirve para ordenar y clasificar clientes.")],
+            className="pf-details"),
     ])
 
 
@@ -2536,41 +2755,106 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
   .mc-slide.best { box-shadow:0 0 0 1px rgba(210,187,137,.7), 0 0 30px 2px rgba(210,187,137,.45); }
   .mc-track { scroll-behavior:auto; } }
 
-/* ---- Predecir: formulario + resultado ---- */
-.pf-layout { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr); gap:20px; align-items:start; }
+/* ---- Predecir: flujo, formulario visual y resultado ---- */
+.pf-flow { display:flex; align-items:stretch; gap:10px; margin:0 0 20px; }
+.pf-flow-item { flex:1; display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:12px;
+  background:var(--surface); border:1px solid var(--line); animation:pf-in .5s ease both; }
+.pf-flow-item:nth-child(3) { animation-delay:.08s; } .pf-flow-item:nth-child(5) { animation-delay:.16s; }
+.pf-flow-item:nth-child(7) { animation-delay:.24s; }
+.pf-flow-item b { display:block; font-size:14px; } .pf-flow-item p { margin:2px 0 0; font-size:12.5px; color:var(--muted); }
+.pf-flow-ico { flex:none; width:38px; height:38px; border-radius:10px; display:inline-flex; align-items:center;
+  justify-content:center; background:var(--accent); color:var(--on-accent); }
+.pf-flow-ico .ico { width:20px; height:20px; }
+.pf-flow-arrow { align-self:center; color:var(--accent-2); } .pf-flow-arrow .ico { width:18px; height:18px; }
+@keyframes pf-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.pf-layout { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(310px,1fr); gap:20px; align-items:start; }
 .pf-side { position:sticky; top:84px; }
 .pf-profiles { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:4px 0 6px; }
 .pf-prof { padding:6px 12px; font-size:13px; cursor:pointer; background:transparent; font-family:inherit; }
-.pf-h { margin:18px 0 10px; font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
-  color:var(--accent-2); display:flex; align-items:center; gap:10px; }
+.pf-prof .ico { width:15px; height:15px; color:var(--accent-2); }
+.pf-h { margin:20px 0 12px; font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--accent-2); display:flex; align-items:center; gap:8px; }
+.pf-h .ico { width:16px; height:16px; }
 .pf-h::after { content:''; flex:1; height:1px; background:var(--line); }
-.pf-grid { display:grid; gap:12px 14px; } .pf-g5 { grid-template-columns:repeat(5,minmax(0,1fr)); }
-.pf-g3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
-.pf-field { min-width:0; } .pf-field .ctl-label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pf-hint { font-size:12.5px; color:var(--muted); }
-.pf-input { width:100%; height:36px; padding:6px 10px; border-radius:6px; border:1px solid var(--line-strong);
-  background:var(--surface); color:var(--text); font:inherit; font-size:14px; font-variant-numeric:tabular-nums; }
+.pf-grid { display:grid; gap:14px 22px; margin-bottom:12px; }
+.pf-g2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.pf-field { min-width:0; } .pf-field .ctl-label { margin-bottom:8px; }
+.pf-hint { font-size:12.5px; color:var(--muted); } .pf-note { margin:6px 0 12px; } .pf-row { margin-bottom:14px; }
+.pf-slider { padding-top:34px; }
+.pf-form { --Dash-Fill-Interactive-Strong:var(--accent-2); --Dash-Fill-Inverse-Strong:var(--surface);
+  --Dash-Text-Strong:var(--text); --Dash-Fill-Disabled:var(--line-strong); --Dash-Text-Primary:var(--muted); }
+.pf-form .dash-slider-tooltip { color:var(--text); font-weight:700; font-variant-numeric:tabular-nums;
+  white-space:nowrap; padding:6px 9px; }
+.pf-form .dash-slider-mark { color:var(--muted); font-size:11.5px; }
+.pf-form .dash-slider-thumb { width:18px; height:18px; }
+/* tarjetas con ícono */
+.pf-tiles { display:flex !important; flex-direction:row; flex-wrap:wrap; gap:8px; }
+.pf-tiles .dash-options-list-option { flex:1 1 0; min-width:84px; position:relative; display:flex; padding:0;
+  margin:0; background:transparent; align-items:stretch; }
+.pf-tiles .dash-options-list-option-wrapper { position:absolute; width:1px; height:1px; overflow:hidden; opacity:0; }
+.pf-tile { flex:1; display:flex; }
+.pf-tile > span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:12px 8px 10px; border-radius:12px; border:1.5px solid var(--line-strong); background:var(--surface);
+  color:var(--muted); font-size:13px; font-weight:600; text-align:center;
+  transition:border-color .15s, background .15s, color .15s, transform .15s, box-shadow .15s; }
+.dash-options-list-option:hover .pf-tile > span { border-color:var(--accent-2); color:var(--text); transform:translateY(-2px); }
+.pf-tile-ico { width:28px; height:28px; }
+.dash-options-list-option.selected .pf-tile > span { border-color:var(--accent-2); color:var(--text);
+  background:linear-gradient(180deg, rgba(210,187,137,.20), rgba(210,187,137,.06));
+  box-shadow:0 0 0 3px rgba(210,187,137,.25), 0 8px 18px -12px rgba(184,143,61,.8); }
+.dash-options-list-option.selected .pf-tile-ico { color:var(--accent-2); }
+.dash-options-list-option:has(input:focus-visible) .pf-tile > span { outline:2px solid var(--focus); outline-offset:2px; }
+.pf-seg { margin-bottom:6px; } .pf-seg .pf-tile > span { padding:9px 10px; flex-direction:row; }
+/* estado de pago */
+.pf-keys { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.pf-key { font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:999px; border:1px solid var(--line-strong); }
+.pf-key.k-ok { background:var(--tech-bg); } .pf-key.k-mid { background:var(--surface-2); }
+.pf-key.k-late { background:rgba(184,143,61,.16); border-color:rgba(184,143,61,.5); }
+.pf-pay { display:grid; gap:2px; }
+.pf-pay-row { display:grid; grid-template-columns:44px 1fr; align-items:center; gap:10px; }
+.pf-pay-m { font-size:13px; font-weight:700; color:var(--muted); }
+.pf-pay-slider { padding:6px 0 0; }
+/* montos */
+.pf-input { width:100%; height:36px; padding:6px 8px; border-radius:6px; border:1px solid var(--line-strong);
+  background:var(--surface); color:var(--text); font:inherit; font-size:13px; font-variant-numeric:tabular-nums; }
 .pf-input:focus { outline:none; border-color:var(--accent-2); box-shadow:0 0 0 3px rgba(184,143,61,.18); }
-.pf-dd .Select-control { min-height:36px; border-radius:6px; }
 .pf-amounts { display:grid; grid-template-columns:78px repeat(6,minmax(0,1fr)); gap:8px; align-items:center; }
-.pf-amounts .pf-input { padding:6px 7px; font-size:13px; }
 .pf-mh { font-size:12.5px; font-weight:600; color:var(--muted); text-align:center; }
 .pf-rh { font-size:12.5px; font-weight:600; color:var(--muted); }
+/* resultado */
 .pf-result { border-top:3px solid var(--accent-2); }
-.pf-badge { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin:4px 0 10px; }
-.pf-badge .ico { width:24px; height:24px; flex:none; }
+.pf-badge { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin:0 0 10px;
+  animation:pf-in .35s ease both; }
+.pf-badge .ico { width:26px; height:26px; flex:none; }
 .pf-badge b { display:block; font-size:15px; } .pf-badge span { font-size:12.5px; color:var(--muted); }
 .pf-badge.hi { background:rgba(184,143,61,.14); border:1px solid rgba(184,143,61,.55); }
 .pf-badge.hi .ico { color:var(--accent-2); }
 .pf-badge.lo { background:var(--tech-bg); border:1px solid var(--line-strong); }
 .pf-badge.lo .ico { color:var(--tech-line); }
-.pf-signals { margin:0 0 6px 18px; padding:0; font-size:13.5px; } .pf-signals li { margin:5px 0; }
-.pf-code { white-space:pre; line-height:1.55; margin:12px 0 !important; }
+.pf-signals { list-style:none; margin:0 0 8px; padding:0; display:grid; gap:7px; }
+.card .pf-signals li { display:flex; gap:9px; align-items:flex-start; margin:0; font-size:13.5px; }
+.pf-signals .ico { width:17px; height:17px; margin-top:2px; color:var(--accent-2); }
+.pf-details { margin:8px 0; font-size:13.5px; } .pf-details summary { cursor:pointer; font-weight:700; color:var(--accent); }
+.pf-details p { color:var(--muted); }
+.pf-trees { margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+.pf-trees-h { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:14px; }
+.pf-trees-h .ico { width:20px; height:20px; color:var(--accent-2); }
+.pf-waffle { display:grid; grid-template-columns:repeat(20,1fr); gap:3px; max-width:340px; }
+.pf-cell { aspect-ratio:1; border-radius:3px; background:var(--line-strong); transition:background .4s ease; }
+.pf-cell.on { background:var(--accent-2); }
+/* serialización */
+.pf-steps { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:12px 0; }
+.pf-step { position:relative; padding:14px 14px 12px; border-radius:12px; background:var(--surface-2); border:1px solid var(--line); }
+.pf-step-n { position:absolute; top:10px; right:12px; font-size:22px; font-weight:800; color:var(--line-strong); }
+.pf-step-ico { width:24px; height:24px; color:var(--accent-2); }
+.pf-step b { display:block; margin-top:6px; } .card .pf-step p { margin:4px 0 0; font-size:12.5px; color:var(--muted); }
+.pf-code { white-space:pre; line-height:1.55; margin:10px 0 !important; }
 @media (max-width:1250px) { .pf-layout { grid-template-columns:1fr; } .pf-side { position:static; }
-  .pf-g5 { grid-template-columns:repeat(3,minmax(0,1fr)); } }
-@media (max-width:700px) { .pf-g5 { grid-template-columns:repeat(2,minmax(0,1fr)); } .pf-wide { grid-column:span 2; }
-  .pf-g3 { grid-template-columns:1fr; }
-  .pf-amounts { min-width:600px; } }
+  .pf-flow { flex-wrap:wrap; } .pf-flow-item { flex:1 1 40%; } .pf-flow-arrow { display:none; } }
+@media (max-width:700px) { .pf-g2, .pf-steps { grid-template-columns:1fr; } .pf-flow-item { flex-basis:100%; }
+  .pf-amounts { min-width:600px; }
+  .pf-tiles .dash-options-list-option { min-width:64px; } .pf-tile > span { font-size:12px; padding:10px 4px 8px; } }
+@media (prefers-reduced-motion:reduce) { .pf-flow-item, .pf-badge { animation:none; } }
 """
 
 # ---------- JS de la portada: inclinación con el mouse, brillo y volteo ----------
@@ -2915,18 +3199,37 @@ def cb_profile(*_clicks):
     return [prof[c] for c in INPUT_COLS]
 
 
-@graph_cb(Output("pf-gauge", "figure"), Output("pf-verdict", "children"),
-          *[Input(f"pf-{c}", "value") for c in INPUT_COLS])
-def cb_predict(*vals):
-    if MODELO is None:
-        return fig_risk_gauge(), ""
+def _pf_values(vals):
     values = dict(zip(INPUT_COLS, vals))
     missing = [pretty(c) for c, v in values.items() if v is None]
-    if missing:
-        return fig_risk_gauge(), html.P("Completa los campos: " + ", ".join(missing[:4]) +
-                                        ("…" if len(missing) > 4 else ""), className="callout")
+    return values, missing
+
+
+@app.callback(Output("pf-gauge", "figure"), Output("pf-verdict", "children"), Output("pf-trees", "children"),
+              Output("pf-history", "figure"), Output("pf-drivers", "figure"),
+              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("theme", "data"))
+def cb_predict(*vals):
+    *vals, theme = vals
+    dark = theme == "dark"
+    values, missing = _pf_values(vals)
+    if MODELO is None or missing:
+        msg = html.P("Completa los campos: " + ", ".join(missing[:4]) + ("…" if len(missing) > 4 else ""),
+                     className="callout") if missing else ""
+        empty = style_fig(go.Figure(), 340, legend_top=False)
+        return themed(fig_risk_gauge(), dark), msg, "", themed(empty, dark), themed(empty, dark)
     score = predict_risk(values)
-    return fig_risk_gauge(score), predict_verdict(values, score)
+    return (themed(fig_risk_gauge(score), dark), predict_verdict(values, score), trees_block(values),
+            themed(fig_client_history(values), dark), themed(fig_drivers(values, score), dark))
+
+
+@app.callback(Output("pf-whatif", "figure"), Input("pf-whatif-var", "value"),
+              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("theme", "data"))
+def cb_whatif(var, *vals):
+    *vals, theme = vals
+    values, missing = _pf_values(vals)
+    if MODELO is None or missing:
+        return themed(style_fig(go.Figure(), 360, legend_top=False), theme == "dark")
+    return themed(fig_whatif(values, var or "PAY_0", predict_risk(values)), theme == "dark")
 
 
 def nav_buttons(path):

@@ -24,7 +24,7 @@ El análisis incluye:
 - Pruebas estadísticas: χ² con V de Cramér, Mann-Whitney, t de Welch y Kruskal-Wallis
 - Diagnóstico de multicolinealidad entre las variables de facturación (BILL_AMT)
 - Análisis del desbalance de clases de la variable objetivo
-- Sección **Predecir**: formulario con los datos de un cliente que devuelve su puntaje de riesgo usando un Random Forest **serializado con `joblib`** (`dash/modelo/modelo_credito.pkl`)
+- Sección **Predecir**: formulario visual (deslizadores y tarjetas con íconos) que devuelve en vivo el puntaje de riesgo de un cliente usando un Random Forest **serializado con `joblib`** (`dash/modelo/modelo_credito.pkl`), con indicador, votos de los árboles, historial del cliente, aporte de cada grupo de variables y simulador «¿Qué pasaría si…?»
 - Modo claro y oscuro, y menú lateral plegable
 - Sección **Modelos**: carrusel deslizable con los siete clasificadores del proyecto (mejor combinación de cada uno), el mejor modelo resaltado, F1 por técnica de balanceo, F1 frente a ROC-AUC de las 112 combinaciones, matriz de confusión del mejor modelo y resumen de SHAP
 
