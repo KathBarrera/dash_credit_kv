@@ -135,6 +135,8 @@ El repositorio ya trae la configuración (`railway.json`, `requirements.txt` y `
 
 Si el dataset no está en `dash/`, la aplicación lo descarga de UCI al arrancar (una sola vez gracias a `--preload`).
 
+Durante el build, si `dash/modelo/modelo_credito.pkl` no está en el repositorio, Railway lo entrena y lo serializa con `python -m modelo.entrenar 12` (descarga los datos de UCI). Para fijar un modelo concreto, entrénalo localmente y sube el `.pkl` y el `.json`.
+
 ---
 
 ## Equipo

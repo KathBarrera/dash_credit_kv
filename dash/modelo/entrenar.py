@@ -4,7 +4,8 @@
 Uso (desde la carpeta dash/):
     python -m modelo.entrenar
 
-Necesita `default_of_credit_card_clients.xls` (o .csv) en dash/ o en dash/data/.
+Busca `default_of_credit_card_clients.xls` (o .csv) en dash/ o en dash/data/; si no
+lo encuentra, lo descarga del repositorio UCI.
 
 Modelo: Random Forest con pesos de clase (class_weight="balanced"), la técnica
 de balanceo con la que ganó en el proyecto Credit_Card_Project. Los
@@ -43,6 +44,8 @@ DASH_DIR = HERE.parent
 MODEL_PATH = HERE / "modelo_credito.pkl"
 META_PATH = HERE / "modelo_credito.json"
 TARGET = "default_payment_next_month"
+UCI_URL = ("https://archive.ics.uci.edu/ml/machine-learning-databases/00350/"
+           "default%20of%20credit%20card%20clients.xls")
 RANDOM_STATE = 42
 
 
@@ -59,7 +62,8 @@ def cargar_datos():
             print(f"[datos] {p}")
             break
     else:
-        sys.exit("No se encontró default_of_credit_card_clients.xls en dash/ ni en dash/data/.")
+        print("[datos] archivo local no encontrado; descargando desde UCI ...")
+        d = pd.read_excel(UCI_URL, header=1)
     tcol = [c for c in d.columns if "default" in str(c).lower()][0]
     d = d.rename(columns={tcol: TARGET, "PAY_1": "PAY_0"}).drop(columns=["ID"], errors="ignore")
     # mismo orden del proyecto: reagrupar categorías y luego quitar duplicados exactos
