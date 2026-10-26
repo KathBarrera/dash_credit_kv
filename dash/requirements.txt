@@ -5,3 +5,5 @@ plotly>=5.18
 scipy
 xlrd>=2.0.1
 gunicorn
+scikit-learn==1.9.1
+joblib>=1.4
