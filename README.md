@@ -25,7 +25,7 @@ El análisis incluye:
 - Diagnóstico de multicolinealidad entre las variables de facturación (BILL_AMT)
 - Análisis del desbalance de clases de la variable objetivo
 - Modo claro y oscuro, y menú lateral plegable
-- *(Próximamente)* Modelo predictivo de incumplimiento integrado al tablero
+- Página **Modelos**: carrusel deslizable con los 7 clasificadores (Random Forest, XGBoost, SVM, árbol de decisión, KNN, regresión logística y Naive Bayes), el mejor resaltado con borde iluminado, y comparación de las 112 combinaciones (modelo × técnica de balanceo × método de optimización) tomadas de los notebooks del [proyecto](https://github.com/valeriaflorezs/Credit_Card_Project/tree/main/notebooks)
 
 ---
 
@@ -48,10 +48,13 @@ dash_credit_kv/
 └── dash/
     ├── app.py                               # Aplicación completa (datos, figuras, páginas y callbacks)
     ├── requirements.txt                     # Dependencias del proyecto
+    ├── results/                             # Resultados de los modelos (copiados de Credit_Card_Project/results)
+    │   ├── experiments_posthoc_metrics.csv  # 96 combinaciones locales
+    │   └── svm_gpu_results_colab.csv        # 16 combinaciones de SVM (Colab, GPU)
     └── default_of_credit_card_clients.xls   # Dataset
 ```
 
-La aplicación tiene cinco secciones: Introducción, Problema y Objetivos, Marco Teórico, EDA Univariado y EDA Multivariado.
+La aplicación tiene estas secciones: Introducción, Problema y Objetivos, Marco Teórico, EDA Univariado, EDA Multivariado, Modelos, Enlaces y Equipo.
 
 ---
 

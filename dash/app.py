@@ -18,11 +18,12 @@
      3. Figuras + interpretaciones: EDA Univariado
      4. Figuras + interpretaciones: EDA Multivariado
      5. Componentes de interfaz (tarjetas, KPIs, interpretaciones)
-     6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Enlaces, Equipo)
+     6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Modelos, Enlaces, Equipo)
      7. Aplicación, CSS, navegación y callbacks
 ===============================================================================
 """
 
+import json
 import warnings
 from pathlib import Path
 from urllib.parse import quote
@@ -1002,7 +1003,7 @@ def icon(name, cls=""):
 
 
 PAGE_ICONS = {"Introducción": "info", "Problema y Objetivos": "target", "Marco Teórico": "book",
-              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Enlaces": "link", "Equipo": "users"}
+              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Modelos": "chip", "Enlaces": "link", "Equipo": "users"}
 
 
 # =============================================================================
@@ -1596,6 +1597,275 @@ def page_team():
     ])
 
 
+# ---------------------------------------------------------------- Modelos
+# Resultados del diseño factorial del proyecto (notebooks 04, 05 y 07 del repositorio
+# Credit_Card_Project). Copias de results/ en dash/results/:
+#   experiments_posthoc_metrics.csv -> 96 combinaciones locales (F1, precisión, recall, ROC-AUC, PR-AUC)
+#   svm_gpu_results_colab.csv       -> 16 combinaciones de SVM (GPU en Colab, sin PR-AUC)
+RESULTS_DIR = BASE_DIR / "results"
+MODEL_INFO = {
+    "random_forest": ("Random Forest", "Muchos árboles entrenados con muestras distintas que votan juntos."),
+    "xgboost": ("XGBoost", "Árboles construidos en secuencia: cada uno corrige los errores del anterior."),
+    "svm": ("SVM (kernel RBF)", "Busca la frontera que separa mejor a las dos clases. Corrido en GPU (Colab)."),
+    "decision_tree": ("Árbol de decisión", "Un solo árbol de reglas «si… entonces…», fácil de leer."),
+    "naive_bayes": ("Naive Bayes", "Modelo probabilístico que supone variables independientes entre sí."),
+    "knn": ("KNN", "Clasifica a cada cliente según sus vecinos más parecidos."),
+    "logistic_regression": ("Regresión logística", "Modelo lineal de referencia (la línea base del proyecto)."),
+}
+TECH_LBL = {"none": "Sin balanceo", "class_weight": "class_weight", "smote": "SMOTE", "adasyn": "ADASYN"}
+METH_LBL = {"grid_search": "Malla", "random_search": "Aleatoria",
+            "bayesian_optuna": "Bayesiana (Optuna)", "genetic_deap": "Genética (DEAP)"}
+TECH_ORDER, METH_ORDER = list(TECH_LBL), list(METH_LBL)
+MH_ROW = {"none": "Ninguna", "class_weight": "Pesos", "smote": "SMOTE", "adasyn": "ADASYN"}
+MH_COL = {"grid_search": "Malla", "random_search": "Aleat.", "bayesian_optuna": "Bayes.", "genetic_deap": "Genét."}
+METRICS = {"f1": "F1", "precision": "Precisión", "recall": "Recall", "roc_auc": "ROC-AUC", "pr_auc": "PR-AUC"}
+
+
+def load_models():
+    """Une las 96 combinaciones locales y las 16 de SVM en una sola tabla (112 filas)."""
+    loc = pd.read_csv(RESULTS_DIR / "experiments_posthoc_metrics.csv")
+    loc = pd.DataFrame({
+        "model": loc["model"], "technique": loc["technique"], "method": loc["method"],
+        "f1": loc["f1_posthoc_mean"], "f1_sd": loc["f1_posthoc_std"],          # std con ddof=1
+        "precision": loc["precision_posthoc_mean"], "recall": loc["recall_posthoc_mean"],
+        "roc_auc": loc["roc_auc_posthoc_mean"], "pr_auc": loc["pr_auc_posthoc_mean"]})
+    svm = pd.read_csv(RESULTS_DIR / "svm_gpu_results_colab.csv")
+    svm = pd.DataFrame({
+        "model": svm["model"], "technique": svm["technique"], "method": svm["method"],
+        "f1": svm["f1_mean"],
+        "f1_sd": svm["f1_per_fold"].map(lambda s: float(np.std(json.loads(s), ddof=1))),
+        "precision": svm["precision_mean"], "recall": svm["recall_mean"],
+        "roc_auc": svm["roc_auc_mean"], "pr_auc": np.nan})
+    out = pd.concat([loc, svm], ignore_index=True).sort_values("f1", ascending=False, ignore_index=True)
+    out["combo"] = out["model"].map(lambda m: MODEL_INFO[m][0]) + " · " + out["technique"].map(TECH_LBL) \
+        + " · " + out["method"].map(METH_LBL)
+    return out
+
+
+MODELS_DF = load_models()
+BEST = MODELS_DF.iloc[0]
+BASELINE = MODELS_DF[(MODELS_DF.model == "logistic_regression") & (MODELS_DF.technique == "none")].iloc[0]
+# Mejor combinación de cada modelo, ordenadas por F1 (la primera es la mejor del experimento)
+MODEL_BEST = MODELS_DF.groupby("model", sort=False).head(1).reset_index(drop=True)
+
+
+def _mc_bar(label, v):
+    if pd.isna(v):
+        return html.Div([html.Span(label), html.Div(className="mc-track-bar"), html.B("n/d")],
+                        className="mc-bar na", title="SVM corrió en GPU (Colab): no tiene PR-AUC")
+    return html.Div([html.Span(label), html.Div(html.Div(style={"width": f"{v * 100:.1f}%"}), className="mc-track-bar"),
+                     html.B(f"{v:.3f}")], className="mc-bar")
+
+
+def _mc_heat(model):
+    """Mini mapa 4×4: F1 de las 16 combinaciones (técnica × método) del modelo."""
+    sub = MODELS_DF[MODELS_DF.model == model].set_index(["technique", "method"])["f1"]
+    lo, hi = MODELS_DF["f1"].min(), MODELS_DF["f1"].max()
+    top = sub.idxmax()
+    cells = [html.Span()] + [html.Span(MH_COL[m], className="mh-col", title=METH_LBL[m])
+                             for m in METH_ORDER]
+    for t in TECH_ORDER:
+        cells.append(html.Span(MH_ROW[t], className="mh-row", title=TECH_LBL[t]))
+        for m in METH_ORDER:
+            v = sub[(t, m)]
+            a = 0.12 + 0.88 * (v - lo) / (hi - lo)
+            cells.append(html.Span(f"{v:.3f}"[1:], className="mh-cell" + (" top" if (t, m) == top else "") + (" lo" if a < .5 else ""),
+                                   style={"--a": f"{a:.2f}"}, title=f"{TECH_LBL[t]} · {METH_LBL[m]}: F1 = {v:.4f}"))
+    return html.Div(cells, className="mc-heat")
+
+
+def model_card(r, rank):
+    name, desc = MODEL_INFO[r.model]
+    best = rank == 1
+    face = html.Div([
+        html.Div(className="cc-gloss"),
+        html.Div([html.Span(f"N.º {rank} de 7 · F1", className="cc-brand"),
+                  html.Span([icon("target"), "Mejor modelo"], className="mc-ribbon") if best else
+                  icon("contactless", "cc-nfc")], className="cc-top"),
+        html.Div([html.Div(className="cc-chip tc-chip"), html.Div(name, className="mc-name")], className="tc-mid"),
+        html.Div([html.Span(TECH_LBL[r.technique], className="mc-pill"),
+                  html.Span(METH_LBL[r.method], className="mc-pill")], className="mc-pills"),
+        html.Div([html.Span("F1 de la clase default", className="cc-lbl"),
+                  html.Div([html.B(f"{r.f1:.3f}"), html.Span(f"± {r.f1_sd:.3f}")], className="mc-f1")]),
+        html.Div([_mc_bar("Precisión", r.precision), _mc_bar("Recall", r.recall),
+                  _mc_bar("ROC-AUC", r.roc_auc), _mc_bar("PR-AUC", r.pr_auc)], className="mc-bars"),
+        html.Div([html.Span("F1 en sus 16 combinaciones", className="cc-lbl"), _mc_heat(r.model)]),
+        html.P(desc, className="mc-desc"),
+    ], className="cc-face mc-face")
+    return html.Div(face, className="mc" + (" best" if best else ""),
+                    **{"role": "group", "aria-label": f"{name}, puesto {rank} de 7, F1 {r.f1:.3f}"})
+
+
+def models_carousel():
+    cards = [model_card(r, i + 1) for i, r in enumerate(MODEL_BEST.itertuples())]
+    return html.Div([
+        html.Div([
+            html.Button(icon("arrow", "flip"), className="icon-btn mc-nav mc-prev", title="Modelo anterior",
+                        **{"aria-label": "Modelo anterior", "type": "button"}),
+            html.Div(cards, className="mc-rail", tabIndex=0,
+                     **{"aria-label": "Carrusel de modelos: desliza para ver los siete"}),
+            html.Button(icon("arrow"), className="icon-btn mc-nav mc-next", title="Modelo siguiente",
+                        **{"aria-label": "Modelo siguiente", "type": "button"}),
+        ], className="mc-wrap"),
+        html.Div([html.Button(className="mc-dot" + (" on" if i == 0 else ""), title=MODEL_INFO[r.model][0],
+                              **{"aria-label": f"Ir a {MODEL_INFO[r.model][0]}", "type": "button"})
+                  for i, r in enumerate(MODEL_BEST.itertuples())], className="mc-dots"),
+    ], className="mc-carousel")
+
+
+def fig_models_heat(metric):
+    """Mapa de calor modelo × técnica: mejor valor de la métrica entre los 4 métodos."""
+    order = list(MODEL_BEST["model"])
+    p = MODELS_DF.pivot_table(index="model", columns="technique", values=metric, aggfunc="max")
+    p = p.reindex(index=order[::-1], columns=TECH_ORDER)
+    z = p.values
+    fig = go.Figure(go.Heatmap(
+        z=z, x=[TECH_LBL[t] for t in TECH_ORDER], y=[MODEL_INFO[m][0] for m in p.index],
+        colorscale=SEQ_GOLD, texttemplate="%{z:.3f}", textfont=dict(size=13),
+        hovertemplate="%{y} · %{x}<br>" + METRICS[metric] + " = %{z:.4f}<extra></extra>",
+        colorbar=dict(title=METRICS[metric], thickness=12), xgap=3, ygap=3))
+    style_fig(fig, 430, legend_top=False)
+    fig.update_layout(margin=dict(l=150, r=20, t=20, b=50), plot_bgcolor=WHITE)
+    fig.update_xaxes(side="bottom", title="Técnica de balanceo", showgrid=False)
+    fig.update_yaxes(showgrid=False)
+    return fig
+
+
+def fig_models_top(n=15):
+    """Las n mejores combinaciones por F1 con su desviación entre folds."""
+    t = MODELS_DF.head(n).iloc[::-1]
+    colors = [WARM_GOLD if i == 0 else NAVY for i in range(n)][::-1]
+    fig = go.Figure(go.Bar(
+        x=t["f1"], y=t["combo"], orientation="h", marker_color=colors,
+        error_x=dict(type="data", array=t["f1_sd"], color=GREY_BLUE, thickness=1.2, width=3),
+        hovertemplate="%{y}<br>F1 = %{x:.4f} ± %{error_x.array:.4f}<extra></extra>"))
+    style_fig(fig, 520, legend_top=False)
+    fig.update_layout(margin=dict(l=20, r=20, t=20, b=50), showlegend=False)
+    fig.update_xaxes(range=[0.52, 0.56], title="F1 medio ± desviación estándar")
+    fig.update_yaxes(automargin=True, tickfont=dict(size=11.5))
+    return fig
+
+
+def fig_models_tradeoff():
+    """Precisión vs. recall de las 112 combinaciones: el balanceo mueve el punto de operación."""
+    colors = {"none": GREY_BLUE, "class_weight": WARM_GOLD, "smote": NAVY, "adasyn": BROWN}
+    fig = go.Figure()
+    for t in TECH_ORDER:
+        s = MODELS_DF[MODELS_DF.technique == t]
+        fig.add_trace(go.Scatter(
+            x=s["recall"], y=s["precision"], mode="markers", name=TECH_LBL[t], customdata=s[["combo", "f1"]],
+            marker=dict(color=colors[t], size=9, opacity=.85, line=dict(width=.6, color=WHITE)),
+            hovertemplate="%{customdata[0]}<br>Recall %{x:.3f} · Precisión %{y:.3f}<br>F1 %{customdata[1]:.3f}<extra></extra>"))
+    fig.add_trace(go.Scatter(x=[BEST.recall], y=[BEST.precision], mode="markers", name="Mejor F1",
+                             marker=dict(symbol="star", size=20, color=PALE_GOLD, line=dict(width=1.5, color=DEEP_NAVY)),
+                             hovertemplate=f"Mejor F1: {BEST.combo}<extra></extra>"))
+    style_fig(fig, 430)
+    fig.update_layout(margin=dict(l=60, r=20, t=50, b=50))
+    fig.update_xaxes(title="Recall (defaults detectados)")
+    fig.update_yaxes(title="Precisión (alertas acertadas)")
+    return fig
+
+
+def interp_models_heat():
+    tech = MODELS_DF.groupby("technique")[["f1", "recall", "precision"]].mean()
+    return (
+        "Cada casilla muestra el mejor resultado del modelo con esa técnica. La columna «Sin balanceo» es la más "
+        "clara: los modelos detectan pocos clientes que incumplen. Al balancear las clases, todos los modelos "
+        "suben su F1, y los modelos de árboles (Random Forest y XGBoost) quedan arriba.",
+        f"Promedio de las 112 combinaciones por técnica: F1 {tech.loc['none', 'f1']:.3f} sin balanceo frente a "
+        f"{tech.loc['class_weight', 'f1']:.3f} con class_weight, {tech.loc['smote', 'f1']:.3f} con SMOTE y "
+        f"{tech.loc['adasyn', 'f1']:.3f} con ADASYN. Friedman por factor (28 bloques modelo × método): "
+        "χ² = 59.8, p ≈ 7·10⁻¹³; «sin balanceo» es peor que las tres técnicas (Nemenyi p ≤ 10⁻⁴) y class_weight "
+        "no se distingue de SMOTE (p = 0.67). Por modelo (16 bloques), Random Forest, XGBoost y SVM forman el "
+        "grupo superior sin diferencias entre sí (p ≥ 0.88). El ROC-AUC casi no cambia entre técnicas: el balanceo "
+        "mueve el umbral más de lo que mejora la capacidad de ordenar clientes.")
+
+
+def interp_models_top():
+    close = int((BEST.f1 - MODELS_DF["f1"] < BEST.f1_sd).sum()) - 1
+    return (
+        f"La combinación con mayor F1 es {BEST.combo} ({BEST.f1:.3f}). Las siguientes están muy cerca: las "
+        "barras grises muestran cuánto varía cada resultado entre los tres folds, y se solapan casi por completo.",
+        f"{close} combinaciones quedan a menos de una desviación estándar ({BEST.f1_sd:.4f}, ddof = 1) de la "
+        "primera. Con 112 combinaciones y 3 folds la diferencia crítica de Nemenyi (115.4) supera la mayor "
+        "diferencia de rangos (107.7): ningún par es significativo, así que el orden es descriptivo. Lo que sí es "
+        "robusto es el patrón: modelos de árboles + class_weight dominan el top 8.")
+
+
+def interp_models_tradeoff():
+    return (
+        "Sin balanceo (gris) los modelos son prudentes: aciertan cuando alertan, pero se les escapan dos de "
+        "cada tres clientes que incumplen. Al balancear, los puntos se corren a la derecha: detectan muchos más "
+        "defaults a cambio de más falsas alarmas.",
+        f"Recall medio por técnica: {MODELS_DF.groupby('technique')['recall'].mean()['none']:.2f} sin balanceo frente a "
+        f"{MODELS_DF.groupby('technique')['recall'].mean()['class_weight']:.2f} con class_weight; la precisión baja "
+        f"de {MODELS_DF.groupby('technique')['precision'].mean()['none']:.2f} a "
+        f"{MODELS_DF.groupby('technique')['precision'].mean()['class_weight']:.2f}. Con el umbral fijo de 0.5, la "
+        "ganancia de F1 viene en gran parte de este desplazamiento. Ajustar el umbral sobre probabilidades "
+        "calibradas podría mover el punto de operación según el costo de cada error.")
+
+
+def best_model_findings():
+    items = [
+        ("Qué variables pesan más",
+         "SHAP sobre el Random Forest: PAY_0 (el atraso de septiembre) domina con claridad, seguido de PAY_2 y "
+         "PAY_3. Un mayor límite de crédito y mayores pagos reducen el riesgo. Coincide con el EDA."),
+        ("Probabilidades calibradas",
+         "Con class_weight las probabilidades sobrestiman el riesgo (ECE 0.196, Brier 0.175). Una recalibración "
+         "isotónica baja el ECE de 0.190 a 0.017 en el fold de F1 mediano."),
+        ("Costo frente a ganancia",
+         "Frente al Random Forest por defecto sin balanceo, el F1 sube de 0.474 a 0.549 (+0.076) y el tiempo de "
+         "ajuste pasa de 9.4 s a 23.7 s, en el fold de F1 mediano."),
+        ("Método de optimización",
+         "Los cuatro métodos (malla, aleatoria, bayesiana y genética) dan F1 medios entre 0.502 y 0.503: son "
+         "equivalentes en la práctica, así que conviene elegir el más barato."),
+    ]
+    return [html.Div([html.Div(t, className="find-title"), html.P(x)], className="finding") for t, x in items]
+
+
+def page_models():
+    gain = BEST.f1 - BASELINE.f1
+    return html.Div([
+        page_title("Modelos", "Siete clasificadores × 4 técnicas de balanceo × 4 métodos de optimización"),
+        html.Div([
+            kpi("Mejor F1", f"{BEST.f1:.3f}", f"{MODEL_INFO[BEST.model][0]} · {TECH_LBL[BEST.technique]}", "target"),
+            kpi("Línea base", f"{BASELINE.f1:.3f}", "Regresión logística sin balanceo", "bars"),
+            kpi("Mejora en F1", f"+{gain:.3f}", f"Recall {BASELINE.recall:.2f} → {BEST.recall:.2f}", "arrow"),
+            kpi("Combinaciones", f"{len(MODELS_DF)}", "Validación cruzada anidada 3 × 3", "columns"),
+        ], className="kpi-row k4"),
+        card("Los siete modelos, de mejor a peor",
+             [models_carousel(),
+              html.P("Cada tarjeta muestra la mejor combinación de ese modelo. Desliza (o usa las flechas) para ver "
+                     "los siete; el borde iluminado marca el de mayor F1.", className="muted mc-hint")],
+             subtitle="F1 de la clase minoritaria (default), media de los 3 folds externos; el mapa 4 × 4 de cada "
+                      "tarjeta va de técnica (filas) a método de búsqueda (columnas)"),
+        card("Comparación por modelo y técnica de balanceo",
+             [html.Div([control("Métrica", dcc.RadioItems(
+                 id="mh-metric", value="f1", className="radio",
+                 options=[{"label": v, "value": k} for k, v in METRICS.items()]))], className="controls"),
+              dcc.Graph(id="mh-graph", config={"displaylogo": False}),
+              html.P("PR-AUC no incluye SVM (corrió en GPU con otra librería).", className="muted"),
+              interp_block(*interp_models_heat())],
+             subtitle="Mejor valor de cada modelo con cada técnica, entre los cuatro métodos de optimización"),
+        html.Div([
+            card("Las 15 combinaciones con mayor F1",
+                 [dcc.Graph(id="mtop-graph", figure=fig_models_top(), config={"displaylogo": False}),
+                  interp_block(*interp_models_top())],
+                 subtitle="Barras: F1 medio · líneas: desviación estándar entre folds"),
+            card("Precisión frente a recall",
+                 [dcc.Graph(id="mtr-graph", figure=fig_models_tradeoff(), config={"displaylogo": False}),
+                  interp_block(*interp_models_tradeoff())],
+                 subtitle="Las 112 combinaciones, coloreadas por técnica de balanceo"),
+        ], className="grid g2"),
+        html.Div([html.H3(f"El mejor modelo en detalle: {BEST.combo}", className="section-h"),
+                  html.Div(best_model_findings(), className="grid g4")], className="findings"),
+        html.P(["Nota: las 16 filas de SVM vienen de Colab (cuML en GPU) y no son estrictamente comparables con "
+                "las otras 96 (otro solver y otras versiones de librerías). Fuente: notebooks 04, 05, 06 y 07 del ",
+                html.A("repositorio del proyecto", href=REPO_PROJECT + "/tree/main/notebooks", target="_blank",
+                       rel="noopener noreferrer"), "."], className="muted mc-note"),
+    ])
+
+
 # =============================================================================
 # 7. APLICACIÓN, CSS, NAVEGACIÓN Y CALLBACKS
 # =============================================================================
@@ -1937,6 +2207,70 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .team-hint { text-align:center; font-size:13px; margin:18px 0 8px; }
 @media (max-width:600px) { .team-grid { grid-template-columns:minmax(0,320px); } }
 @media (prefers-reduced-motion:reduce) { .tc-scene { animation:none; } .tc-inner { transition:none; } }
+
+/* ---- Modelos: carrusel de tarjetas (desliza para ver los siete) ---- */
+.mc-carousel { margin:4px 0 2px; }
+.mc-wrap { position:relative; display:flex; align-items:center; gap:10px; }
+.mc-rail { flex:1; min-width:0; display:flex; gap:22px; overflow-x:auto; scroll-snap-type:x mandatory;
+  scroll-padding:0 24px; padding:34px 24px 34px; scrollbar-width:thin; scrollbar-color:var(--line-strong) transparent;
+  overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; }
+.mc-rail:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; border-radius:12px; }
+.mc-rail::-webkit-scrollbar { height:8px; } .mc-rail::-webkit-scrollbar-thumb { background:var(--line-strong); border-radius:8px; }
+.mc { flex:0 0 clamp(270px,30%,318px); scroll-snap-align:start; border-radius:22px; position:relative;
+  transition:transform .25s ease, box-shadow .25s ease; animation:cc-settle .7s cubic-bezier(.2,.8,.2,1) backwards; }
+.mc:hover { transform:translateY(-4px); }
+.mc .cc-face { position:relative; inset:auto; height:100%; padding:20px 20px 18px; display:flex; flex-direction:column; gap:13px; }
+.mc .cc-top { position:relative; }
+.mc-name { font-size:19px; font-weight:700; letter-spacing:.02em; line-height:1.2; }
+.mc-pills { display:flex; flex-wrap:wrap; gap:6px; }
+.mc-pill { font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:999px; color:#D2BB89;
+  border:1px solid rgba(210,187,137,.4); background:rgba(210,187,137,.08); }
+.mc-f1 { display:flex; align-items:baseline; gap:8px; }
+.mc-f1 b { font-family:Consolas,'Courier New',monospace; font-size:34px; letter-spacing:.04em; line-height:1.05;
+  font-variant-numeric:tabular-nums; text-shadow:0 1px 0 rgba(0,0,0,.45), 0 -1px 0 rgba(255,255,255,.14); }
+.mc-f1 span { font-size:12.5px; color:#9AA3BA; font-variant-numeric:tabular-nums; }
+.mc-bars { display:grid; gap:7px; }
+.mc-bar { display:grid; grid-template-columns:68px 1fr 42px; align-items:center; gap:8px; font-size:12px; }
+.mc-bar span { color:#C9CFDD; } .mc-bar b { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+.mc-track-bar { height:6px; border-radius:6px; background:rgba(255,255,255,.09); overflow:hidden; }
+.mc-track-bar div { height:100%; border-radius:6px; background:linear-gradient(90deg,#B88F3D,#D2BB89); }
+.mc-bar.na b, .mc-bar.na span { color:#7D869E; }
+.mc-heat { display:grid; grid-template-columns:52px repeat(4,1fr); gap:3px; margin-top:5px; font-size:10.5px; }
+.mh-col { text-align:center; color:#9AA3BA; } .mh-row { color:#C9CFDD; align-self:center; white-space:nowrap; }
+.mh-cell { text-align:center; padding:4px 0; border-radius:4px; font-variant-numeric:tabular-nums;
+  background:rgba(210,187,137,var(--a)); color:#1A233D; font-weight:600; }
+.mh-cell.lo { color:#F3EFE7; font-weight:500; }
+.mh-cell.top { box-shadow:0 0 0 1.5px #F3EFE7; }
+.mc-desc { margin:auto 0 0 !important; font-size:12.5px; line-height:1.5; color:#C9CFDD; }
+.mc-ribbon { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; letter-spacing:.04em;
+  padding:4px 10px; border-radius:999px; color:#1A233D; background:linear-gradient(135deg,#E6D3A3,#D2BB89 55%,#B88F3D); }
+.mc-ribbon .ico { width:13px; height:13px; }
+/* El mejor modelo: borde con luz dorada que respira */
+.mc.best { z-index:1; }
+.mc.best::before { content:''; position:absolute; inset:-2px; border-radius:24px; pointer-events:none; padding:2px;
+  background:conic-gradient(from var(--mc-ang,0deg), #B88F3D, #F3EFE7, #D2BB89, #B88F3D 40%, #D2BB89 70%, #B88F3D);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); animation:mc-spin 6s linear infinite; }
+.mc.best .cc-face { border-color:transparent;
+  animation:mc-glow 2.8s ease-in-out infinite; }
+@property --mc-ang { syntax:'<angle>'; inherits:false; initial-value:0deg; }
+@keyframes mc-spin { to { --mc-ang:360deg; } }
+@keyframes mc-glow {
+  0%,100% { box-shadow:0 0 16px 3px rgba(210,187,137,.45), 0 0 36px 8px rgba(184,143,61,.25), 0 34px 60px -24px rgba(8,12,30,.6); }
+  50%     { box-shadow:0 0 24px 6px rgba(210,187,137,.7),  0 0 54px 14px rgba(184,143,61,.4),  0 34px 60px -24px rgba(8,12,30,.6); } }
+.mc-nav { flex:none; border-radius:50%; background:var(--surface); }
+.mc-nav .flip { transform:scaleX(-1); }
+.mc-nav:disabled { opacity:.35; cursor:default; }
+.mc-dots { display:flex; justify-content:center; gap:8px; margin-top:4px; }
+.mc-dot { width:9px; height:9px; padding:0; border-radius:999px; border:0; cursor:pointer; background:var(--line-strong);
+  transition:width .2s, background .2s; }
+.mc-dot.on { width:24px; background:var(--accent-2); }
+.mc-hint { text-align:center; margin:10px 0 0; }
+.mc-note { margin:6px 0 10px; } .mc-note a { color:var(--accent-2); }
+@media (max-width:600px) { .mc-nav { display:none; } .mc { flex-basis:84%; } .mc-rail { padding:24px 8px 20px; scroll-padding:0 8px; } }
+@media (prefers-reduced-motion:reduce) { .mc { animation:none; } .mc.best::before, .mc.best .cc-face { animation:none; }
+  .mc.best .cc-face { box-shadow:0 0 22px 5px rgba(210,187,137,.5), 0 34px 60px -24px rgba(8,12,30,.6); } }
 """
 
 # ---------- JS de la portada: inclinación con el mouse, brillo y volteo ----------
@@ -2012,6 +2346,40 @@ COVER_JS = """
       e.preventDefault(); flip(a); }
   });
 })();
+
+// ---------- Modelos: carrusel (flechas, puntos y teclado) ----------
+(function () {
+  function parts(el) { var c = el.closest('.mc-carousel'); if (!c) return null;
+    return { c: c, rail: c.querySelector('.mc-rail'), cards: c.querySelectorAll('.mc'), dots: c.querySelectorAll('.mc-dot') }; }
+  function current(p) { var r = p.rail.getBoundingClientRect(), best = 0, d = 1e9;
+    p.cards.forEach(function (k, i) { var x = Math.abs(k.getBoundingClientRect().left - r.left - 24);
+      if (x < d) { d = x; best = i; } }); return best; }
+  function go(p, i) { i = Math.max(0, Math.min(p.cards.length - 1, i));
+    var k = p.cards[i]; p.rail.scrollTo({ left: k.offsetLeft - p.rail.offsetLeft - 24, behavior: 'smooth' }); }
+  function sync(p) { var i = current(p), end = p.rail.scrollLeft + p.rail.clientWidth >= p.rail.scrollWidth - 4;
+    if (end) i = p.cards.length - 1;
+    p.dots.forEach(function (d, j) { d.classList.toggle('on', j === i); });
+    var pr = p.c.querySelector('.mc-prev'), nx = p.c.querySelector('.mc-next');
+    if (pr) pr.disabled = p.rail.scrollLeft <= 4; if (nx) nx.disabled = end; }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    var b = e.target.closest('.mc-prev, .mc-next, .mc-dot'); if (!b) return;
+    var p = parts(b); if (!p) return;
+    if (b.classList.contains('mc-dot')) go(p, Array.prototype.indexOf.call(p.dots, b));
+    else go(p, current(p) + (b.classList.contains('mc-next') ? 1 : -1));
+  });
+  document.addEventListener('keydown', function (e) {
+    var a = document.activeElement; if (!a || !a.classList || !a.classList.contains('mc-rail')) return;
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault(); var p = parts(a); go(p, current(p) + (e.key === 'ArrowRight' ? 1 : -1));
+  });
+  document.addEventListener('scroll', function (e) {
+    var t = e.target; if (t && t.classList && t.classList.contains('mc-rail')) sync(parts(t));
+  }, true);
+  // Al montar la página (Dash la inserta después de cargar), deja las flechas en su estado inicial
+  new MutationObserver(function () { var r = document.querySelector('.mc-rail');
+    if (r && !r._mc) { r._mc = 1; sync(parts(r)); } }).observe(document.body, { childList: true, subtree: true });
+})();
 """
 CSS += NEW_CSS
 CSS += _icon_css()
@@ -2039,7 +2407,7 @@ app.index_string = f"""<!DOCTYPE html>
 NAV = [("/", "Inicio", "home"), ("/introduccion", "Introducción", "info"),
        ("/problema", "Problema y Objetivos", "target"), ("/marco", "Marco Teórico", "book"),
        ("/univariado", "EDA Univariado", "bars"), ("/multivariado", "EDA Multivariado", "scatter"),
-       ("/enlaces", "Enlaces", "link"), ("/equipo", "Equipo", "users")]
+       ("/modelos", "Modelos", "chip"), ("/enlaces", "Enlaces", "link"), ("/equipo", "Equipo", "users")]
 
 sidebar = html.Div([
     dcc.Link([html.Div([icon("card"), "Proyecto EDA"], className="brand-tag"),
@@ -2202,6 +2570,22 @@ def cb_corr():
     return fig_corr()
 
 
+# ---------- Callbacks: Modelos ---------------------------------------------------
+@graph_cb(Output("mh-graph", "figure"), Input("mh-metric", "value"))
+def cb_models_heat(metric):
+    return fig_models_heat(metric)
+
+
+@graph_cb(Output("mtop-graph", "figure"))
+def cb_models_top():
+    return fig_models_top()
+
+
+@graph_cb(Output("mtr-graph", "figure"))
+def cb_models_tradeoff():
+    return fig_models_tradeoff()
+
+
 def nav_buttons(path):
     """Botones Anterior / Siguiente para recorrer el tablero en orden."""
     order = [p for p, _, _ in NAV]
@@ -2234,6 +2618,8 @@ def _route(path):
         return page_marco()
     if path == "/introduccion":
         return page_intro()
+    if path == "/modelos":
+        return page_models()
     if path == "/enlaces":
         return page_links()
     if path == "/equipo":
