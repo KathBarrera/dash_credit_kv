@@ -17,8 +17,9 @@
      2. Utilidades (formato, estadísticos, estilos de figuras)
      3. Figuras + interpretaciones: EDA Univariado
      4. Figuras + interpretaciones: EDA Multivariado
+        4a. Modelos (resultados de results/model_results.csv)
      5. Componentes de interfaz (tarjetas, KPIs, interpretaciones)
-     6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Enlaces, Equipo)
+     6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Modelos, Enlaces, Equipo)
      7. Aplicación, CSS, navegación y callbacks
 ===============================================================================
 """
@@ -953,6 +954,126 @@ def key_findings():
 
 
 # =============================================================================
+# 4a. MODELOS (resultados del repositorio Credit_Card_Project, notebooks 04, 05 y 07)
+# =============================================================================
+# results/model_results.csv resume las 112 combinaciones (7 modelos x 4 técnicas de
+# balanceo x 4 métodos de optimización, validación cruzada anidada 3 x 3):
+#   - 96 filas locales: results/experiments_posthoc_metrics.csv (F1, precisión, recall,
+#     ROC-AUC y PR-AUC; desviación del F1 con ddof=1).
+#   - 16 filas de SVM: results/svm_gpu_results_colab.csv (Colab con GPU; sin PR-AUC).
+MODEL_RESULTS_PATH = BASE_DIR / "results" / "model_results.csv"
+MR = pd.read_csv(MODEL_RESULTS_PATH)
+
+MODEL_INFO = {
+    "random_forest": {
+        "label": "Random Forest", "family": "Ensamble de árboles (bagging)",
+        "desc": "Promedia muchos árboles entrenados sobre muestras distintas de clientes; capta relaciones no "
+                "lineales entre el historial de pagos y el riesgo.",
+        "note": "Mayor F1 medio de las 112 combinaciones. Encabeza el grupo superior junto a XGBoost y SVM, "
+                "sin diferencia significativa entre los tres (Nemenyi, p ≥ 0.88)."},
+    "xgboost": {
+        "label": "XGBoost", "family": "Ensamble de árboles (boosting)",
+        "desc": "Construye árboles en secuencia: cada uno corrige los errores del anterior.",
+        "note": "A menos de una milésima del primer lugar: la diferencia es mucho menor que la variación "
+                "entre folds, así que en la práctica empata con Random Forest."},
+    "svm": {
+        "label": "SVM", "family": "Máquina de vectores de soporte (kernel RBF)",
+        "desc": "Busca la frontera que separa mejor a quienes pagan de quienes incumplen, con un margen máximo.",
+        "note": "Corrida en Colab con GPU (cuML): no es estrictamente comparable con los demás modelos "
+                "y no tiene PR-AUC calculado."},
+    "knn": {
+        "label": "KNN", "family": "Vecinos más cercanos",
+        "desc": "Clasifica a cada cliente según lo que hicieron los clientes más parecidos a él.",
+        "note": "Con pesos de clase usa un ajuste propio del proyecto (el voto de cada vecino se pondera por la "
+                "rareza de su clase), no un mecanismo estándar de scikit-learn."},
+    "decision_tree": {
+        "label": "Árbol de decisión", "family": "Árbol de clasificación",
+        "desc": "Una secuencia de preguntas sí/no sobre las variables; fácil de leer, pero inestable.",
+        "note": "Queda por debajo del grupo superior: Random Forest lo supera de forma significativa (p = 0.018)."},
+    "logistic_regression": {
+        "label": "Regresión logística", "family": "Modelo lineal · línea base",
+        "desc": "Modelo de referencia: combina las variables de forma lineal para estimar la probabilidad de default.",
+        "note": "Sin balanceo es la combinación con menor F1 (0.378): solo detecta 26 % de quienes incumplen. "
+                "Con SMOTE o pesos de clase sube a 0.515, con un ROC-AUC casi igual."},
+    "naive_bayes": {
+        "label": "Naive Bayes", "family": "Probabilístico (gaussiano)",
+        "desc": "Aplica el teorema de Bayes suponiendo que las variables son independientes entre sí.",
+        "note": "Ese supuesto no se cumple con el historial de pagos, muy correlacionado mes a mes; "
+                "por eso el balanceo casi no lo cambia (F1 entre 0.494 y 0.499)."},
+}
+TECH_LBL = {"none": "Sin balanceo", "class_weight": "Pesos de clase", "smote": "SMOTE", "adasyn": "ADASYN"}
+TECH_ORDER = ["none", "class_weight", "smote", "adasyn"]
+METHOD_LBL = {"grid_search": "Grid search", "random_search": "Random search",
+              "bayesian_optuna": "Bayesiana (Optuna)", "genetic_deap": "Genética (DEAP)"}
+
+# Mejor combinación de cada modelo (por F1 medio), ordenadas de mejor a peor
+BEST_BY_MODEL = (MR.loc[MR.groupby("model")["f1_mean"].idxmax()]
+                 .sort_values("f1_mean", ascending=False).reset_index(drop=True))
+BEST = BEST_BY_MODEL.iloc[0]
+BASELINE = MR[(MR["model"] == "logistic_regression") & (MR["technique"] == "none")]["f1_mean"].max()
+# Matriz de confusión out-of-fold de la mejor combinación (05_results_analysis.ipynb)
+BEST_CM = {"tn": 19295, "fp": 4040, "fn": 2624, "tp": 4006}
+TECH_COLORS = {"none": GREY_BLUE, "class_weight": WARM_GOLD, "smote": DEEP_NAVY, "adasyn": MID_BLUE}
+
+
+def fig_models_heat():
+    """Mejor F1 de cada modelo con cada técnica de balanceo (máximo sobre los 4 métodos)."""
+    order = list(BEST_BY_MODEL["model"])
+    pv = MR.pivot_table(index="model", columns="technique", values="f1_mean", aggfunc="max").loc[order, TECH_ORDER]
+    fig = go.Figure(go.Heatmap(
+        z=pv.values, x=[TECH_LBL[t] for t in TECH_ORDER], y=[MODEL_INFO[m]["label"] for m in order],
+        colorscale=SEQ_GOLD, texttemplate="%{z:.3f}", textfont=dict(size=13), xgap=3, ygap=3,
+        colorbar=dict(title="F1", thickness=12),
+        hovertemplate="%{y} · %{x}<br>Mejor F1: %{z:.4f}<extra></extra>"))
+    style_fig(fig, 400, legend_top=False)
+    fig.update_layout(margin=dict(l=130, r=20, t=24, b=40))
+    fig.update_yaxes(autorange="reversed", showgrid=False)
+    fig.update_xaxes(side="top", showgrid=False)
+    return fig
+
+
+def fig_models_scatter():
+    """Las 112 combinaciones: F1 frente a ROC-AUC, coloreadas por técnica de balanceo."""
+    fig = go.Figure()
+    for t in TECH_ORDER:
+        d = MR[MR["technique"] == t]
+        fig.add_trace(go.Scatter(
+            x=d["roc_auc_mean"], y=d["f1_mean"], mode="markers", name=TECH_LBL[t],
+            marker=dict(size=9, color=TECH_COLORS[t], opacity=.85, line=dict(width=.6, color=WHITE)),
+            customdata=np.stack([d["model"].map(lambda m: MODEL_INFO[m]["label"]),
+                                 d["method"].map(METHOD_LBL), d["recall_mean"]], axis=-1),
+            hovertemplate="<b>%{customdata[0]}</b> · " + TECH_LBL[t] + "<br>%{customdata[1]}"
+                          "<br>F1: %{y:.4f}<br>ROC-AUC: %{x:.4f}<br>Recall: %{customdata[2]:.3f}<extra></extra>"))
+    fig.add_trace(go.Scatter(
+        x=[BEST["roc_auc_mean"]], y=[BEST["f1_mean"]], mode="markers", name="Mejor combinación",
+        marker=dict(symbol="star", size=20, color=PALE_GOLD, line=dict(width=1.5, color=GOLD_DARK)),
+        hovertemplate=f"<b>Mejor: {MODEL_INFO[BEST['model']]['label']}</b><br>{TECH_LBL[BEST['technique']]} · "
+                      f"{METHOD_LBL[BEST['method']]}<br>F1: %{{y:.4f}}<br>ROC-AUC: %{{x:.4f}}<extra></extra>"))
+    style_fig(fig, 420)
+    fig.update_layout(margin=dict(l=60, r=20, t=50, b=55),
+                      xaxis_title="ROC-AUC (capacidad de ordenar clientes)", yaxis_title="F1 de la clase default")
+    return fig
+
+
+def fig_best_cm():
+    """Matriz de confusión out-of-fold de la mejor combinación (umbral 0.5)."""
+    c = BEST_CM
+    z = [[c["tn"], c["fp"]], [c["fn"], c["tp"]]]
+    txt = [[f"<b>{c['tn']:,}</b><br>Bien clasificados", f"<b>{c['fp']:,}</b><br>Falsas alarmas"],
+           [f"<b>{c['fn']:,}</b><br>No detectados", f"<b>{c['tp']:,}</b><br>Detectados"]]
+    fig = go.Figure(go.Heatmap(
+        z=z, x=["Predice: paga", "Predice: incumple"], y=["Real: paga", "Real: incumple"],
+        text=txt, texttemplate="%{text}", textfont=dict(size=13), showscale=False, xgap=4, ygap=4,
+        colorscale=[[0, CREAM], [0.25, PALE_GOLD], [1, NAVY]],
+        hovertemplate="%{y} · %{x}<br>Clientes: %{z:,}<extra></extra>"))
+    style_fig(fig, 340, legend_top=False)
+    fig.update_layout(margin=dict(l=100, r=20, t=24, b=40))
+    fig.update_yaxes(autorange="reversed", showgrid=False)
+    fig.update_xaxes(side="top", showgrid=False)
+    return fig
+
+
+# =============================================================================
 # 4b. ICONOS (SVG propios, sin dependencias ni emojis; toman el color del texto)
 # =============================================================================
 ICONS = {
@@ -984,6 +1105,10 @@ ICONS = {
     "card": '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/>',
     "chip": '<rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 10h16M4 14h16M10 5v14M14 5v14"/>',
     "contactless": '<path d="M8.5 8.5a5 5 0 0 1 0 7M12 6a9 9 0 0 1 0 12M15.5 3.5a13 13 0 0 1 0 17"/>',
+    # --- página Modelos ---
+    "layers": '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
+    "trophy": '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+    "chevron": '<path d="m9 6 6 6-6 6"/>',
 }
 
 
@@ -1002,7 +1127,7 @@ def icon(name, cls=""):
 
 
 PAGE_ICONS = {"Introducción": "info", "Problema y Objetivos": "target", "Marco Teórico": "book",
-              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Enlaces": "link", "Equipo": "users"}
+              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Modelos": "layers", "Enlaces": "link", "Equipo": "users"}
 
 
 # =============================================================================
@@ -1194,8 +1319,9 @@ def page_intro():
                        "de 2005. Para cada cliente se conoce su límite de crédito, sus características demográficas, "
                        "su historial de pagos de seis meses, los montos facturados, los montos pagados y si incumplió "
                        "el pago del mes siguiente (variable objetivo)."),
-                html.P("El análisis se organiza en tres capas: fundamentos (problema, objetivos y marco teórico), "
-                       "exploración univariada y exploración multivariada. Cada gráfico trae una interpretación "
+                html.P("El análisis se organiza en cuatro capas: fundamentos (problema, objetivos y marco teórico), "
+                       "exploración univariada, exploración multivariada y los resultados de los modelos "
+                       "predictivos del proyecto. Cada gráfico trae una interpretación "
                        "básica (lenguaje cotidiano) y una técnica (estadísticos y recomendaciones de modelado)."),
             ], cls="span-2"),
             card("Fuente y alcance", [
@@ -1203,8 +1329,8 @@ def page_intro():
                        "accuracy of probability of default of credit card clients. Expert Systems with Applications, "
                        "36(2), 2473–2480. Datos: UCI Machine Learning Repository."),
                 html.P("Cifras monetarias en dólares taiwaneses (NT$)."),
-                html.P("Alcance: descriptivo y exploratorio. No se estima causalidad ni se entrena un modelo predictivo.",
-                       className="muted"),
+                html.P("Alcance: el EDA es descriptivo y no estima causalidad. La sección Modelos resume los "
+                       "clasificadores entrenados en el repositorio del proyecto.", className="muted"),
             ]),
         ], className="grid g3"),
         html.Div([
@@ -1293,7 +1419,8 @@ def page_problem():
             card("Alcance y limitaciones", _ul([
                 "Datos de un solo banco de Taiwán y de un periodo corto (abril–septiembre de 2005): no se generalizan sin cautela a otros mercados o épocas.",
                 "El análisis es asociativo; una correlación no implica causalidad.",
-                "No se construye ni evalúa un modelo predictivo; solo se derivan lineamientos para hacerlo.",
+                "El EDA no construye modelos: deriva lineamientos para hacerlo. Los modelos se entrenan en el "
+                "repositorio del proyecto y sus resultados se resumen en la sección Modelos.",
                 "Los códigos −2 y 0 de PAY_x no están documentados con precisión en la fuente; se conservan sin recodificar.",
             ])),
         ], className="grid g2"),
@@ -1405,7 +1532,8 @@ def page_marco():
                        "discriminante, k vecinos, Naive Bayes, redes neuronales y árboles de clasificación) para "
                        "predecir el incumplimiento con estos mismos datos, y propusieron un método de suavizado por "
                        "ordenamiento (Sorting Smoothing Method) para estimar la probabilidad real de incumplimiento."),
-                html.P("Este tablero no repite ese modelado: se concentra en la etapa previa, entender los datos."),
+                html.P("La sección Modelos retoma esa comparación con siete clasificadores, cuatro técnicas de "
+                       "balanceo y cuatro métodos de optimización de hiperparámetros."),
             ]),
             card("Referencias", html.Ul([html.Li(r) for r in refs], className="refs")),
         ], className="grid g2"),
@@ -1503,6 +1631,168 @@ def page_home():
             ], className="cover-copy"),
         ], className="cover-hero"),
     ], className="cover")
+
+
+# ---------------------------------------------------------------- Modelos
+F1_MAX = MR["f1_mean"].max()
+
+
+def _mc_bar(label, v, scale=1.0, cls=""):
+    """Fila de métrica con barra (v se dibuja como fracción de `scale`)."""
+    if pd.isna(v):
+        return html.Div([html.Span(label), html.Div(className="mc-bar na"), html.B("n/d", title="No calculado")],
+                        className="mc-metric")
+    return html.Div([html.Span(label),
+                     html.Div(html.Span(style={"width": f"{min(v / scale, 1) * 100:.1f}%"}), className="mc-bar"),
+                     html.B(f"{v:.3f}")], className=f"mc-metric {cls}".strip())
+
+
+def model_slide(row, rank):
+    """Tarjeta de un modelo dentro del carrusel (mejor combinación de ese modelo)."""
+    m = row["model"]
+    info = MODEL_INFO[m]
+    best = rank == 1
+    sub = MR[MR["model"] == m]
+    by_tech = sub.groupby("technique")["f1_mean"].max()
+    top = html.Div([html.Span(f"#{rank}", className="mc-rank"),
+                    html.Span([icon("trophy"), "Mejor modelo"], className="mc-badge") if best
+                    else html.Span(f"{row['f1_mean'] - F1_MAX:+.4f} F1 vs. el mejor", className="mc-fam-top")],
+                   className="mc-top")
+    return html.Article([
+        html.Div(className="cc-gloss"),
+        top,
+        html.H3(info["label"], className="mc-name"),
+        html.Div(info["family"], className="mc-family"),
+        html.Div([
+            html.Div(className="cc-chip mc-chip"),
+            html.Div([html.Span("F1 · clase default", className="cc-lbl"),
+                      html.Div([html.Span(f"{row['f1_mean']:.3f}", className="mc-f1"),
+                                html.Span(f"± {row['f1_std']:.3f}", className="mc-std")])]),
+        ], className="mc-score"),
+        html.Div([html.Span(TECH_LBL[row["technique"]], className="mc-pill"),
+                  html.Span(METHOD_LBL[row["method"]], className="mc-pill")], className="mc-config",
+                 title="Técnica de balanceo y método de optimización de su mejor combinación"),
+        html.Div([_mc_bar("Precisión", row["precision_mean"]), _mc_bar("Recall", row["recall_mean"]),
+                  _mc_bar("ROC-AUC", row["roc_auc_mean"]), _mc_bar("PR-AUC", row["pr_auc_mean"])],
+                 className="mc-metrics"),
+        html.Div([html.Span("Mejor F1 con cada técnica de balanceo", className="cc-lbl"),
+                  *[_mc_bar(TECH_LBL[t], by_tech.get(t), F1_MAX, "on" if t == row["technique"] else "")
+                    for t in TECH_ORDER]], className="mc-metrics mc-tech"),
+        html.P(info["desc"], className="mc-desc"),
+        html.P(info["note"], className="mc-note"),
+        html.Div(f"16 combinaciones · F1 de {sub['f1_mean'].min():.3f} a {sub['f1_mean'].max():.3f}",
+                 className="mc-foot"),
+    ], className="mc-slide" + (" best" if best else ""),
+        **{"aria-label": f"Puesto {rank}: {info['label']}, F1 {row['f1_mean']:.3f}"})
+
+
+def models_carousel():
+    rows = list(BEST_BY_MODEL.iterrows())
+    slides = [model_slide(r, i + 1) for i, r in rows]
+    dots = [html.Button(className="mc-dot", n_clicks=0,
+                        **{"data-i": str(i), "type": "button", "title": MODEL_INFO[r["model"]]["label"],
+                           "aria-label": f"Ver {MODEL_INFO[r['model']]['label']}"})
+            for i, r in rows]
+    return html.Div([
+        html.Div([
+            html.Button(icon("chevron"), className="mc-nav mc-prev", n_clicks=0,
+                        **{"type": "button", "title": "Modelo anterior", "aria-label": "Modelo anterior"}),
+            html.Div(slides, className="mc-track", tabIndex=0,
+                     **{"role": "region", "aria-label": "Carrusel de modelos; usa las flechas para desplazarte"}),
+            html.Button(icon("chevron"), className="mc-nav mc-next", n_clicks=0,
+                        **{"type": "button", "title": "Modelo siguiente", "aria-label": "Modelo siguiente"}),
+        ], className="mc-stage"),
+        html.Div(dots, className="mc-dots"),
+        html.P("Desliza, usa las flechas o los puntos para recorrer los siete modelos.", className="muted mc-hint"),
+    ], className="mc-wrap")
+
+
+def page_models():
+    b, info = BEST, MODEL_INFO[BEST["model"]]
+    c = BEST_CM
+    pos, flagged = c["tp"] + c["fn"], c["tp"] + c["fp"]
+    gcfg = {"displaylogo": False, "displayModeBar": False}
+    return html.Div([
+        page_title("Modelos", "Siete clasificadores comparados con validación cruzada anidada; desliza para ver cada uno"),
+        html.Div([
+            kpi("Combinaciones evaluadas", f"{len(MR)}", "7 modelos × 4 balanceos × 4 optimizadores", "layers"),
+            kpi("Mejor F1 (clase default)", f"{b['f1_mean']:.3f}", f"{info['label']} · {TECH_LBL[b['technique']]}",
+                "trophy"),
+            kpi("Mejora sobre la línea base", f"+{b['f1_mean'] - BASELINE:.3f}",
+                f"Regresión logística sin balanceo: {BASELINE:.3f}", "bars"),
+            kpi("Incumplimientos detectados", f"{b['recall_mean']:.0%}", "Recall del mejor modelo (umbral 0.5)",
+                "target"),
+        ], className="kpi-row k4"),
+        card("Comparación de modelos", models_carousel(),
+             subtitle="Mejor combinación de cada modelo, ordenados por F1 medio en los 3 folds externos. "
+                      "El borde dorado marca el mejor."),
+        html.Div([
+            card("F1 por modelo y técnica de balanceo", [
+                dcc.Graph(id="mdl-heat", figure=fig_models_heat(), config=gcfg),
+                interp_block(
+                    "Cada celda es el mejor F1 que logró el modelo con esa técnica. Sin balanceo todos rinden peor, "
+                    "porque casi no detectan a quienes incumplen; con pesos de clase, Random Forest y XGBoost "
+                    "llegan a 0.55.",
+                    "Comparación por factor (Friedman con 28 bloques modelo × método): χ² = 59.8, p ≈ 7·10⁻¹³. "
+                    "Sin balanceo el F1 medio es 0.453, frente a 0.526 (pesos de clase), 0.519 (SMOTE) y 0.513 "
+                    "(ADASYN); «sin balanceo» es peor que las tres (Nemenyi, p ≤ 10⁻⁴). Pesos de clase supera a "
+                    "ADASYN (p = 0.020) y no se distingue de SMOTE (p = 0.67). Naive Bayes es el único modelo "
+                    "al que el balanceo casi no le cambia el F1."),
+            ]),
+            card("Balancear mueve el umbral, no la capacidad de ordenar", [
+                dcc.Graph(id="mdl-scatter", figure=fig_models_scatter(), config=gcfg),
+                interp_block(
+                    "Cada punto es una de las 112 combinaciones. Las que no balancean (gris) quedan abajo: "
+                    "aciertan poco con quienes incumplen. Pero no quedan más a la izquierda: ordenan a los clientes "
+                    "casi igual de bien; lo que cambia es dónde se pone el corte entre «paga» e «incumple».",
+                    "ROC-AUC medio por técnica (96 combinaciones locales): 0.758 sin balanceo, 0.761 con pesos de "
+                    "clase, 0.754 con SMOTE y 0.749 con ADASYN. Al umbral de 0.5 el recall pasa de 0.377 a 0.610 y "
+                    "la precisión baja de 0.618 a 0.460, así que la ganancia de F1 (0.456 → 0.523) viene en gran "
+                    "parte del umbral y no de un modelo que discrimine mejor."),
+            ]),
+        ], className="grid g2"),
+        html.Div([
+            card(f"Mejor combinación: {info['label']}", [
+                dcc.Graph(id="mdl-cm", figure=fig_best_cm(), config=gcfg),
+                interp_block(
+                    f"De los {pos:,} clientes que incumplieron, el modelo detecta {c['tp']:,} ({c['tp'] / pos:.0%}). "
+                    f"A cambio marca {c['fp']:,} falsas alarmas: de los {flagged:,} clientes que señala como "
+                    f"riesgosos, {c['tp'] / flagged:.0%} sí incumple.",
+                    f"{TECH_LBL[b['technique']]} y optimización {METHOD_LBL[b['method']].lower()}. Predicciones "
+                    "out-of-fold de los tres modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.781). "
+                    "Las probabilidades no están calibradas (ECE = 0.196) porque el balanceo infla la clase "
+                    "positiva; una recalibración isotónica la baja a 0.017 en un fold. Ajustar el umbral según el "
+                    "costo de cada tipo de error es el siguiente paso natural."),
+            ], subtitle=f"Matriz de confusión out-of-fold sobre {sum(c.values()):,} clientes"),
+            card("Qué variables pesan más en el mejor modelo (SHAP)", [
+                _ul([
+                    [html.B("PAY_0 domina: "), "el atraso de septiembre es, con diferencia, la variable más "
+                     "importante; más meses de atraso empujan la predicción hacia el default."],
+                    [html.B("Le siguen PAY_2 y PAY_3, "), "y más abajo PAY_4 a PAY_6: en todas, más atraso, más riesgo."],
+                    [html.B("Mayor límite de crédito, menor riesgo: "), "los valores altos de LIMIT_BAL reducen la "
+                     "probabilidad de default."],
+                    [html.B("Montos pagados y facturados: "), "pagar más se asocia con menor riesgo, pero con un "
+                     "efecto individual pequeño; la facturación media aparece quinta y discrimina poco."],
+                ]),
+                html.P("Coincide con el EDA: el historial de pagos es la señal más fuerte del incumplimiento y el "
+                       "perfil demográfico pesa poco.", className="callout"),
+                html.P("SHAP del Random Forest sobre 100 clientes de un fold (06_interpretability.ipynb). Con "
+                       "variables correlacionadas SHAP reparte la importancia entre ellas, así que el orden "
+                       "exacto entre PAY_2 … PAY_6 es aproximado.", className="muted"),
+            ], subtitle="Resumen del notebook de interpretabilidad"),
+        ], className="grid g2"),
+        card("Cómo leer estos resultados", _ul([
+            "Los primeros lugares están prácticamente empatados: 15 de las 112 combinaciones quedan a menos de una "
+            "desviación estándar del mejor F1 y la prueba de Nemenyi no separa ningún par (diferencia crítica "
+            "115.4 frente a 107.7 de diferencia máxima de rangos). El orden entre ellas es descriptivo.",
+            "El factor que sí importa es el balanceo. El método de optimización casi no cambia el F1 (0.5022 a "
+            "0.5032 en promedio), así que conviene elegirlo por su costo computacional.",
+            "Las 16 combinaciones de SVM se corrieron en Colab con GPU (cuML) y no son estrictamente comparables con "
+            "las demás; KNN y Naive Bayes con pesos de clase usan ajustes propios del proyecto.",
+            "Validación cruzada anidada con 3 folds externos y 3 internos; la desviación del F1 se calcula con "
+            "ddof = 1. Con 3 folds las pruebas estadísticas tienen poca potencia y sus p-valores son optimistas.",
+        ]), subtitle="Fuente: notebooks 04, 05, 06 y 07 del repositorio del proyecto"),
+    ])
 
 
 # ---------------------------------------------------------------- Enlaces
@@ -1937,6 +2227,94 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .team-hint { text-align:center; font-size:13px; margin:18px 0 8px; }
 @media (max-width:600px) { .team-grid { grid-template-columns:minmax(0,320px); } }
 @media (prefers-reduced-motion:reduce) { .tc-scene { animation:none; } .tc-inner { transition:none; } }
+
+/* ---- Modelos: carrusel deslizable de tarjetas ---- */
+@property --mc-ang { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+.mc-wrap { --mc-w:min(370px, 80%); }
+.mc-stage { position:relative; margin:0 -8px; }
+.mc-track { position:relative; display:flex; gap:22px; overflow-x:auto; overscroll-behavior-x:contain;
+  scroll-snap-type:x mandatory; scroll-behavior:smooth; scrollbar-width:none;
+  padding:30px calc((100% - var(--mc-w)) / 2) 34px; outline:none; border-radius:14px; }
+.mc-track::-webkit-scrollbar { display:none; }
+.mc-track:focus-visible { box-shadow:inset 0 0 0 2px var(--focus); }
+.mc-slide { position:relative; flex:0 0 var(--mc-w); scroll-snap-align:center; display:flex; flex-direction:column;
+  gap:12px; padding:20px 22px 18px; border-radius:20px; overflow:hidden; color:#F3EFE7;
+  border:1px solid rgba(210,187,137,.30);
+  background:repeating-radial-gradient(circle at 88% 12%, rgba(210,187,137,.07) 0 1px, transparent 1px 8px),
+             linear-gradient(150deg, #2A3860 0%, #1A233D 58%, #141B30 100%);
+  box-shadow:0 26px 46px -26px rgba(8,12,30,.65), inset 0 1px 0 rgba(255,255,255,.07);
+  opacity:.72; filter:saturate(.8); transform:scale(.95); transition:opacity .35s ease, transform .35s ease, filter .35s ease; }
+.mc-slide.is-active { opacity:1; filter:none; transform:none; }
+.mc-slide .cc-gloss { opacity:.45; }
+.mc-slide > *:not(.cc-gloss) { position:relative; }
+/* el mejor: borde con luz dorada que recorre el contorno + halo suave */
+.mc-slide.best { border-color:transparent; opacity:.8;
+  animation:mc-glow 3.4s ease-in-out infinite; }
+.mc-slide.best.is-active { opacity:1; }
+.mc-slide.best::after { content:''; position:absolute; inset:0; border-radius:inherit; padding:2px; pointer-events:none;
+  background:conic-gradient(from var(--mc-ang), rgba(210,187,137,.35) 0deg, rgba(210,187,137,.35) 200deg,
+             #B88F3D 250deg, #F6E7C1 290deg, #D2BB89 315deg, rgba(210,187,137,.35) 350deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude; animation:mc-spin 5s linear infinite; }
+@keyframes mc-spin { to { --mc-ang:360deg; } }
+@keyframes mc-glow {
+  0%,100% { box-shadow:0 0 0 1px rgba(210,187,137,.45), 0 0 22px 0 rgba(210,187,137,.35), 0 26px 46px -26px rgba(8,12,30,.65); }
+  50%     { box-shadow:0 0 0 1px rgba(210,187,137,.75), 0 0 38px 4px rgba(210,187,137,.55), 0 26px 46px -26px rgba(8,12,30,.65); } }
+.mc-top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.mc-rank { font-family:Consolas,'Courier New',monospace; font-weight:700; font-size:14px; letter-spacing:.12em; color:#D2BB89; }
+.mc-fam-top { font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:#9AA3BA; text-align:right; }
+.mc-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; font-size:11.5px;
+  font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#1A233D;
+  background:linear-gradient(135deg, #F1E1B6, #D2BB89 55%, #B88F3D); box-shadow:0 0 14px rgba(210,187,137,.55); }
+.mc-badge .ico { width:14px; height:14px; }
+.mc-name { margin:2px 0 0; font-size:23px; font-weight:800; letter-spacing:-.01em; color:#fff; }
+.mc-family { margin-top:-8px; font-size:12.5px; color:#D2BB89; }
+.mc-score { display:flex; align-items:center; gap:14px; padding:10px 0 2px; }
+.mc-chip { width:46px; flex:none; border-radius:8px; }
+.mc-chip::before { box-shadow:0 -7px 0 rgba(26,35,61,.35), 0 7px 0 rgba(26,35,61,.35); }
+.mc-f1 { font-family:Consolas,'Courier New',monospace; font-size:36px; font-weight:700; letter-spacing:.06em;
+  font-variant-numeric:tabular-nums; text-shadow:0 1px 0 rgba(0,0,0,.45), 0 -1px 0 rgba(255,255,255,.14); }
+.mc-slide.best .mc-f1 { color:#F1E1B6; }
+.mc-std { margin-left:8px; white-space:nowrap; font-size:12.5px; color:#9AA3BA; font-variant-numeric:tabular-nums; }
+.mc-config { display:flex; flex-wrap:wrap; gap:6px; }
+.mc-pill { font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; color:#F3EFE7;
+  border:1px solid rgba(210,187,137,.38); background:rgba(255,255,255,.05); }
+.mc-metrics { display:grid; gap:7px; padding-top:10px; border-top:1px solid rgba(255,255,255,.08); }
+.mc-metric { display:grid; grid-template-columns:92px 1fr 44px; align-items:center; gap:10px; font-size:12.5px; color:#D3D8E5; }
+.mc-tech .mc-metric { grid-template-columns:104px 1fr 44px; }
+.mc-metric b { text-align:right; font-variant-numeric:tabular-nums; color:#F3EFE7; font-weight:600; }
+.mc-bar { height:7px; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; }
+.mc-bar > span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg, #66749C, #AEB8D6); }
+.mc-bar.na { background:repeating-linear-gradient(135deg, rgba(255,255,255,.08) 0 4px, transparent 4px 8px); }
+.mc-tech .mc-bar > span { background:linear-gradient(90deg, #4A5679, #8089A0); }
+.mc-tech .mc-metric.on { color:#F1E1B6; font-weight:600; }
+.mc-tech .mc-metric.on .mc-bar > span { background:linear-gradient(90deg, #B88F3D, #F1E1B6); }
+.mc-desc { margin:2px 0 0 !important; font-size:13px; line-height:1.5; color:#E3DED3; }
+.mc-note { margin:0 !important; font-size:12.5px; line-height:1.5; color:#B9C1D6; padding-left:10px;
+  border-left:2px solid rgba(210,187,137,.55); }
+.mc-foot { margin-top:auto; padding-top:8px; font-size:11px; letter-spacing:.06em; color:#9AA3BA;
+  font-variant-numeric:tabular-nums; }
+.mc-nav { position:absolute; top:50%; z-index:2; width:42px; height:42px; margin-top:-21px; display:inline-flex;
+  align-items:center; justify-content:center; padding:0; border-radius:50%; cursor:pointer; color:var(--text);
+  background:var(--surface); border:1px solid var(--line-strong); box-shadow:0 6px 18px -8px rgba(8,12,30,.45);
+  transition:background .15s, border-color .15s, color .15s, opacity .15s; }
+.mc-nav:hover { border-color:var(--accent-2); color:var(--accent-2); }
+.mc-nav .ico { width:20px; height:20px; }
+.mc-prev { left:4px; } .mc-prev .ico { transform:scaleX(-1); } .mc-next { right:4px; }
+.mc-nav[disabled] { opacity:.35; cursor:default; }
+.mc-dots { display:flex; justify-content:center; gap:8px; margin-top:2px; }
+.mc-dot { width:9px; height:9px; padding:0; border-radius:99px; cursor:pointer; border:0; background:var(--line-strong);
+  transition:width .25s ease, background .25s ease; }
+.mc-dot.on { width:26px; background:var(--accent-2); }
+.mc-dot:first-child { box-shadow:0 0 0 2px rgba(210,187,137,.45); }
+.mc-hint { text-align:center; font-size:12.5px; margin:10px 0 0; }
+@media (max-width:600px) { .mc-wrap { --mc-w:86%; } .mc-nav { display:none; } .mc-track { gap:14px; }
+  .mc-slide { padding:18px 16px 16px; } .mc-f1 { font-size:30px; } .mc-chip { width:38px; }
+  .mc-metric, .mc-tech .mc-metric { grid-template-columns:84px 1fr 40px; gap:8px; } }
+@media (prefers-reduced-motion:reduce) {
+  .mc-slide.best, .mc-slide.best::after { animation:none; }
+  .mc-slide.best { box-shadow:0 0 0 1px rgba(210,187,137,.7), 0 0 30px 2px rgba(210,187,137,.45); }
+  .mc-track { scroll-behavior:auto; } }
 """
 
 # ---------- JS de la portada: inclinación con el mouse, brillo y volteo ----------
@@ -2012,6 +2390,59 @@ COVER_JS = """
       e.preventDefault(); flip(a); }
   });
 })();
+
+// ---------- Modelos: carrusel deslizable (flechas, puntos y tarjeta activa) ----------
+(function () {
+  function slides(t) { return t.querySelectorAll('.mc-slide'); }
+  function current(t) {           // tarjeta cuyo centro está más cerca del centro visible
+    var mid = t.scrollLeft + t.clientWidth / 2, best = 0, d = Infinity;
+    slides(t).forEach(function (s, i) {
+      var dd = Math.abs(s.offsetLeft + s.offsetWidth / 2 - mid); if (dd < d) { d = dd; best = i; } });
+    return best;
+  }
+  function go(t, i) {
+    var s = slides(t)[i]; if (!s) return;
+    t.scrollTo({ left: s.offsetLeft - (t.clientWidth - s.offsetWidth) / 2, behavior: 'smooth' });
+  }
+  function sync(t) {
+    var w = t.closest('.mc-wrap'); if (!w) return;
+    var i = current(t), n = slides(t).length;
+    slides(t).forEach(function (s, k) { s.classList.toggle('is-active', k === i); });
+    w.querySelectorAll('.mc-dot').forEach(function (d, k) {
+      d.classList.toggle('on', k === i);
+      if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
+    var p = w.querySelector('.mc-prev'), nx = w.querySelector('.mc-next');
+    if (p) p.disabled = i <= 0;
+    if (nx) nx.disabled = i >= n - 1;
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    var b = e.target.closest('.mc-prev, .mc-next, .mc-dot'); if (!b) return;
+    var w = b.closest('.mc-wrap'), t = w && w.querySelector('.mc-track'); if (!t) return;
+    if (b.classList.contains('mc-dot')) go(t, +b.getAttribute('data-i'));
+    else go(t, current(t) + (b.classList.contains('mc-next') ? 1 : -1));
+  });
+  document.addEventListener('keydown', function (e) {
+    var t = document.activeElement;
+    if (!t || !t.classList || !t.classList.contains('mc-track')) return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault(); go(t, current(t) + (e.key === 'ArrowRight' ? 1 : -1)); }
+  });
+  var raf = 0;
+  document.addEventListener('scroll', function (e) {
+    var t = e.target;
+    if (!t.classList || !t.classList.contains('mc-track')) return;
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(function () { sync(t); });
+  }, true);
+  // Dash dibuja la página después de cargar: sincroniza cuando aparece un carrusel nuevo
+  function scan() {
+    document.querySelectorAll('.mc-track:not([data-ready])').forEach(function (t) {
+      t.setAttribute('data-ready', '1'); t.scrollLeft = 0; sync(t); });
+  }
+  new MutationObserver(scan).observe(document.documentElement, { childList: true, subtree: true });
+  window.addEventListener('resize', function () {
+    document.querySelectorAll('.mc-track').forEach(function (t) { sync(t); }); });
+})();
 """
 CSS += NEW_CSS
 CSS += _icon_css()
@@ -2039,7 +2470,7 @@ app.index_string = f"""<!DOCTYPE html>
 NAV = [("/", "Inicio", "home"), ("/introduccion", "Introducción", "info"),
        ("/problema", "Problema y Objetivos", "target"), ("/marco", "Marco Teórico", "book"),
        ("/univariado", "EDA Univariado", "bars"), ("/multivariado", "EDA Multivariado", "scatter"),
-       ("/enlaces", "Enlaces", "link"), ("/equipo", "Equipo", "users")]
+       ("/modelos", "Modelos", "layers"), ("/enlaces", "Enlaces", "link"), ("/equipo", "Equipo", "users")]
 
 sidebar = html.Div([
     dcc.Link([html.Div([icon("card"), "Proyecto EDA"], className="brand-tag"),
@@ -2202,6 +2633,22 @@ def cb_corr():
     return fig_corr()
 
 
+# ---------- Callbacks: Modelos ------------------------------------------------
+@graph_cb(Output("mdl-heat", "figure"))
+def cb_models_heat():
+    return fig_models_heat()
+
+
+@graph_cb(Output("mdl-scatter", "figure"))
+def cb_models_scatter():
+    return fig_models_scatter()
+
+
+@graph_cb(Output("mdl-cm", "figure"))
+def cb_best_cm():
+    return fig_best_cm()
+
+
 def nav_buttons(path):
     """Botones Anterior / Siguiente para recorrer el tablero en orden."""
     order = [p for p, _, _ in NAV]
@@ -2234,6 +2681,8 @@ def _route(path):
         return page_marco()
     if path == "/introduccion":
         return page_intro()
+    if path == "/modelos":
+        return page_models()
     if path == "/enlaces":
         return page_links()
     if path == "/equipo":
