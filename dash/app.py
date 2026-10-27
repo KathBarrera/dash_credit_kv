@@ -23,6 +23,7 @@
      6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Modelos, Predecir,
         Enlaces, Equipo)
      7. Aplicación, CSS, navegación y callbacks
+        (incluye el asistente Astra: panel derecho y mascota; su lógica está en asistente/)
 ===============================================================================
 """
 
@@ -39,7 +40,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 from scipy import stats
-from dash import Dash, Input, Output, State, ctx, dcc, html
+from dash import ALL, Dash, Input, Output, State, ctx, dcc, html, no_update
 
 warnings.filterwarnings("ignore")
 
@@ -1316,6 +1317,10 @@ ICONS = {
     "person": '<circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>',
     "tree": '<path d="M12 22v-5"/><path d="M12 17H6l3-4H7l3-4H8.5L12 3l3.5 6H14l3 4h-2l3 4z"/>',
     "save": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+    # --- asistente Astra ---
+    "close": '<path d="M6 6l12 12M18 6 6 18"/>',
+    "send": '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
+    "reset": '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
 }
 
 
@@ -2988,6 +2993,188 @@ CSS += NEW_CSS
 CSS += _icon_css()
 
 
+# ---------- Asistente Astra: panel lateral derecho (tipo Copilot) y mascota caminante ----------
+# La lógica del bot vive en asistente/ (motor entrenado, base de conocimiento y mascota SVG).
+from asistente import Asistente, construir_conocimiento, mascota_svg, mascota_uri  # noqa: E402
+
+BOT_W = 400   # ancho del panel en px
+BOT_CSS = """
+/* ---- panel del asistente: se abre a la derecha y empuja el contenido ---- */
+.bot-panel { position:fixed; top:0; right:0; bottom:0; width:%%W%%px; max-width:100vw; z-index:10002;
+  display:flex; flex-direction:column; background:var(--surface); color:var(--text);
+  border-left:1px solid var(--line-strong); box-shadow:-12px 0 32px rgba(10,14,30,.14);
+  transform:translateX(100%); visibility:hidden; transition:transform .3s ease, visibility 0s linear .3s; }
+.bot-open .bot-panel { transform:none; visibility:visible; transition:transform .3s ease, visibility 0s; }
+.main { transition:margin-left .3s ease, margin-right .3s ease; }
+@media (min-width:1101px) { .bot-open .main { margin-right:%%W%%px; } }
+.bot-head { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line); }
+.bot-av { width:40px; height:48px; flex:none; }
+.bot-id { flex:1; min-width:0; }
+.bot-name { font-weight:700; font-size:15px; display:flex; align-items:center; gap:8px; }
+.bot-dot { width:8px; height:8px; border-radius:50%; background:#3FB27F; box-shadow:0 0 0 3px rgba(63,178,127,.18); }
+.bot-sub { color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bot-head .icon-btn { width:32px; height:32px; }
+.bot-where { padding:8px 16px; font-size:12px; color:var(--muted); border-bottom:1px solid var(--line);
+  background:var(--surface-2); display:flex; align-items:center; gap:6px; }
+.bot-where b { color:var(--text); font-weight:600; }
+.bot-where .ico { width:14px; height:14px; color:var(--accent-2); }
+.bot-msgs { flex:1; overflow-y:auto; padding:16px 14px 6px; display:flex; flex-direction:column; gap:14px;
+  scroll-behavior:smooth; }
+.bm { display:flex; gap:8px; align-items:flex-start; animation:bot-in .25s ease both; }
+.bm.user { justify-content:flex-end; }
+.bm-av { width:30px; height:36px; flex:none; margin-top:2px; }
+.bm-bubble { max-width:86%; padding:10px 13px; border-radius:14px; font-size:13.5px; line-height:1.5;
+  overflow-wrap:anywhere; }
+.bm.bot .bm-bubble { background:var(--surface-2); border:1px solid var(--line); border-top-left-radius:4px; }
+.bm.user .bm-bubble { background:var(--accent); color:var(--on-accent); border-top-right-radius:4px; }
+.bm-bubble p { margin:0 0 7px; } .bm-bubble p:last-child { margin-bottom:0; }
+.bm-bubble ul, .bm-bubble ol { margin:4px 0 7px; padding-left:18px; } .bm-bubble li { margin:2px 0; }
+.bm-bubble code { background:var(--code-bg); padding:1px 5px; border-radius:4px; font-size:12px; }
+.bm-bubble > div > *:last-child { margin-bottom:0; }
+.bot-go { display:inline-flex; align-items:center; gap:6px; margin-top:8px; padding:5px 10px; border-radius:999px;
+  font-size:12.5px; font-weight:600; text-decoration:none; color:var(--accent-2); border:1px solid var(--accent-2); }
+.bot-go .ico { width:14px; height:14px; }
+.bot-go:hover { background:var(--accent-2); color:var(--on-accent); }
+.bot-sugs { display:flex; flex-wrap:wrap; gap:6px; padding:8px 14px 4px; }
+.bot-sug { font:inherit; font-size:12.5px; text-align:left; padding:6px 11px; border-radius:999px; cursor:pointer;
+  color:var(--text); background:transparent; border:1px solid var(--line-strong); transition:background .15s, border-color .15s; }
+.bot-sug:hover { border-color:var(--accent-2); background:var(--surface-2); }
+.bot-form { display:flex; gap:8px; padding:10px 14px 6px; }
+.bot-input { flex:1; min-width:0; font:inherit; font-size:14px; padding:10px 12px; border-radius:10px;
+  border:1px solid var(--line-strong); background:var(--surface-2); color:var(--text); }
+.bot-input:focus { outline:none; border-color:var(--accent-2); box-shadow:0 0 0 3px rgba(184,143,61,.18); }
+.bot-send { width:42px; flex:none; border:0; border-radius:10px; cursor:pointer; background:var(--accent);
+  color:var(--on-accent); display:inline-flex; align-items:center; justify-content:center; }
+.bot-send .ico { width:18px; height:18px; }
+.bot-foot { margin:0; padding:2px 16px 12px; font-size:11px; color:var(--muted); }
+@keyframes bot-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+/* ---- Astra caminando por la parte inferior ---- */
+/* z-index por encima de la barra de depuración de Dash (10000), que solo aparece con python app.py */
+.astra-walker { position:fixed; right:22px; bottom:4px; width:68px; height:82px; z-index:10001; cursor:pointer;
+  transition:opacity .25s ease; -webkit-tap-highlight-color:transparent; }
+.astra-walker:focus-visible { outline:2px solid var(--focus); outline-offset:4px; border-radius:12px; }
+.bot-open .astra-walker { opacity:0; pointer-events:none; }
+.astra-flip { width:100%; height:100%; transition:transform .25s ease; }
+.astra-walker.face-left .astra-flip { transform:scaleX(-1); }
+.astra-svg { width:100%; height:100%; overflow:visible; display:block; filter:drop-shadow(0 4px 6px rgba(20,16,43,.25));
+  transition:transform .2s ease; }
+.astra-walker:hover .astra-svg { transform:translateY(-4px) scale(1.06); }
+.astra-svg .a-eyes { transform-box:fill-box; transform-origin:center; animation:astra-blink 4.6s infinite; }
+.astra-svg .a-leg, .astra-svg .a-arm { transform-box:fill-box; transform-origin:50% 0; }
+.astra-svg .a-spark { transform-box:fill-box; transform-origin:center; animation:astra-twinkle 2.4s ease-in-out infinite; }
+.astra-walker.walking .a-leg-l { animation:astra-step .46s ease-in-out infinite alternate; }
+.astra-walker.walking .a-leg-r { animation:astra-step .46s ease-in-out -.46s infinite alternate-reverse; }
+.astra-walker.walking .a-arm-l { animation:astra-swing .46s ease-in-out infinite alternate-reverse; }
+.astra-walker.walking .a-arm-r { animation:astra-swing .46s ease-in-out infinite alternate; }
+.astra-walker.walking .a-body { animation:astra-bob .23s ease-in-out infinite alternate; }
+.astra-walker:not(.walking) .a-body { animation:astra-idle 3s ease-in-out infinite; }
+.astra-bubble { position:absolute; right:58px; bottom:64px; width:max-content; max-width:210px; padding:7px 11px;
+  border-radius:12px 12px 2px 12px; background:var(--surface); color:var(--text); border:1px solid var(--line-strong);
+  box-shadow:0 6px 18px rgba(10,14,30,.16); font-size:12.5px; font-weight:600; line-height:1.35;
+  opacity:0; transform:translateY(6px); pointer-events:none; transition:opacity .25s ease, transform .25s ease; }
+.astra-walker.talk .astra-bubble, .astra-walker:hover .astra-bubble { opacity:1; transform:none; }
+@keyframes astra-step { from { transform:rotate(-20deg); } to { transform:rotate(20deg); } }
+@keyframes astra-swing { from { transform:rotate(-16deg); } to { transform:rotate(16deg); } }
+@keyframes astra-bob { from { transform:translateY(0); } to { transform:translateY(-2.5px); } }
+@keyframes astra-idle { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
+@keyframes astra-blink { 0%,92%,100% { transform:scaleY(1); } 95% { transform:scaleY(.12); } }
+@keyframes astra-twinkle { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(.7); opacity:.6; } }
+@media (max-width:900px) {
+  .bot-panel { width:100%; }
+  .tb-right { flex-wrap:wrap; }   /* la barra superior ya no desborda la pantalla del celular */
+  .astra-walker { width:56px; height:68px; right:12px; }
+  .astra-bubble { right:46px; bottom:52px; } }
+@media (prefers-reduced-motion:reduce) {
+  .astra-svg .a-eyes, .astra-svg .a-spark, .astra-walker .a-body { animation:none !important; }
+  .bm { animation:none; } }
+""".replace("%%W%%", str(BOT_W))
+CSS += BOT_CSS
+
+# Mascota fija en la página (fuera de Dash) para que nunca se vuelva a dibujar mientras camina
+WALKER_HTML = (
+    '<div id="astra-walker" class="astra-walker" role="button" tabindex="0" '
+    'aria-label="Abrir a Astra, la asistente del tablero" title="Abrir a Astra, la asistente del tablero">'
+    '<div class="astra-bubble">¿Te explico el tablero? ¡Tócame!</div>'
+    f'<div class="astra-flip">{mascota_svg("happy", cls="astra-svg", uid="walker")}</div></div>')
+
+BOT_JS = """
+// ---------- Astra: abrir y cerrar el panel, y paseo por la parte inferior cada 2 minutos ----------
+(function () {
+  var root = document.documentElement;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var PASEO_CADA = 120000, VELOCIDAD = 75;   // ms entre paseos · px por segundo
+  var timers = [], walking = false;
+  function walker() { return document.getElementById('astra-walker'); }
+  function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+  function relayout() { setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 330); }
+  function say(w, ms) { w.classList.add('talk'); later(function () { w.classList.remove('talk'); }, ms); }
+  function stopWalk() {
+    timers.forEach(clearTimeout); timers = []; walking = false;
+    var w = walker(); if (!w) return;
+    w.classList.remove('walking', 'face-left', 'talk');
+    w.style.transition = 'none'; w.style.transform = 'none';
+  }
+  function openBot() {
+    if (root.classList.contains('bot-open')) return;
+    stopWalk(); root.classList.add('bot-open'); relayout();
+    setTimeout(function () { var i = document.getElementById('bot-input'); if (i) i.focus(); }, 340);
+  }
+  function closeBot() {
+    if (!root.classList.contains('bot-open')) return;
+    root.classList.remove('bot-open'); relayout();
+    var w = walker(); if (w) w.focus({ preventScroll: true });
+  }
+  window.astra = { open: openBot, close: closeBot };
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    if (e.target.closest('#astra-walker')) { openBot(); return; }
+    if (e.target.closest('#bot-close')) closeBot();
+  });
+  document.addEventListener('keydown', function (e) {
+    var a = document.activeElement;
+    if ((e.key === 'Enter' || e.key === ' ') && a && a.id === 'astra-walker') { e.preventDefault(); openBot(); }
+    if (e.key === 'Escape' && root.classList.contains('bot-open')) closeBot();
+  });
+  // Paseo: sale de su esquina, camina hacia la izquierda por el borde inferior, se da vuelta y regresa.
+  function leftLimit() {
+    var sb = document.querySelector('.sidebar');
+    if (!sb) return 16;
+    var r = sb.getBoundingClientRect();
+    return (getComputedStyle(sb).position === 'fixed' && r.right > 0 && r.height > 0) ? r.right + 16 : 16;
+  }
+  function stroll() {
+    var w = walker();
+    if (!w || walking || reduce || document.hidden || root.classList.contains('bot-open')) return;
+    var dist = Math.round(w.getBoundingClientRect().left - leftLimit());
+    if (dist < 140) { say(w, 4000); return; }
+    var secs = dist / VELOCIDAD;
+    walking = true;
+    say(w, 3500);
+    w.classList.add('walking', 'face-left');
+    w.style.transition = 'transform ' + secs + 's linear';
+    requestAnimationFrame(function () { w.style.transform = 'translateX(-' + dist + 'px)'; });
+    later(function () {                 // llega al otro lado: se detiene, saluda y se da vuelta
+      w.classList.remove('walking'); say(w, 2200);
+      later(function () {
+        w.classList.remove('face-left'); w.classList.add('walking');
+        w.style.transform = 'translateX(0)';
+        later(function () { w.classList.remove('walking'); walking = false; }, secs * 1000);
+      }, 1600);
+    }, secs * 1000);
+  }
+  window.addEventListener('resize', function () { if (walking && !root.classList.contains('bot-open')) stopWalk(); });
+  setTimeout(stroll, 6000);
+  setInterval(stroll, PASEO_CADA);
+  // Desplaza el chat al último mensaje cuando llega una respuesta
+  new MutationObserver(function () {
+    var m = document.getElementById('bot-msgs');
+    if (m && m.dataset.n !== String(m.children.length)) { m.dataset.n = m.children.length; m.scrollTop = m.scrollHeight; }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+})();
+"""
+
+
 app.index_string = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3001,7 +3188,9 @@ app.index_string = f"""<!DOCTYPE html>
 </head>
 <body>
   {{%app_entry%}}
+  {WALKER_HTML}
   <script>{COVER_JS}</script>
+  <script>{BOT_JS}</script>
   {{%config%}}{{%scripts%}}{{%renderer%}}
 </body>
 </html>"""
@@ -3122,6 +3311,53 @@ topbar = html.Div([
     ], className="tb-right"),
 ], className="topbar")
 
+# ---------- Asistente Astra: entrenamiento y panel ------------------------------------
+# Se entrena una sola vez al arrancar (menos de un segundo) con el contenido de este archivo.
+BOT = Asistente(*construir_conocimiento(sys.modules[__name__]))
+print(f"[astra] entrenada con {BOT.n_ejemplos} preguntas de {len(BOT.I)} temas del tablero")
+BOT_AV = {m: mascota_uri(m) for m in ("happy", "thinking", "explaining", "proud", "alert")}
+
+
+def bot_panel():
+    return html.Aside([
+        html.Div([
+            html.Img(src=BOT_AV["happy"], className="bot-av", alt=""),
+            html.Div([html.Div(["Astra", html.Span(className="bot-dot", title="En línea")], className="bot-name"),
+                      html.Div("Asistente del tablero · entrenada con su contenido", className="bot-sub")],
+                     className="bot-id"),
+            html.Button(icon("reset"), id="bot-reset", n_clicks=0, className="icon-btn", type="button",
+                        title="Nueva conversación", **{"aria-label": "Nueva conversación"}),
+            html.Button(icon("close"), id="bot-close", n_clicks=0, className="icon-btn", type="button",
+                        title="Cerrar (Esc)", **{"aria-label": "Cerrar el asistente"}),
+        ], className="bot-head"),
+        html.Div(id="bot-where", className="bot-where"),
+        html.Div(id="bot-msgs", className="bot-msgs", role="log", **{"aria-live": "polite"}),
+        html.Div(id="bot-sugs", className="bot-sugs"),
+        html.Div([
+            dcc.Input(id="bot-input", type="text", n_submit=0, autoComplete="off", className="bot-input",
+                      placeholder="Pregúntame por cualquier parte del tablero…", maxLength=300),
+            html.Button(icon("send"), id="bot-send", n_clicks=0, className="bot-send", type="button",
+                        title="Enviar", **{"aria-label": "Enviar pregunta"}),
+        ], className="bot-form"),
+        html.P("Respondo con lo que aprendí del contenido de este tablero; no uso servicios externos.",
+               className="bot-foot"),
+    ], id="bot-panel", className="bot-panel", **{"aria-label": "Asistente Astra"})
+
+
+def _bot_path(path):
+    return (path or "/").rstrip("/") or "/"
+
+
+def _bot_msg(m, path):
+    if m["r"] == "u":
+        return html.Div(html.Div(m["t"], className="bm-bubble"), className="bm user")
+    body = [dcc.Markdown(m["t"], link_target="_blank")]
+    if m.get("p") and m["p"] != path:
+        body.append(dcc.Link([f"Ir a {m.get('n') or 'la sección'}", icon("arrow")], href=m["p"], className="bot-go"))
+    return html.Div([html.Img(src=BOT_AV.get(m.get("m"), BOT_AV["happy"]), className="bm-av", alt=""),
+                     html.Div(body, className="bm-bubble")], className="bm bot")
+
+
 app.layout = html.Div([
     dcc.Location(id="url"),
     dcc.Store(id="theme", storage_type="local", data="light"),
@@ -3131,6 +3367,8 @@ app.layout = html.Div([
                 **{"aria-label": "Cambiar entre modo claro y oscuro"}),
     sidebar,
     html.Div([topbar, html.Div(id="page", className="content"), footer], className="main"),
+    dcc.Store(id="bot-store", storage_type="session", data=[]),
+    bot_panel(),
 ], id="shell", className="app")
 
 
@@ -3321,6 +3559,45 @@ def cb_splom(vars_):
         fig.update_layout(title="Selecciona al menos 2 variables")
         return style_fig(fig, 380, legend_top=False), interp_block("Elige al menos dos variables numéricas.", "")
     return fig_splom(vars_), interp_block(*interp_splom(vars_))
+
+
+# ---------- Callbacks: Asistente Astra -------------------------------------------
+@app.callback(Output("bot-store", "data"), Output("bot-input", "value"),
+              Input("bot-send", "n_clicks"), Input("bot-input", "n_submit"),
+              Input({"type": "bot-sug", "index": ALL}, "n_clicks"), Input("bot-reset", "n_clicks"),
+              State("bot-input", "value"), State("url", "pathname"), State("bot-store", "data"),
+              prevent_initial_call=True)
+def cb_bot(_send, _enter, _sugs, _reset, text, path, hist):
+    trig = ctx.triggered_id
+    if trig == "bot-reset":
+        return [], ""
+    if isinstance(trig, dict):   # una sugerencia: su texto viaja en el id
+        # (ctx.triggered pierde el valor cuando el id tiene tildes; se busca en la lista de entradas)
+        clicked = any(i["id"] == trig and i.get("value") for i in ctx.inputs_list[2])
+        if not clicked:          # los botones recién dibujados también disparan el callback
+            return no_update, no_update
+        text = trig["index"]
+    text = (text or "").strip()[:300]
+    if not text:
+        return no_update, no_update
+    hist = list(hist or [])[-38:]
+    last = next((m.get("i") for m in reversed(hist) if m["r"] == "b" and m.get("i")), None)
+    hist += [{"r": "u", "t": text}, {"r": "b", **BOT.responder(text, _bot_path(path), last)}]
+    return hist, ""
+
+
+@app.callback(Output("bot-msgs", "children"), Output("bot-sugs", "children"), Output("bot-where", "children"),
+              Input("bot-store", "data"), Input("url", "pathname"))
+def cb_bot_render(hist, path):
+    path = _bot_path(path)
+    hist = hist or []
+    msgs = [BOT.bienvenida(path) | {"r": "b"}] + hist
+    sugs = msgs[-1].get("s", []) if not hist else (hist[-1].get("s") or BOT.sug_de_pagina.get(path, []))
+    where = [icon("info"), "Estás en ", html.B(BOT.paginas.get(path, "Inicio"))]
+    return ([_bot_msg(m, path) for m in msgs],
+            [html.Button(s, id={"type": "bot-sug", "index": s}, n_clicks=0, className="bot-sug", type="button")
+             for s in sugs],
+            where)
 
 
 # =============================================================================
