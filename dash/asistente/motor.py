@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Motor de Astra: un clasificador de intenciones entrenado con preguntas de ejemplo.
+"""Motor de Kyo: un clasificador de intenciones entrenado con preguntas de ejemplo.
 
 Cómo funciona
     1. Cada intención (una página, una gráfica, un concepto) trae varias preguntas de ejemplo.
@@ -7,7 +7,7 @@ Cómo funciona
        TF-IDF de palabras (1-2 gramas) y de caracteres (3-5 gramas, tolera errores de escritura).
     3. Con esos vectores se entrena una regresión logística multiclase (scikit-learn).
     4. Para una pregunta nueva, el modelo da la probabilidad de cada intención. Si ni la
-       probabilidad ni la similitud con los ejemplos alcanzan un mínimo, Astra reconoce que no
+       probabilidad ni la similitud con los ejemplos alcanzan un mínimo, Kyo reconoce que no
        sabe la respuesta en vez de inventarla.
     5. El contexto importa: se da un pequeño impulso a las intenciones de la página abierta, y
        «explícame esta página» o «dame la versión técnica» usan la página y la última respuesta.
@@ -200,7 +200,7 @@ class Asistente:
     def bienvenida(self, pagina="/"):
         pagina = pagina if pagina in self.paginas else "/"
         nombre = self.paginas[pagina]
-        return {"t": (f"¡Hola! Soy **Astra**, la asistente de este tablero. Me entrenaron con su contenido para "
+        return {"t": (f"¡Hola! Soy **Kyo**, el asistente de este tablero. Me entrenaron con su contenido para "
                       f"explicarte cada parte. Estás en **{nombre}**: pregúntame lo que quieras o toca una sugerencia."),
                 "i": None, "m": "happy", "p": None, "n": "",
                 "s": ["Explícame esta página"] + self.sug_de_pagina.get(pagina, [])[:3]}

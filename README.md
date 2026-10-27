@@ -26,7 +26,7 @@ El análisis incluye:
 - Análisis del desbalance de clases de la variable objetivo
 - Sección **Predecir**: formulario visual (deslizadores y tarjetas con íconos) que devuelve en vivo el puntaje de riesgo de un cliente usando un Random Forest **serializado con `joblib`** (`dash/modelo/modelo_credito.pkl`), con indicador, votos de los árboles, historial del cliente, aporte de cada grupo de variables y simulador «¿Qué pasaría si…?»
 - Modo claro y oscuro, y menú lateral plegable
-- **Astra, asistente del tablero**: una mascota que camina por la parte inferior de la pantalla cada 2 minutos; al tocarla se abre a la derecha un panel de chat (estilo Copilot de VS Code) que explica cada página, gráfica, variable, modelo y concepto del dash. Es un bot **entrenado** con scikit-learn (TF-IDF + regresión logística) sobre preguntas de ejemplo, usa las mismas cifras que dibujan las gráficas y reconoce cuando una pregunta no es del tablero
+- **Kyo, asistente del tablero**: una mascota que camina por la parte inferior de la pantalla cada 2 minutos; al tocarlo se abre a la derecha un panel de chat (estilo Copilot de VS Code) que explica cada página, gráfica, variable, modelo y concepto del dash. Es un bot **entrenado** con scikit-learn (TF-IDF + regresión logística) sobre preguntas de ejemplo, usa las mismas cifras que dibujan las gráficas y reconoce cuando una pregunta no es del tablero
 - Sección **Modelos**: carrusel deslizable con los siete clasificadores del proyecto (mejor combinación de cada uno), el mejor modelo resaltado, F1 por técnica de balanceo, F1 frente a ROC-AUC de las 112 combinaciones, matriz de confusión del mejor modelo y resumen de SHAP
 
 ---
@@ -56,7 +56,7 @@ dash_credit_kv/
         ├── entrenar.py                      # Entrena y serializa el modelo (python -m modelo.entrenar)
         ├── modelo_credito.pkl               # Modelo serializado con joblib
         └── modelo_credito.json              # Métricas, hiperparámetros y versiones
-    ├── asistente/                           # Astra, el bot que explica el tablero
+    ├── asistente/                           # Kyo, el bot que explica el tablero
     │   ├── motor.py                         # Clasificador de intenciones (TF-IDF + regresión logística)
     │   ├── conocimiento.py                  # Qué sabe: temas, preguntas de entrenamiento y respuestas
     │   ├── mascota.py                       # La mascota en SVG (con sus expresiones)
@@ -65,7 +65,7 @@ dash_credit_kv/
     └── default_of_credit_card_clients.xls   # Dataset
 ```
 
-La aplicación tiene estas secciones: Introducción, Problema y Objetivos, Marco Teórico, EDA Univariado, EDA Multivariado, Modelos, Predecir, Enlaces y Equipo, más el asistente Astra disponible en todas.
+La aplicación tiene estas secciones: Introducción, Problema y Objetivos, Marco Teórico, EDA Univariado, EDA Multivariado, Modelos, Predecir, Enlaces y Equipo, más el asistente Kyo disponible en todas.
 
 ### Modelo serializado (sección Predecir)
 
@@ -85,18 +85,18 @@ riesgo = modelo.predict_proba(cliente)[0, 1]                   # predecir
 
 El `.pkl` guarda el pipeline completo (transformaciones del proyecto + one-hot + Random Forest con `class_weight="balanced"`), así que recibe las 23 variables originales del dataset. Debe cargarse con la misma versión de scikit-learn con la que se guardó (fijada en `requirements.txt`).
 
-### Asistente Astra (bot entrenado)
+### Asistente Kyo (bot entrenado)
 
-Astra camina por la parte inferior de la pantalla cada 2 minutos (el primer paseo empieza a los pocos segundos de abrir el tablero) y descansa en la esquina inferior derecha. Al tocarla se abre un panel a la derecha que empuja el contenido, como el chat de Copilot en VS Code; se cierra con la **X** o con `Esc`.
+Kyo camina por la parte inferior de la pantalla cada 2 minutos (el primer paseo empieza a los pocos segundos de abrir el tablero) y descansa en la esquina inferior derecha. Al tocarlo se abre un panel a la derecha que empuja el contenido, como el chat de Copilot en VS Code; se cierra con la **X** o con `Esc`.
 
-Cómo está entrenada:
+Cómo está entrenado:
 
 1. `asistente/conocimiento.py` define unos 80 temas (cada página, gráfica, variable, modelo y concepto) con varias preguntas de ejemplo cada uno. Las respuestas toman las cifras de las mismas funciones que dibujan el tablero (`interp_corr`, `interp_rates`, …), así que siempre coinciden con lo que se ve.
 2. `asistente/motor.py` convierte las preguntas en vectores TF-IDF de palabras y de fragmentos de letras (tolera errores de escritura) y entrena una regresión logística multiclase. El entrenamiento tarda menos de un segundo y se hace al arrancar la app.
 3. Usa el contexto: «explícame esta página» responde según la página abierta y «dame la explicación técnica» amplía la última respuesta.
 4. Si una pregunta no se parece a nada de lo aprendido, lo dice en vez de inventar. No usa servicios externos ni claves de API.
 
-Para evaluarla con preguntas que no están en su entrenamiento:
+Para evaluarlo con preguntas que no están en su entrenamiento:
 
 ```bash
 cd dash

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Evalúa a Astra con preguntas que NO están en su entrenamiento.
+"""Evalúa a Kyo con preguntas que NO están en su entrenamiento.
 
 Uso (desde la carpeta dash/):
     python -m asistente.evaluar
@@ -91,7 +91,7 @@ PRUEBA = [
     ("¿dónde encuentro el código en github?", "p_enlaces", "/enlaces"),
     ("¿qué hace cada notebook?", "notebooks", "/enlaces"),
     ("¿quiénes son las autoras del tablero?", "p_equipo", "/equipo"),
-    ("muchas gracias astra", "gracias", "/"),
+    ("muchas gracias kyo", "gracias", "/"),
     # con errores de escritura
     ("esplicame la matris de correlasion", "corr", "/multivariado"),
     ("q es el recal", "metricas", "/modelos"),
@@ -107,9 +107,9 @@ FUERA = [
 
 
 def main():
-    import app as A   # carga datos, modelo y entrena a Astra
+    import app as A   # carga datos, modelo y entrena a Kyo
     bot = A.BOT
-    print(f"Astra · {len(bot.I)} intenciones · {bot.n_ejemplos} preguntas de entrenamiento\n")
+    print(f"Kyo · {len(bot.I)} intenciones · {bot.n_ejemplos} preguntas de entrenamiento\n")
 
     # 1) validación cruzada sobre los ejemplos
     X, y = bot.M, bot.y

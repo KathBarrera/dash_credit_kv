@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Astra, la mascota del asistente: una estrella morada con ojos grandes, brazos y piernas.
+"""Kyo, la mascota del asistente: una estrella morada con ojos grandes, brazos y piernas.
 
 `mascota_svg` devuelve el SVG como texto (para incrustarlo en la página y animarlo con CSS)
 y `mascota_uri` lo devuelve como data URI (para usarlo en <img> dentro del chat).
@@ -62,10 +62,10 @@ def _mouth(mood):
 
 
 def mascota_svg(mood="happy", cls="", uid="a"):
-    """SVG de Astra. mood: happy · thinking · explaining · proud · alert."""
+    """SVG de Kyo. mood: happy · thinking · explaining · proud · alert."""
     mood = mood if mood in _ARMS else "happy"
     arm_l, arm_r = _ARMS[mood]
-    g = f"astra-g-{uid}"
+    g = f"kyo-g-{uid}"
     spark = ""
     if mood in ("happy", "proud"):
         spark = (f'<path class="a-spark" d="M87 8 Q87 15 94 15 Q87 15 87 22 Q87 15 80 15 Q87 15 87 8 Z" '

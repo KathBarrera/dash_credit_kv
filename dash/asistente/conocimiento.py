@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Base de conocimiento de Astra: qué sabe del tablero y con qué preguntas se entrena.
+"""Base de conocimiento de Kyo: qué sabe del tablero y con qué preguntas se entrena.
 
 `construir_conocimiento(A)` recibe el módulo de la aplicación (app.py ya cargado) y arma las
 intenciones con las cifras reales del tablero: las interpretaciones de cada gráfica salen de las
@@ -50,17 +50,17 @@ def construir_conocimiento(A):
     # =====================================================================
     add(Intencion(
         "saludo", "Saludo",
-        ["hola", "buenas", "buenos días", "buenas tardes", "hey astra", "hola astra", "qué tal", "holi",
+        ["hola", "buenas", "buenos días", "buenas tardes", "hey kyo", "hola kyo", "qué tal", "holi",
          "hola cómo estás", "buenas noches"],
-        "¡Hola! Soy **Astra**. Puedo explicarte cualquier página, gráfica, variable o modelo de este tablero. "
+        "¡Hola! Soy **Kyo**. Puedo explicarte cualquier página, gráfica, variable o modelo de este tablero. "
         "Si quieres, empiezo por la página en la que estás.",
         sug=["Explícame esta página", "¿Qué puedo preguntarte?", "¿Cuál es el hallazgo principal?"], mood="happy"))
     add(Intencion(
-        "quien_eres", "Quién es Astra",
+        "quien_eres", "Quién es Kyo",
         ["quién eres", "qué eres", "hola quién eres", "y tú quién eres", "cómo funcionas", "cómo te entrenaron", "eres una inteligencia artificial",
          "cómo aprendiste", "con qué te entrenaron", "qué modelo usas para responder", "eres un bot",
          "cómo sabes las respuestas", "de dónde sacas la información"],
-        "Soy **Astra**, un bot entrenado con el contenido de este tablero:\n\n"
+        "Soy **Kyo**, un bot entrenado con el contenido de este tablero:\n\n"
         "- Cada página, gráfica, variable y modelo es una *intención* con varias preguntas de ejemplo.\n"
         "- Las preguntas se convierten en vectores **TF-IDF** (palabras y fragmentos de letras, así tolero "
         "errores de escritura) y con ellos se entrena una **regresión logística** de scikit-learn.\n"

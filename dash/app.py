@@ -23,7 +23,7 @@
      6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Modelos, Predecir,
         Enlaces, Equipo)
      7. Aplicación, CSS, navegación y callbacks
-        (incluye el asistente Astra: panel derecho y mascota; su lógica está en asistente/)
+        (incluye el asistente Kyo: panel derecho y mascota; su lógica está en asistente/)
 ===============================================================================
 """
 
@@ -1317,7 +1317,7 @@ ICONS = {
     "person": '<circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>',
     "tree": '<path d="M12 22v-5"/><path d="M12 17H6l3-4H7l3-4H8.5L12 3l3.5 6H14l3 4h-2l3 4z"/>',
     "save": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
-    # --- asistente Astra ---
+    # --- asistente Kyo ---
     "close": '<path d="M6 6l12 12M18 6 6 18"/>',
     "send": '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
     "reset": '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
@@ -2993,7 +2993,7 @@ CSS += NEW_CSS
 CSS += _icon_css()
 
 
-# ---------- Asistente Astra: panel lateral derecho (tipo Copilot) y mascota caminante ----------
+# ---------- Asistente Kyo: panel lateral derecho (tipo Copilot) y mascota caminante ----------
 # La lógica del bot vive en asistente/ (motor entrenado, base de conocimiento y mascota SVG).
 from asistente import Asistente, construir_conocimiento, mascota_svg, mascota_uri  # noqa: E402
 
@@ -3049,63 +3049,63 @@ BOT_CSS = """
 .bot-foot { margin:0; padding:2px 16px 12px; font-size:11px; color:var(--muted); }
 @keyframes bot-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 
-/* ---- Astra caminando por la parte inferior ---- */
+/* ---- Kyo caminando por la parte inferior ---- */
 /* z-index por encima de la barra de depuración de Dash (10000), que solo aparece con python app.py */
-.astra-walker { position:fixed; right:22px; bottom:4px; width:68px; height:82px; z-index:10001; cursor:pointer;
+.kyo-walker { position:fixed; right:22px; bottom:4px; width:68px; height:82px; z-index:10001; cursor:pointer;
   transition:opacity .25s ease; -webkit-tap-highlight-color:transparent; }
-.astra-walker:focus-visible { outline:2px solid var(--focus); outline-offset:4px; border-radius:12px; }
-.bot-open .astra-walker { opacity:0; pointer-events:none; }
-.astra-flip { width:100%; height:100%; transition:transform .25s ease; }
-.astra-walker.face-left .astra-flip { transform:scaleX(-1); }
-.astra-svg { width:100%; height:100%; overflow:visible; display:block; filter:drop-shadow(0 4px 6px rgba(20,16,43,.25));
+.kyo-walker:focus-visible { outline:2px solid var(--focus); outline-offset:4px; border-radius:12px; }
+.bot-open .kyo-walker { opacity:0; pointer-events:none; }
+.kyo-flip { width:100%; height:100%; transition:transform .25s ease; }
+.kyo-walker.face-left .kyo-flip { transform:scaleX(-1); }
+.kyo-svg { width:100%; height:100%; overflow:visible; display:block; filter:drop-shadow(0 4px 6px rgba(20,16,43,.25));
   transition:transform .2s ease; }
-.astra-walker:hover .astra-svg { transform:translateY(-4px) scale(1.06); }
-.astra-svg .a-eyes { transform-box:fill-box; transform-origin:center; animation:astra-blink 4.6s infinite; }
-.astra-svg .a-leg, .astra-svg .a-arm { transform-box:fill-box; transform-origin:50% 0; }
-.astra-svg .a-spark { transform-box:fill-box; transform-origin:center; animation:astra-twinkle 2.4s ease-in-out infinite; }
-.astra-walker.walking .a-leg-l { animation:astra-step .46s ease-in-out infinite alternate; }
-.astra-walker.walking .a-leg-r { animation:astra-step .46s ease-in-out -.46s infinite alternate-reverse; }
-.astra-walker.walking .a-arm-l { animation:astra-swing .46s ease-in-out infinite alternate-reverse; }
-.astra-walker.walking .a-arm-r { animation:astra-swing .46s ease-in-out infinite alternate; }
-.astra-walker.walking .a-body { animation:astra-bob .23s ease-in-out infinite alternate; }
-.astra-walker:not(.walking) .a-body { animation:astra-idle 3s ease-in-out infinite; }
-.astra-bubble { position:absolute; right:58px; bottom:64px; width:max-content; max-width:210px; padding:7px 11px;
+.kyo-walker:hover .kyo-svg { transform:translateY(-4px) scale(1.06); }
+.kyo-svg .a-eyes { transform-box:fill-box; transform-origin:center; animation:kyo-blink 4.6s infinite; }
+.kyo-svg .a-leg, .kyo-svg .a-arm { transform-box:fill-box; transform-origin:50% 0; }
+.kyo-svg .a-spark { transform-box:fill-box; transform-origin:center; animation:kyo-twinkle 2.4s ease-in-out infinite; }
+.kyo-walker.walking .a-leg-l { animation:kyo-step .46s ease-in-out infinite alternate; }
+.kyo-walker.walking .a-leg-r { animation:kyo-step .46s ease-in-out -.46s infinite alternate-reverse; }
+.kyo-walker.walking .a-arm-l { animation:kyo-swing .46s ease-in-out infinite alternate-reverse; }
+.kyo-walker.walking .a-arm-r { animation:kyo-swing .46s ease-in-out infinite alternate; }
+.kyo-walker.walking .a-body { animation:kyo-bob .23s ease-in-out infinite alternate; }
+.kyo-walker:not(.walking) .a-body { animation:kyo-idle 3s ease-in-out infinite; }
+.kyo-bubble { position:absolute; right:58px; bottom:64px; width:max-content; max-width:210px; padding:7px 11px;
   border-radius:12px 12px 2px 12px; background:var(--surface); color:var(--text); border:1px solid var(--line-strong);
   box-shadow:0 6px 18px rgba(10,14,30,.16); font-size:12.5px; font-weight:600; line-height:1.35;
   opacity:0; transform:translateY(6px); pointer-events:none; transition:opacity .25s ease, transform .25s ease; }
-.astra-walker.talk .astra-bubble, .astra-walker:hover .astra-bubble { opacity:1; transform:none; }
-@keyframes astra-step { from { transform:rotate(-20deg); } to { transform:rotate(20deg); } }
-@keyframes astra-swing { from { transform:rotate(-16deg); } to { transform:rotate(16deg); } }
-@keyframes astra-bob { from { transform:translateY(0); } to { transform:translateY(-2.5px); } }
-@keyframes astra-idle { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
-@keyframes astra-blink { 0%,92%,100% { transform:scaleY(1); } 95% { transform:scaleY(.12); } }
-@keyframes astra-twinkle { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(.7); opacity:.6; } }
+.kyo-walker.talk .kyo-bubble, .kyo-walker:hover .kyo-bubble { opacity:1; transform:none; }
+@keyframes kyo-step { from { transform:rotate(-20deg); } to { transform:rotate(20deg); } }
+@keyframes kyo-swing { from { transform:rotate(-16deg); } to { transform:rotate(16deg); } }
+@keyframes kyo-bob { from { transform:translateY(0); } to { transform:translateY(-2.5px); } }
+@keyframes kyo-idle { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
+@keyframes kyo-blink { 0%,92%,100% { transform:scaleY(1); } 95% { transform:scaleY(.12); } }
+@keyframes kyo-twinkle { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(.7); opacity:.6; } }
 @media (max-width:900px) {
   .bot-panel { width:100%; }
   .tb-right { flex-wrap:wrap; }   /* la barra superior ya no desborda la pantalla del celular */
-  .astra-walker { width:56px; height:68px; right:12px; }
-  .astra-bubble { right:46px; bottom:52px; } }
+  .kyo-walker { width:56px; height:68px; right:12px; }
+  .kyo-bubble { right:46px; bottom:52px; } }
 @media (prefers-reduced-motion:reduce) {
-  .astra-svg .a-eyes, .astra-svg .a-spark, .astra-walker .a-body { animation:none !important; }
+  .kyo-svg .a-eyes, .kyo-svg .a-spark, .kyo-walker .a-body { animation:none !important; }
   .bm { animation:none; } }
 """.replace("%%W%%", str(BOT_W))
 CSS += BOT_CSS
 
 # Mascota fija en la página (fuera de Dash) para que nunca se vuelva a dibujar mientras camina
 WALKER_HTML = (
-    '<div id="astra-walker" class="astra-walker" role="button" tabindex="0" '
-    'aria-label="Abrir a Astra, la asistente del tablero" title="Abrir a Astra, la asistente del tablero">'
-    '<div class="astra-bubble">¿Te explico el tablero? ¡Tócame!</div>'
-    f'<div class="astra-flip">{mascota_svg("happy", cls="astra-svg", uid="walker")}</div></div>')
+    '<div id="kyo-walker" class="kyo-walker" role="button" tabindex="0" '
+    'aria-label="Abrir a Kyo, el asistente del tablero" title="Abrir a Kyo, el asistente del tablero">'
+    '<div class="kyo-bubble">¿Te explico el tablero? ¡Tócame!</div>'
+    f'<div class="kyo-flip">{mascota_svg("happy", cls="kyo-svg", uid="walker")}</div></div>')
 
 BOT_JS = """
-// ---------- Astra: abrir y cerrar el panel, y paseo por la parte inferior cada 2 minutos ----------
+// ---------- Kyo: abrir y cerrar el panel, y paseo por la parte inferior cada 2 minutos ----------
 (function () {
   var root = document.documentElement;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var PASEO_CADA = 120000, VELOCIDAD = 75;   // ms entre paseos · px por segundo
   var timers = [], walking = false;
-  function walker() { return document.getElementById('astra-walker'); }
+  function walker() { return document.getElementById('kyo-walker'); }
   function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
   function relayout() { setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 330); }
   function say(w, ms) { w.classList.add('talk'); later(function () { w.classList.remove('talk'); }, ms); }
@@ -3125,15 +3125,15 @@ BOT_JS = """
     root.classList.remove('bot-open'); relayout();
     var w = walker(); if (w) w.focus({ preventScroll: true });
   }
-  window.astra = { open: openBot, close: closeBot };
+  window.kyo = { open: openBot, close: closeBot };
   document.addEventListener('click', function (e) {
     if (!e.target.closest) return;
-    if (e.target.closest('#astra-walker')) { openBot(); return; }
+    if (e.target.closest('#kyo-walker')) { openBot(); return; }
     if (e.target.closest('#bot-close')) closeBot();
   });
   document.addEventListener('keydown', function (e) {
     var a = document.activeElement;
-    if ((e.key === 'Enter' || e.key === ' ') && a && a.id === 'astra-walker') { e.preventDefault(); openBot(); }
+    if ((e.key === 'Enter' || e.key === ' ') && a && a.id === 'kyo-walker') { e.preventDefault(); openBot(); }
     if (e.key === 'Escape' && root.classList.contains('bot-open')) closeBot();
   });
   // Paseo: sale de su esquina, camina hacia la izquierda por el borde inferior, se da vuelta y regresa.
@@ -3311,10 +3311,10 @@ topbar = html.Div([
     ], className="tb-right"),
 ], className="topbar")
 
-# ---------- Asistente Astra: entrenamiento y panel ------------------------------------
+# ---------- Asistente Kyo: entrenamiento y panel ------------------------------------
 # Se entrena una sola vez al arrancar (menos de un segundo) con el contenido de este archivo.
 BOT = Asistente(*construir_conocimiento(sys.modules[__name__]))
-print(f"[astra] entrenada con {BOT.n_ejemplos} preguntas de {len(BOT.I)} temas del tablero")
+print(f"[kyo] entrenado con {BOT.n_ejemplos} preguntas de {len(BOT.I)} temas del tablero")
 BOT_AV = {m: mascota_uri(m) for m in ("happy", "thinking", "explaining", "proud", "alert")}
 
 
@@ -3322,8 +3322,8 @@ def bot_panel():
     return html.Aside([
         html.Div([
             html.Img(src=BOT_AV["happy"], className="bot-av", alt=""),
-            html.Div([html.Div(["Astra", html.Span(className="bot-dot", title="En línea")], className="bot-name"),
-                      html.Div("Asistente del tablero · entrenada con su contenido", className="bot-sub")],
+            html.Div([html.Div(["Kyo", html.Span(className="bot-dot", title="En línea")], className="bot-name"),
+                      html.Div("Asistente del tablero · entrenado con su contenido", className="bot-sub")],
                      className="bot-id"),
             html.Button(icon("reset"), id="bot-reset", n_clicks=0, className="icon-btn", type="button",
                         title="Nueva conversación", **{"aria-label": "Nueva conversación"}),
@@ -3341,7 +3341,7 @@ def bot_panel():
         ], className="bot-form"),
         html.P("Respondo con lo que aprendí del contenido de este tablero; no uso servicios externos.",
                className="bot-foot"),
-    ], id="bot-panel", className="bot-panel", **{"aria-label": "Asistente Astra"})
+    ], id="bot-panel", className="bot-panel", **{"aria-label": "Asistente Kyo"})
 
 
 def _bot_path(path):
@@ -3561,7 +3561,7 @@ def cb_splom(vars_):
     return fig_splom(vars_), interp_block(*interp_splom(vars_))
 
 
-# ---------- Callbacks: Asistente Astra -------------------------------------------
+# ---------- Callbacks: Asistente Kyo -------------------------------------------
 @app.callback(Output("bot-store", "data"), Output("bot-input", "value"),
               Input("bot-send", "n_clicks"), Input("bot-input", "n_submit"),
               Input({"type": "bot-sug", "index": ALL}, "n_clicks"), Input("bot-reset", "n_clicks"),
