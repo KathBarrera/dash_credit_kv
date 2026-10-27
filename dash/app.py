@@ -2336,6 +2336,13 @@ def page_team():
 app = Dash(__name__, suppress_callback_exceptions=True, title="EDA · Riesgo Crediticio")
 server = app.server   # <- para despliegue (gunicorn app:server)
 
+
+@server.route("/ping")
+def ping():
+    """Respuesta mínima para monitores (UptimeRobot, GitHub Actions) que mantienen despierto el
+    servicio gratis de Render, sin cargar la página completa."""
+    return "ok", 200, {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store"}
+
 CSS = """
 :root {
   --deep:%%DEEP%%; --navy:%%NAVY%%; --pale:%%PALE%%; --gold:%%GOLD%%; --cream:%%CREAM%%;

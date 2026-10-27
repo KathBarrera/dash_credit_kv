@@ -150,6 +150,23 @@ http://localhost:8050/
 
 ---
 
+## Despliegue en Render (gratis)
+
+El repositorio trae `render.yaml`, así que Render toma la configuración solo:
+
+1. En [render.com](https://render.com) entra con GitHub y elige **New + → Blueprint**, con el repositorio `KathBarrera/dash_credit_kv` (rama `main`).
+2. Render instala `requirements.txt` y arranca un solo worker de gunicorn (con 4 hilos y sin `--preload`). El plan gratis tiene 512 MB y así el tablero usa unos 350 MB; con 2 workers se pasaría.
+3. Copia la URL pública que te da Render (algo como `https://dash-credit-kv.onrender.com`).
+
+### Mantenerlo despierto
+
+En el plan gratis, Render apaga el servicio tras 15 minutos sin visitas y la siguiente visita tarda entre 30 y 60 segundos en despertarlo. Para evitarlo, algo externo debe visitar `/ping` (una respuesta mínima que no carga la página) cada pocos minutos. Hay dos opciones; se pueden usar las dos:
+
+- **UptimeRobot** (recomendada): en [uptimerobot.com](https://uptimerobot.com) crea un monitor *HTTP(s)* con la URL `https://TU-URL.onrender.com/ping` y un intervalo de 5 minutos.
+- **GitHub Actions**: `.github/workflows/mantener-despierto.yml` visita `/ping` cada 10 minutos. Si tu URL no es `https://dash-credit-kv.onrender.com`, créala como variable del repositorio `RENDER_URL` en *Settings → Secrets and variables → Actions → Variables*. GitHub desactiva las tareas programadas si el repositorio pasa 60 días sin cambios; se reactivan desde la pestaña *Actions*.
+
+Un servicio encendido todo el mes usa unas 744 de las 750 horas gratis mensuales de Render, así que conviene tener un solo servicio gratis en la cuenta.
+
 ## Despliegue en Railway
 
 El repositorio ya trae la configuración (`railway.json`, `requirements.txt` y `.python-version` en la raíz):

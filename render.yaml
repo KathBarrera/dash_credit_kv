@@ -1,0 +1,16 @@
+# Despliegue en Render (plan gratis). En render.com: New + > Blueprint > elige este repositorio.
+services:
+  - type: web
+    name: dash-credit-kv
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # 1 worker y sin --preload: el plan gratis tiene 512 MB y así el tablero usa ~350 MB
+    startCommand: gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+    healthCheckPath: /ping
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13"
+      - key: WEB_CONCURRENCY
+        value: "1"
