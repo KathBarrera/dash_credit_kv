@@ -28,6 +28,8 @@
 """
 
 import json
+import math
+import random
 import sys
 import warnings
 from pathlib import Path
@@ -1179,23 +1181,6 @@ def tree_votes(values):
     return int(round(yes)), len(trees)
 
 
-def fig_risk_gauge(score=None):
-    """Indicador del puntaje de riesgo con el umbral de decisión (0.5)."""
-    thr = MODELO_META.get("umbral", 0.5) * 100
-    val = 0 if score is None else score * 100
-    color = WARM_GOLD if val >= thr else NAVY
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number", value=val, number=dict(suffix="%", valueformat=".0f", font=dict(size=46)),
-        gauge=dict(
-            axis=dict(range=[0, 100], ticksuffix="%", tickwidth=1, tickcolor=GREY_BLUE),
-            bar=dict(color=color, thickness=.32), bgcolor="rgba(0,0,0,0)", borderwidth=0,
-            steps=[dict(range=[0, thr], color=f"{DEEP_RGBA}0.06)"), dict(range=[thr, 100], color="rgba(184,143,61,0.16)")],
-            threshold=dict(line=dict(color=DEEP_NAVY, width=3), thickness=.85, value=thr))))
-    fig.update_layout(height=240, margin=dict(l=30, r=30, t=16, b=6), paper_bgcolor=WHITE,
-                      font=dict(color=DEEP_NAVY, family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"))
-    return fig
-
-
 def fig_client_history(values):
     """Facturado vs. pagado por mes y estado de pago (eje derecho)."""
     fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -2137,7 +2122,6 @@ def page_predict():
         ], className="pf-amounts"), className="table-wrap"),
     ], cls="pf-form")
     result = card("Resultado", [
-        dcc.Graph(id="pf-gauge", figure=fig_risk_gauge(), config=gcfg),
         html.Div(id="pf-verdict"),
         html.Div(id="pf-trees"),
     ], subtitle="Se actualiza en vivo con cada cambio", cls="pf-result")
@@ -2195,9 +2179,107 @@ def trees_block(values):
     ], className="pf-trees")
 
 
+# ---------- Tarjeta de riesgo: una tarjeta de crédito que se agrieta según el puntaje ----------
+# Coordenadas en un lienzo de 160 x 100 (proporción de una tarjeta). Las grietas se generan una
+# sola vez con semilla fija: al subir el puntaje aparecen más y se alargan; al bajar, retroceden.
+RC_IMPACT = (104.0, 44.0)          # punto de impacto
+RC_CRACK_FROM = 0.30               # desde este puntaje aparecen grietas
+RC_SPLIT_FROM = 0.75               # desde este puntaje la tarjeta se parte en dos
+RC_SPLIT_FULL = 0.92               # aquí los pedazos ya están separados del todo (el 1 % más riesgoso)
+
+
+def _rc_geometry():
+    rnd = random.Random(2005)
+    cx, cy = RC_IMPACT
+    cracks = []
+    for ang_deg in (205, 35, 150, 330, 250, 95):        # orden en que aparecen, alternando lados
+        a = math.radians(ang_deg + rnd.uniform(-8, 8))
+        length = rnd.uniform(30, 55)
+        pts, x, y = [(cx, cy)], cx, cy
+        for _ in range(3):                               # pocos tramos y poco quiebre: grietas limpias
+            a += rnd.uniform(-0.18, 0.18)
+            x, y = x + length / 3 * math.cos(a), y + length / 3 * math.sin(a)
+            pts.append((x, y))
+        cracks.append(pts)
+    # fractura principal, de arriba abajo pasando por el impacto (por aquí se parte la tarjeta)
+    split = [(round(cx + (y - cy) * 0.12 + (0 if y in (0, cy, 100) else rnd.uniform(-2.5, 2.5)), 1), y)
+             for y in (0, 14, 29, cy, 58, 72, 86, 100)]
+    return cracks, split
+
+
+RC_CRACKS, RC_SPLIT = _rc_geometry()
+
+
+def _rc_path(pts):
+    return "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in pts)
+
+
+def _rc_svg(score):
+    """SVG (data URI) con las grietas visibles para este puntaje."""
+    t = min(max((score - RC_CRACK_FROM) / (1 - RC_CRACK_FROM), 0), 1)
+    paths = []
+    for i, pts in enumerate(RC_CRACKS):
+        if i >= round(t * len(RC_CRACKS) + 0.49):
+            break
+        keep = max(2, round(len(pts) * min(1, 0.4 + t * 0.8)))
+        paths.append(_rc_path(pts[:keep]))
+    if score >= 0.5:
+        paths.append(_rc_path(RC_SPLIT))
+    if not paths:
+        return "none"
+    d = " ".join(paths)
+    svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" preserveAspectRatio="none">'
+           f'<path d="{d}" fill="none" stroke="rgba(5,8,20,.6)" stroke-width="1.3" '
+           'stroke-linecap="round" stroke-linejoin="round"/>'
+           f'<path d="{d}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width=".55" '
+           'stroke-linecap="round" stroke-linejoin="round"/></svg>')
+    return f'url("data:image/svg+xml,{quote(svg)}")'
+
+
+def _rc_clip(side):
+    """clip-path de cada pedazo, siguiendo la fractura principal."""
+    line = [f"{x / 1.6:.1f}% {y:.1f}%" for x, y in RC_SPLIT]
+    if side == "l":
+        return "polygon(0% 0%, " + ", ".join(line) + ", 0% 100%)"
+    return "polygon(100% 0%, " + ", ".join(line) + ", 100% 100%)"
+
+
+def risk_card(score, thr):
+    """Veredicto como tarjeta de crédito: intacta con riesgo bajo, agrietada y partida con riesgo alto."""
+    high = score >= thr
+    k = min(max((score - RC_SPLIT_FROM) / (RC_SPLIT_FULL - RC_SPLIT_FROM), 0), 1)   # cuánto se separan los pedazos
+    title = "Riesgo alto: probable incumplimiento" if high else "Riesgo bajo: probable pago"
+    cracks = _rc_svg(score)
+
+    def face(clip, hidden=False):
+        return html.Div([
+            html.Div(className="cc-gloss"),
+            html.Div([html.Span("Riesgo de crédito", className="cc-brand"), icon("contactless", "cc-nfc")],
+                     className="cc-top"),
+            html.Div([html.Div(className="cc-chip rc-chip"),
+                      html.Div([html.Span("Puntaje de riesgo", className="cc-lbl"),
+                                html.Div(f"{score:.0%}", className="rc-score")])], className="rc-mid"),
+            html.Div([html.Div([html.Span("Veredicto", className="cc-lbl"), html.Div(title, className="rc-verdict")]),
+                      html.Div([html.Span("Umbral", className="cc-lbl"), html.Div(f"{thr:.0%}", className="cc-name")],
+                               className="cc-valid")], className="cc-bottom"),
+            html.Div(className="rc-cracks", style={"backgroundImage": cracks}),
+        ], className="cc-face rc-face", style={"clipPath": clip}, **({"aria-hidden": "true"} if hidden else {}))
+
+    # el recorte va en la cara y la sombra en el pedazo, así la sombra sigue la forma rota
+    left_style = {"transform": f"translate({-12 * k:.1f}px, {5 * k:.1f}px) rotate({-3.5 * k:.2f}deg)"}
+    right_style = {"visibility": "visible" if k > 0 else "hidden",
+                   "transform": f"translate({12 * k:.1f}px, {-3 * k:.1f}px) rotate({4.5 * k:.2f}deg)"}
+    heat = min(max((score - 0.3) / 0.6, 0), 1)
+    return html.Div([
+        html.Div(face(_rc_clip("l") if k > 0 else "none"), className="rc-piece", style=left_style),
+        html.Div(face(_rc_clip("r"), hidden=True), className="rc-piece", style=right_style),
+    ], className="rc " + ("hi" if high else "lo") + (" split" if k > 0 else ""),
+        style={"--heat": f"{heat:.3f}"}, role="img",
+        **{"aria-label": f"{title}. Puntaje {score:.0%}, umbral {thr:.0%}."})
+
+
 def predict_verdict(values, score):
     thr = MODELO_META.get("umbral", 0.5)
-    high = score >= thr
     pr = MODELO_META.get("prueba", {})
     late = [m for m, c in zip(MONTH_LBL, PAY_CHRONO) if (values.get(c) or 0) >= 1]
     signals = []
@@ -2216,10 +2298,7 @@ def predict_verdict(values, score):
     q = (df["LIMIT_BAL"] < (values.get("LIMIT_BAL") or 0)).mean()
     signals.append(("card", f"Su cupo supera al de {q:.0%} de los clientes."))
     return html.Div([
-        html.Div([icon("alert" if high else "target"),
-                  html.Div([html.B("Riesgo alto: probable incumplimiento" if high else "Riesgo bajo: probable pago"),
-                            html.Span(f"Puntaje {score:.0%} · umbral {thr:.0%}")])],
-                 className="pf-badge " + ("hi" if high else "lo")),
+        risk_card(score, thr),
         html.Ul([html.Li([icon(ic), html.Span(s)]) for ic, s in signals], className="pf-signals"),
         html.Details([html.Summary("¿Cómo leer el puntaje?"), html.P(
             (f"Con el umbral de 50 % el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
@@ -2849,6 +2928,30 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-rh { font-size:12.5px; font-weight:600; color:var(--muted); }
 /* resultado */
 .pf-result { border-top:3px solid var(--accent-2); }
+/* ---- tarjeta de riesgo: se agrieta con el puntaje y se parte con riesgo muy alto ---- */
+.rc { position:relative; width:100%; max-width:440px; margin:4px auto 16px; aspect-ratio:1.6; --heat:0; }
+.rc-piece { position:absolute; inset:0; transition:transform .6s cubic-bezier(.3,.7,.2,1);
+  filter:drop-shadow(0 18px 22px rgba(8,12,30,.35)); }
+.rc .rc-face { display:flex; flex-direction:column; justify-content:space-between; padding:6% 7%;
+  box-shadow:none; transition:background .5s ease, border-color .5s ease;
+  background:repeating-radial-gradient(circle at 88% 12%, rgba(210,187,137,.08) 0 1px, transparent 1px 8px),
+    linear-gradient(135deg,
+      color-mix(in srgb, #2A3860, #7A2E1F calc(var(--heat) * 70%)) 0%,
+      color-mix(in srgb, #1A233D, #4A1A14 calc(var(--heat) * 70%)) 60%,
+      color-mix(in srgb, #141B30, #2B0F0C calc(var(--heat) * 70%)) 100%); }
+.rc.hi .rc-face { border-color:rgba(232,120,90,.55); }
+.rc-mid { display:flex; align-items:center; gap:7%; }
+.rc-chip { width:19%; }
+.rc-score { font-family:Consolas,'Courier New',monospace; font-size:clamp(30px,4.6vw,44px); font-weight:700;
+  letter-spacing:.06em; line-height:1; font-variant-numeric:tabular-nums;
+  text-shadow:0 1px 0 rgba(0,0,0,.45), 0 -1px 0 rgba(255,255,255,.14); }
+.rc.hi .rc-score { color:#F2C27A; }
+.rc-verdict { font-size:clamp(11.5px,1.5vw,13.5px); font-weight:700; letter-spacing:.02em; }
+.rc-cracks { position:absolute; inset:0; z-index:0; pointer-events:none; background:center/100% 100% no-repeat; }
+.rc-face > :not(.rc-cracks):not(.cc-gloss) { position:relative; z-index:1; }   /* el texto queda sobre las grietas */
+.rc.split .rc-piece:first-child { animation:rc-crack .45s ease-out; }
+@keyframes rc-crack { 0% { translate:0 0; } 25% { translate:-3px 1px; } 50% { translate:3px -1px; } 75% { translate:-1px 0; } 100% { translate:0 0; } }
+@media (prefers-reduced-motion:reduce) { .rc-piece { transition:none; } .rc.split .rc-piece:first-child { animation:none; } }
 .pf-badge { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin:0 0 10px;
   animation:pf-in .35s ease both; }
 .pf-badge .ico { width:26px; height:26px; flex:none; }
@@ -3418,7 +3521,7 @@ def _pf_values(vals):
     return values, missing
 
 
-@app.callback(Output("pf-gauge", "figure"), Output("pf-verdict", "children"), Output("pf-trees", "children"),
+@app.callback(Output("pf-verdict", "children"), Output("pf-trees", "children"),
               Output("pf-history", "figure"), Output("pf-drivers", "figure"),
               *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("theme", "data"))
 def cb_predict(*vals):
@@ -3429,9 +3532,9 @@ def cb_predict(*vals):
         msg = html.P("Completa los campos: " + ", ".join(missing[:4]) + ("…" if len(missing) > 4 else ""),
                      className="callout") if missing else ""
         empty = style_fig(go.Figure(), 340, legend_top=False)
-        return themed(fig_risk_gauge(), dark), msg, "", themed(empty, dark), themed(empty, dark)
+        return msg, "", themed(empty, dark), themed(empty, dark)
     score = predict_risk(values)
-    return (themed(fig_risk_gauge(score), dark), predict_verdict(values, score), trees_block(values),
+    return (predict_verdict(values, score), trees_block(values),
             themed(fig_client_history(values), dark), themed(fig_drivers(values, score), dark))
 
 
