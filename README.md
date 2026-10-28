@@ -25,6 +25,7 @@ El análisis incluye:
 - Diagnóstico de multicolinealidad entre las variables de facturación (BILL_AMT)
 - Análisis del desbalance de clases de la variable objetivo
 - Sección **Predecir**: formulario visual (deslizadores y tarjetas con íconos) que devuelve en vivo el puntaje de riesgo de un cliente (mostrado como una tarjeta de crédito que se rompe por la mitad y se abre según el riesgo) usando un Random Forest **serializado con `joblib`** (`dash/modelo/modelo_credito.pkl`), con indicador, votos de los árboles, historial del cliente, aporte de cada grupo de variables y simulador «¿Qué pasaría si…?»
+- **Español e inglés**: botón **ES | EN** en la barra superior (y en la portada) que traduce todo el tablero — textos, interpretaciones, gráficas, formulario y a Kyo — y se recuerda en el navegador
 - Modo claro y oscuro, y menú lateral plegable
 - **Kyo, asistente del tablero**: una mascota fija en la esquina inferior derecha; al tocarla se abre a la derecha un panel de chat (estilo Copilot de VS Code) que explica cada página, gráfica, variable, modelo y concepto del dash. Es un bot **entrenado** con scikit-learn (TF-IDF + regresión logística) sobre preguntas de ejemplo, usa las mismas cifras que dibujan las gráficas y reconoce cuando una pregunta no es del tablero
 - Sección **Modelos**: carrusel deslizable con los siete clasificadores del proyecto (mejor combinación de cada uno), el mejor modelo resaltado, F1 por técnica de balanceo, F1 frente a ROC-AUC de las 112 combinaciones, matriz de confusión del mejor modelo y resumen de SHAP
@@ -85,6 +86,10 @@ riesgo = modelo.predict_proba(cliente)[0, 1]                   # predecir
 
 El `.pkl` guarda el pipeline completo (transformaciones del proyecto + one-hot + Random Forest con `class_weight="balanced"`), así que recibe las 23 variables originales del dataset. Debe cargarse con la misma versión de scikit-learn con la que se guardó (fijada en `requirements.txt`).
 
+### Idioma (español / inglés)
+
+Cada texto del tablero está escrito en los dos idiomas con `tx("español", "english")` (o como par `("es", "en")` en las constantes). El botón **ES | EN** guarda el idioma en el navegador y los callbacks dibujan cada página, gráfica e interpretación en ese idioma. Para agregar un texto nuevo, escríbelo así: `tx("Hola", "Hello")`.
+
 ### Asistente Kyo (bot entrenado)
 
 Kyo está fijo en la esquina inferior derecha de la pantalla y saluda con un globo al abrir el tablero. Al tocarlo se abre un panel a la derecha que empuja el contenido, como el chat de Copilot en VS Code; se cierra con la **X** o con `Esc`.
@@ -94,7 +99,8 @@ Cómo está entrenado:
 1. `asistente/conocimiento.py` define unos 80 temas (cada página, gráfica, variable, modelo y concepto) con varias preguntas de ejemplo cada uno. Las respuestas toman las cifras de las mismas funciones que dibujan el tablero (`interp_corr`, `interp_rates`, …), así que siempre coinciden con lo que se ve.
 2. `asistente/motor.py` convierte las preguntas en vectores TF-IDF de palabras y de fragmentos de letras (tolera errores de escritura) y entrena una regresión logística multiclase. El entrenamiento tarda menos de un segundo y se hace al arrancar la app.
 3. Usa el contexto: «explícame esta página» responde según la página abierta y «dame la explicación técnica» amplía la última respuesta.
-4. Si una pregunta no se parece a nada de lo aprendido, lo dice en vez de inventar. No usa servicios externos ni claves de API.
+4. Es bilingüe: cada tema tiene preguntas y respuestas en español e inglés; se entrena con ambas y responde en el idioma elegido con el botón ES | EN.
+5. Si una pregunta no se parece a nada de lo aprendido, lo dice en vez de inventar. No usa servicios externos ni claves de API.
 
 Para evaluarlo con preguntas que no están en su entrenamiento:
 
@@ -103,7 +109,7 @@ cd dash
 python -m asistente.evaluar
 ```
 
-Para enseñarle algo nuevo, agrega un `Intencion(...)` en `asistente/conocimiento.py` con varias formas de preguntar y su respuesta.
+Para enseñarle algo nuevo, agrega un `Intencion(...)` en `asistente/conocimiento.py` con varias formas de preguntar y su respuesta, usando `t("español", "english")`.
 
 `results/model_results.csv` resume los resultados de [Credit_Card_Project](https://github.com/valeriaflorezs/Credit_Card_Project) (`results/experiments_posthoc_metrics.csv` para los 96 experimentos locales y `results/svm_gpu_results_colab.csv` para SVM): F1, precisión, recall, ROC-AUC y PR-AUC medios de cada combinación modelo × técnica de balanceo × método de optimización.
 

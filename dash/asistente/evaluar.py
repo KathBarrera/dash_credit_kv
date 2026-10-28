@@ -99,17 +99,66 @@ PRUEBA = [
     ("q signifca pay0", "v_pay", "/univariado"),
 ]
 
+PRUEBA_EN = [
+    ("hey, who are you?", "quien_eres", "/"),
+    ("what kind of questions can I ask?", "ayuda", "/"),
+    ("explain what is on this screen", "esta_pagina", "/modelos"),
+    ("make it more technical", "mas_tecnico", "/multivariado"),
+    ("how can I turn on dark mode?", "navegacion", "/"),
+    ("give me a summary of the study's conclusions", "resumen", "/"),
+    ("what is the spinning card on the cover for?", "p_inicio", "/"),
+    ("did they delete repeated records?", "intro_limpieza", "/introduccion"),
+    ("which country and bank are the clients from?", "dataset", "/"),
+    ("which hypotheses are proposed?", "hipotesis", "/problema"),
+    ("are the results causal?", "limitaciones", "/problema"),
+    ("what do PD, LGD and EAD mean?", "perdida_esperada", "/marco"),
+    ("why did they pick Spearman instead of Pearson?", "spearman", "/marco"),
+    ("how is effect size measured between categorical variables?", "cramer", "/marco"),
+    ("what does limit bal represent?", "v_limit", "/univariado"),
+    ("what does a value of -1 in pay_0 mean?", "v_pay", "/univariado"),
+    ("why are some bills negative?", "v_bill", "/univariado"),
+    ("what percentage of clients default?", "v_target", "/univariado"),
+    ("what does the gold color mean in the correlation matrix?", "corr", "/multivariado"),
+    ("does education change the default rate?", "rates", "/multivariado"),
+    ("do young clients fall behind more?", "age", "/multivariado"),
+    ("which algorithm performed best?", "mejor_modelo", "/modelos"),
+    ("how many false negatives does the best model have?", "cm", "/modelos"),
+    ("what is the difference between recall and precision?", "metricas", "/modelos"),
+    ("how does SMOTE work?", "balanceo", "/modelos"),
+    ("how did xgboost perform?", "m_xgboost", "/modelos"),
+    ("from what score is a client high risk?", "gauge", "/predecir"),
+    ("why is the credit card cracked?", "gauge", "/predecir"),
+    ("what happens to the risk if I change the age?", "whatif", "/predecir"),
+    ("what is joblib used for?", "serializacion", "/predecir"),
+    ("who are the authors of the dashboard?", "p_equipo", "/equipo"),
+    ("how do I switch the language to spanish?", "navegacion", "/"),
+    ("thanks a lot kyo", "gracias", "/"),
+    ("explian the corelation matrix", "corr", "/multivariado"),
+]
+
 FUERA = [
     "¿cuál es la capital de Francia?", "dame una receta de arepas", "¿quién ganó el mundial de fútbol?",
     "¿qué hora es?", "cuéntame un chiste", "¿cómo está el clima mañana?", "¿cuánto es 2 más 2?",
     "escríbeme un poema", "¿cuál es el precio del dólar hoy?", "recomiéndame una película",
+    "what is the capital of France?", "give me a pizza recipe", "who won the world cup?", "what time is it?",
+    "tell me a joke", "write me a poem", "recommend me a movie",
 ]
+
+
+def _probar(bot, casos):
+    fallos = []
+    for q, esperado, pag in casos:
+        cid, prob, sim, cob, _sc = bot.clasificar(q, pag)
+        aceptada, _ = bot.entiende(q, pag)
+        if cid != esperado or aceptada is None:
+            fallos.append((q, esperado, cid, prob, sim, aceptada is None))
+    return fallos
 
 
 def main():
     import app as A   # carga datos, modelo y entrena a Kyo
     bot = A.BOT
-    print(f"Kyo · {len(bot.I)} intenciones · {bot.n_ejemplos} preguntas de entrenamiento\n")
+    print(f"Kyo · {bot.n_temas} intenciones · {bot.n_ejemplos} preguntas de entrenamiento (es + en)\n")
 
     # 1) validación cruzada sobre los ejemplos
     X, y = bot.M, bot.y
@@ -123,17 +172,15 @@ def main():
     print(f"1) Validación cruzada (3 folds) sobre los ejemplos: {np.mean(accs):.1%} ± {np.std(accs):.1%}\n"
           "   (prueba exigente: cada tema pierde un tercio de sus pocos ejemplos al entrenar)")
 
-    # 2) preguntas nuevas
-    fallos = []
-    for q, esperado, pag in PRUEBA:
-        cid, prob, sim, cob, _sc = bot.clasificar(q, pag)
-        aceptada, _ = bot.entiende(q, pag)
-        if cid != esperado or aceptada is None:
-            fallos.append((q, esperado, cid, prob, sim, aceptada is None))
-    acc = 1 - len(fallos) / len(PRUEBA)
-    print(f"2) Preguntas nuevas (no vistas): {acc:.1%} ({len(PRUEBA) - len(fallos)}/{len(PRUEBA)})")
-    for q, e, c, p, s, r in fallos:
-        print(f"   ✗ «{q}» esperaba {e}, dio {c} (p={p:.2f}, sim={s:.2f}{', rechazada' if r else ''})")
+    # 2) preguntas nuevas en cada idioma
+    total_ok = True
+    for nombre, casos in (("español", PRUEBA), ("inglés", PRUEBA_EN)):
+        fallos = _probar(bot, casos)
+        acc = 1 - len(fallos) / len(casos)
+        total_ok &= acc >= 0.9
+        print(f"2) Preguntas nuevas en {nombre}: {acc:.1%} ({len(casos) - len(fallos)}/{len(casos)})")
+        for q, e, c, p, s, r in fallos:
+            print(f"   ✗ «{q}» esperaba {e}, dio {c} (p={p:.2f}, sim={s:.2f}{', rechazada' if r else ''})")
 
     # 3) fuera del tablero
     mal = []
@@ -145,22 +192,22 @@ def main():
     for q, c in mal:
         print(f"   ✗ «{q}» respondió {c}")
 
-    # 4) sugerencias
+    # 4) sugerencias: cada botón debe llevar al mismo tema en español y en inglés
+    pares = set()
+    for iid, it in bot.I["es"].items():
+        pares.update(zip(it.sug, bot.I["en"][iid].sug))
+    for ruta, lst in bot.sug_de_pagina["es"].items():
+        pares.update(zip(lst, bot.sug_de_pagina["en"][ruta]))
     malas = []
-    textos = set()
-    for it in bot.I.values():
-        textos.update(it.sug)
-    for lst in bot.sug_de_pagina.values():
-        textos.update(lst)
-    textos.discard("Dame la explicación técnica")
-    for s in sorted(textos):
-        r = bot.responder(s, "/")
-        if r["i"] is None:
-            malas.append((s, None))
-    print(f"4) Sugerencias que llevan a una respuesta: {len(textos) - len(malas)}/{len(textos)}")
-    for s, c in malas:
-        print(f"   ✗ «{s}»")
-    return 0 if acc >= 0.9 and not mal and not malas else 1
+    for es, en in sorted(pares):
+        a, _ = bot.entiende(es, "/")
+        b, _ = bot.entiende(en, "/")
+        if a is None or b is None or a != b:
+            malas.append((es, en, a, b))
+    print(f"4) Sugerencias que llevan al mismo tema en ambos idiomas: {len(pares) - len(malas)}/{len(pares)}")
+    for es, en, a, b in malas:
+        print(f"   ✗ «{es}» → {a} | «{en}» → {b}")
+    return 0 if total_ok and not mal and not malas else 1
 
 
 if __name__ == "__main__":
