@@ -26,7 +26,7 @@ El análisis incluye:
 - Análisis del desbalance de clases de la variable objetivo
 - Sección **Predecir**: formulario visual (deslizadores y tarjetas con íconos) que devuelve en vivo el puntaje de riesgo de un cliente usando un Random Forest **serializado con `joblib`** (`dash/modelo/modelo_credito.pkl`), con indicador, votos de los árboles, historial del cliente, aporte de cada grupo de variables y simulador «¿Qué pasaría si…?»
 - Modo claro y oscuro, y menú lateral plegable
-- **Kyo, asistente del tablero**: una mascota que camina por la parte inferior de la pantalla cada 2 minutos; al tocarlo se abre a la derecha un panel de chat (estilo Copilot de VS Code) que explica cada página, gráfica, variable, modelo y concepto del dash. Es un bot **entrenado** con scikit-learn (TF-IDF + regresión logística) sobre preguntas de ejemplo, usa las mismas cifras que dibujan las gráficas y reconoce cuando una pregunta no es del tablero
+- **Kyo, asistente del tablero**: una mascota fija en la esquina inferior derecha; al tocarla se abre a la derecha un panel de chat (estilo Copilot de VS Code) que explica cada página, gráfica, variable, modelo y concepto del dash. Es un bot **entrenado** con scikit-learn (TF-IDF + regresión logística) sobre preguntas de ejemplo, usa las mismas cifras que dibujan las gráficas y reconoce cuando una pregunta no es del tablero
 - Sección **Modelos**: carrusel deslizable con los siete clasificadores del proyecto (mejor combinación de cada uno), el mejor modelo resaltado, F1 por técnica de balanceo, F1 frente a ROC-AUC de las 112 combinaciones, matriz de confusión del mejor modelo y resumen de SHAP
 
 ---
@@ -87,7 +87,7 @@ El `.pkl` guarda el pipeline completo (transformaciones del proyecto + one-hot +
 
 ### Asistente Kyo (bot entrenado)
 
-Kyo camina por la parte inferior de la pantalla cada 2 minutos (el primer paseo empieza a los pocos segundos de abrir el tablero) y descansa en la esquina inferior derecha. Al tocarlo se abre un panel a la derecha que empuja el contenido, como el chat de Copilot en VS Code; se cierra con la **X** o con `Esc`.
+Kyo está fijo en la esquina inferior derecha de la pantalla y saluda con un globo al abrir el tablero. Al tocarlo se abre un panel a la derecha que empuja el contenido, como el chat de Copilot en VS Code; se cierra con la **X** o con `Esc`.
 
 Cómo está entrenado:
 
@@ -162,8 +162,8 @@ El repositorio trae `render.yaml`, así que Render toma la configuración solo:
 
 En el plan gratis, Render apaga el servicio tras 15 minutos sin visitas y la siguiente visita tarda entre 30 y 60 segundos en despertarlo. Para evitarlo, algo externo debe visitar `/ping` (una respuesta mínima que no carga la página) cada pocos minutos. Hay dos opciones; se pueden usar las dos:
 
-- **UptimeRobot** (recomendada): en [uptimerobot.com](https://uptimerobot.com) crea un monitor *HTTP(s)* con la URL `https://TU-URL.onrender.com/ping` y un intervalo de 5 minutos.
-- **GitHub Actions**: `.github/workflows/mantener-despierto.yml` visita `/ping` cada 10 minutos. Si tu URL no es `https://dash-credit-kv.onrender.com`, créala como variable del repositorio `RENDER_URL` en *Settings → Secrets and variables → Actions → Variables*. GitHub desactiva las tareas programadas si el repositorio pasa 60 días sin cambios; se reactivan desde la pestaña *Actions*.
+- **UptimeRobot o cron-job.org** (necesaria): en [uptimerobot.com](https://uptimerobot.com) crea un monitor *HTTP(s)* con la URL `https://dash-credit-kv.onrender.com/ping` y un intervalo de 5 minutos (o en [cron-job.org](https://cron-job.org) una tarea cada 5 minutos a esa URL).
+- **GitHub Actions** (solo respaldo): `.github/workflows/mantener-despierto.yml` pide visitar `/ping` cada 10 minutos, pero GitHub retrasa mucho las tareas programadas (en la práctica se ejecutó cada 4–5 horas), así que por sí sola no evita que Render duerma el servicio. Si tu URL no es `https://dash-credit-kv.onrender.com`, créala como variable del repositorio `RENDER_URL` en *Settings → Secrets and variables → Actions → Variables*. GitHub desactiva las tareas programadas si el repositorio pasa 60 días sin cambios; se reactivan desde la pestaña *Actions*.
 
 Un servicio encendido todo el mes usa unas 744 de las 750 horas gratis mensuales de Render, así que conviene tener un solo servicio gratis en la cuenta.
 
