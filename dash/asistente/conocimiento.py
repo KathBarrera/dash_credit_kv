@@ -86,7 +86,7 @@ def construir_conocimiento(A):
         "gracias", "Agradecimiento",
         ["gracias", "muchas gracias", "perfecto gracias", "genial", "listo", "ok gracias", "chévere", "excelente",
          "súper", "entendido", "vale gracias", "adiós", "chao", "hasta luego"],
-        "¡Con gusto! Cuando quieras, vuelve a tocarme mientras camino por la parte de abajo de la pantalla.",
+        "¡Con gusto! Cuando quieras, tócame de nuevo: estoy en la esquina inferior derecha de la pantalla.",
         sug=["Explícame esta página", "¿Cuál es el hallazgo principal?"], mood="happy"))
     add(Intencion(
         "esta_pagina", "Esta página",
@@ -113,9 +113,9 @@ def construir_conocimiento(A):
         "lo oculta o lo muestra.\n"
         "- **Sol y luna**: cambia entre modo claro y oscuro (se recuerda en tu navegador).\n"
         "- **Anterior / Siguiente**: al final de cada página te llevan por el tablero en orden.\n"
-        "- **Interpretaciones**: bajo cada gráfica hay una explicación básica (abierta) y una técnica "
-        "(se despliega).\n"
-        "- **Yo**: camino por abajo cada 2 minutos; tócame para abrir este panel y la **X** para cerrarlo.",
+        "- **Interpretaciones**: bajo cada gráfica, el botón **Ver interpretación** despliega la explicación "
+        "básica y la técnica.\n"
+        "- **Yo**: estoy en la esquina inferior derecha; tócame para abrir este panel y la **X** para cerrarlo.",
         sug=["Explícame esta página", "¿Qué puedo preguntarte?"], mood="happy"))
     add(Intencion(
         "resumen", "Resumen del proyecto",
@@ -513,7 +513,7 @@ def construir_conocimiento(A):
         "- **Categóricas** (SEX, EDUCATION, PAY_x…): barras con el porcentaje de cada categoría.\n"
         "- **Recortar cola superior (P99):** oculta el 1 % de valores más altos *solo en la vista*, para que se "
         "vea la forma de la distribución.\n\n"
-        "Debajo, la interpretación se actualiza sola con la variable que elijas.",
+        "En **Ver interpretación**, la explicación se actualiza sola con la variable que elijas.",
         tecnico=("La interpretación técnica reporta n, media, mediana, σ, IQR, asimetría, curtosis y % de atípicos de "
                  "Tukey. Si |asimetría| > 2 sugiere transformación logarítmica con signo. Para PAY_x informa la moda y "
                  "el % con atraso ≥ 1 mes, y recomienda tratarla como ordinal/categórica."),
@@ -599,8 +599,8 @@ def construir_conocimiento(A):
         "- categórica × numérica → **boxplots** por grupo;\n"
         "- categórica × default → **barras de tasa**;\n"
         "- categórica × categórica → **mapa de calor**.\n\n"
-        "«Ejes ajustados al percentil 99» corta la vista donde está el 99 % de los clientes. La interpretación de "
-        "abajo cambia con tu elección.",
+        "«Ejes ajustados al percentil 99» corta la vista donde está el 99 % de los clientes. La interpretación "
+        "(botón **Ver interpretación**) cambia con tu elección.",
         tecnico=("Según el tipo de par se reportan Spearman, Mann-Whitney / Kruskal-Wallis o χ² con V de Cramér. "
                  "Con n ≈ 30 000 el p-value casi siempre es significativo, por eso conviene mirar el tamaño del efecto."),
         pagina="/multivariado", sug=["¿Qué es Kruskal-Wallis?", "¿Qué es la V de Cramér?"]))
@@ -638,7 +638,7 @@ def construir_conocimiento(A):
         f"base y {B['recall_mean']:.0%} de incumplimientos detectados.\n"
         "- **Carrusel:** la mejor combinación de cada modelo.\n"
         "- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n"
-        "- **Matriz de confusión** del mejor modelo y **resumen SHAP**.\n- **Cómo leer estos resultados.**",
+        "- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
         pagina="/modelos", sug=["¿Cuál es el mejor modelo?", "Explícame el carrusel de modelos",
                                 "¿Qué técnicas de balanceo usaron?"]))
     add(Intencion(
@@ -725,10 +725,10 @@ def construir_conocimiento(A):
                  "es aproximado."),
         pagina="/modelos", sug=["¿Qué es PAY_0?", "Explícame «¿Qué empuja su riesgo?»"]))
     add(Intencion(
-        "como_leer", "Cómo leer los resultados de los modelos",
-        ["cómo leer estos resultados", "están empatados los modelos", "qué es Nemenyi", "qué es la prueba de Friedman",
+        "como_leer", "Qué tan distintos son los modelos",
+        ["cómo leer los resultados de los modelos", "están empatados los modelos", "qué es Nemenyi", "qué es la prueba de Friedman",
          "importa el método de optimización", "son comparables los resultados de SVM", "diferencia significativa entre modelos"],
-        "**Cómo leer los resultados:**\n\n"
+        "**Qué tan distintos son los modelos:**\n\n"
         "- Los primeros lugares están **prácticamente empatados**: 15 de 112 combinaciones quedan a menos de una "
         "desviación del mejor F1 y Nemenyi no separa ningún par.\n"
         "- Lo que sí importa es **balancear**. El método de optimización casi no cambia el F1 (0.5022 a 0.5032): "
@@ -781,7 +781,7 @@ def construir_conocimiento(A):
         "En la **validación cruzada anidada** hay dos niveles: los **3 folds internos** eligen los hiperparámetros y "
         "los **3 folds externos** miden el rendimiento con datos que el ajuste nunca vio. Así el F1 reportado no "
         "está inflado por la búsqueda de hiperparámetros. El «±» del F1 es la desviación entre los folds externos.",
-        pagina="/modelos", sug=["¿Cómo leer estos resultados?", "¿Qué es el F1?"]))
+        pagina="/modelos", sug=["¿Están empatados los modelos?", "¿Qué es el F1?"]))
     for _, r in A.BEST_BY_MODEL.iterrows():
         m = r["model"]
         info = A.MODEL_INFO[m]

@@ -1346,9 +1346,7 @@ PAGE_ICONS = {"Introducción": "info", "Problema y Objetivos": "target", "Marco 
 # 5. COMPONENTES DE INTERFAZ
 # =============================================================================
 def card(title, children, subtitle=None, cls=""):
-    head = [html.H3(title, className="card-title")]
-    if subtitle:
-        head.append(html.P(subtitle, className="card-sub"))
+    head = [html.H3(title, className="card-title")]   # solo el título (subtitle se ignora a propósito)
     return html.Div(head + (children if isinstance(children, list) else [children]),
                     className=f"card {cls}".strip())
 
@@ -1361,12 +1359,11 @@ def kpi(label, value, note="", ico=None):
 
 
 def interp_block(basic, tech):
-    """Bloques desplegables: Interpretación Básica + Técnica."""
-    return html.Div([
-        html.Details([html.Summary("Interpretación básica"), html.P(basic)],
-                     open=True, className="interp basic"),
-        html.Details([html.Summary("Interpretación técnica"), html.P(tech)],
-                     open=False, className="interp tech"),
+    """Un solo botón desplegable (cerrado) con la interpretación básica y la técnica."""
+    return html.Details([
+        html.Summary([icon("info"), "Ver interpretación", icon("chevron", "interp-chev")], className="interp-btn"),
+        html.Div([html.Div([html.B("Básica"), html.P(basic)], className="interp basic"),
+                  html.Div([html.B("Técnica"), html.P(tech)], className="interp tech")], className="interp-body"),
     ], className="interp-wrap")
 
 
@@ -1376,8 +1373,7 @@ def control(label, comp):
 
 def page_title(title, sub):
     ic = PAGE_ICONS.get(title)
-    return html.Div([html.H2([icon(ic, "pt-ico"), title] if ic else title), html.P(sub)],
-                    className="page-title")
+    return html.Div(html.H2([icon(ic, "pt-ico"), title] if ic else title), className="page-title")
 
 
 def var_options(cols):
@@ -1673,7 +1669,8 @@ def page_marco():
         ("PAY_AMT1–6", "Numérica continua", "Monto efectivamente pagado de septiembre (1) a abril (6), en NT$."),
         ("default_payment_next_month", "Binaria (objetivo)", "1 = el cliente incumple el pago el mes siguiente (octubre 2005); 0 = no incumple."),
     ]
-    F = lambda t: html.Div(t, className="formula")
+    # Fórmulas en LaTeX (MathJax incluido en Dash); r"..." evita escapar las barras
+    F = lambda tex: dcc.Markdown(f"$$\\displaystyle {tex}$$", mathjax=True, className="formula")
     return html.Div([
         page_title("Marco Teórico", "Conceptos, métodos estadísticos y variables que sustentan el análisis"),
         html.Div([
@@ -1681,7 +1678,7 @@ def page_marco():
                 html.P("El riesgo de crédito es la posibilidad de que una entidad sufra pérdidas porque un deudor "
                        "no cumple, total o parcialmente, sus obligaciones. En la regulación bancaria (Basilea II) la "
                        "pérdida esperada se descompone así:"),
-                F("EL = PD × LGD × EAD"),
+                F(r"\mathrm{EL} = \mathrm{PD} \times \mathrm{LGD} \times \mathrm{EAD}"),
                 _ul(["PD: probabilidad de incumplimiento en un horizonte dado (lo que estudian estos datos).",
                      "LGD: porcentaje de la exposición que se pierde si hay incumplimiento.",
                      "EAD: monto expuesto en el momento del incumplimiento."]),
@@ -1703,7 +1700,7 @@ def page_marco():
             card("4. Estadística descriptiva y valores atípicos", [
                 html.P("La asimetría (skewness) indica hacia dónde se alarga la cola de una distribución; la curtosis, "
                        "qué tan pesadas son sus colas. Los montos de dinero suelen ser muy asimétricos."),
-                F("Atípico (Tukey): x < Q1 − 1.5·IQR  ó  x > Q3 + 1.5·IQR,  con IQR = Q3 − Q1"),
+                F(r"x < Q_1 - 1.5\,\mathrm{IQR} \quad \text{ó} \quad x > Q_3 + 1.5\,\mathrm{IQR}, \qquad \mathrm{IQR} = Q_3 - Q_1"),
                 html.P("La winsorización recorta los extremos a percentiles (por ejemplo P1–P99) sin eliminar clientes. "
                        "La transformación logarítmica con signo suaviza colas largas cuando hay ceros o negativos."),
             ]),
@@ -1715,25 +1712,29 @@ def page_marco():
                      "Evaluar con AUC-ROC, F1 y recall de la clase minoritaria en lugar de accuracy."]),
             ]),
             card("6. Correlación de Spearman y multicolinealidad", [
-                F("Spearman: ρ = Pearson( rango(X), rango(Y) )"),
+                F(r"\rho_s = r\big(\mathrm{rango}(X),\, \mathrm{rango}(Y)\big) = 1 - \frac{6 \sum d_i^2}{n\,(n^2 - 1)}"),
+                html.P("La segunda forma vale cuando no hay empates (dᵢ es la diferencia de rangos de cada cliente)."),
                 html.P("Spearman (1904) mide asociación monótona usando los rangos de los datos. No exige linealidad "
                        "ni normalidad y resiste los valores extremos. Se eligió sobre Pearson porque los montos "
                        "(BILL_AMT, PAY_AMT) son muy asimétricos y con colas largas, las variables PAY_x son ordinales "
                        "y la variable objetivo es binaria."),
-                F("VIF_j = 1 / (1 − R²_j)"),
+                F(r"\mathrm{VIF}_j = \frac{1}{1 - R_j^2}"),
                 html.P("Hay multicolinealidad cuando las predictoras son casi redundantes: se inflan las varianzas de "
                        "los coeficientes. Un VIF > 10 (algunos autores usan > 5) es señal de alerta."),
             ]),
             card("7. Asociación entre variables categóricas", [
                 html.P("La prueba χ² de independencia contrasta si dos variables categóricas están asociadas. Su "
                        "tamaño de efecto se mide con la V de Cramér, que va de 0 a 1:"),
-                F("V = √( χ² / ( n · min(r − 1, c − 1) ) )"),
+                F(r"V = \sqrt{\frac{\chi^2}{n \cdot \min(r - 1,\; c - 1)}}"),
                 html.P("Como regla orientativa, V < 0.1 es un efecto pequeño y V ≈ 0.3 uno moderado."),
             ]),
             card("8. Comparación de grupos y tamaño del efecto", [
                 _ul(["Mann–Whitney U: compara dos grupos sin suponer normalidad.",
                      "Kruskal–Wallis H: extiende la comparación a tres o más grupos.",
                      "t de Welch: compara medias con varianzas distintas."]),
+                F(r"U_1 = R_1 - \frac{n_1 (n_1 + 1)}{2}"),
+                F(r"H = \frac{12}{N (N + 1)} \sum_{g} \frac{R_g^2}{n_g} - 3 (N + 1)"),
+                F(r"t = \frac{\bar{x}_1 - \bar{x}_2}{\sqrt{\dfrac{s_1^2}{n_1} + \dfrac{s_2^2}{n_2}}}"),
                 html.P("Con n ≈ 30 000 casi cualquier diferencia resulta significativa; por eso se reporta el tamaño del "
                        "efecto y la relevancia práctica, no solo el p-value."),
             ]),
@@ -1747,11 +1748,12 @@ def page_marco():
                 html.P("La sección Modelos retoma esa comparación con siete clasificadores, cuatro técnicas de "
                        "balanceo y cuatro métodos de optimización de hiperparámetros."),
             ]),
-            card("Referencias", html.Ul([html.Li(r) for r in refs], className="refs")),
-        ], className="grid g2"),
+        ], className="grid"),
         card("Diccionario de variables", _tbl(["Variable", "Tipo", "Descripción"],
                                               [(html.Code(v), t, d) for v, t, d in var_table]),
              subtitle="Variables explicativas y variable objetivo (default_payment_next_month)"),
+        html.Details([html.Summary([icon("book"), f"Referencias ({len(refs)})"]),
+                      html.Ul([html.Li(r) for r in refs], className="refs")], className="card fold"),
     ])
 
 
@@ -1993,17 +1995,6 @@ def page_models():
                        "exacto entre PAY_2 … PAY_6 es aproximado.", className="muted"),
             ], subtitle="Resumen del notebook de interpretabilidad"),
         ], className="grid g2"),
-        card("Cómo leer estos resultados", _ul([
-            "Los primeros lugares están prácticamente empatados: 15 de las 112 combinaciones quedan a menos de una "
-            "desviación estándar del mejor F1 y la prueba de Nemenyi no separa ningún par (diferencia crítica "
-            "115.4 frente a 107.7 de diferencia máxima de rangos). El orden entre ellas es descriptivo.",
-            "El factor que sí importa es el balanceo. El método de optimización casi no cambia el F1 (0.5022 a "
-            "0.5032 en promedio), así que conviene elegirlo por su costo computacional.",
-            "Las 16 combinaciones de SVM se corrieron en Colab con GPU (cuML) y no son estrictamente comparables con "
-            "las demás; KNN y Naive Bayes con pesos de clase usan ajustes propios del proyecto.",
-            "Validación cruzada anidada con 3 folds externos y 3 internos; la desviación del F1 se calcula con "
-            "ddof = 1. Con 3 folds las pruebas estadísticas tienen poca potencia y sus p-valores son optimistas.",
-        ]), subtitle="Fuente: notebooks 04, 05, 06 y 07 del repositorio del proyecto"),
     ])
 
 
@@ -2426,7 +2417,7 @@ a { color:inherit; }
 /* ---------- Títulos ---------- */
 .page-title h2 { margin:0; font-size:27px; font-weight:700; letter-spacing:-.01em; display:flex; align-items:center; gap:12px; }
 .page-title .pt-ico { width:26px; height:26px; color:var(--accent-2); }
-.page-title p { margin:6px 0 22px; color:var(--muted); }
+.page-title { margin-bottom:22px; } .page-title p { margin:6px 0 22px; color:var(--muted); }
 .section-h { font-size:18px; font-weight:700; margin:30px 0 12px; }
 
 /* ---------- Tarjetas y KPI ---------- */
@@ -2458,12 +2449,35 @@ a { color:inherit; }
 .radio input, .check input { accent-color:var(--accent); }
 
 /* ---------- Interpretaciones ---------- */
-.interp-wrap { margin-top:10px; display:grid; gap:10px; }
+.interp-wrap { margin-top:12px; }
+.interp-btn { display:inline-flex; align-items:center; gap:8px; cursor:pointer; list-style:none; user-select:none;
+  padding:7px 14px; border-radius:999px; border:1px solid var(--line-strong); font-weight:600; font-size:13px;
+  color:var(--text); background:var(--surface-2); transition:border-color .15s, color .15s; }
+.interp-btn::-webkit-details-marker { display:none; }
+.interp-btn:hover { border-color:var(--accent-2); color:var(--accent-2); }
+.interp-btn .ico { width:15px; height:15px; }
+.interp-chev { transition:transform .2s ease; }
+.interp-wrap[open] .interp-chev { transform:rotate(90deg); }
+.interp-wrap[open] .interp-btn { border-color:var(--accent-2); }
+.interp-body { margin-top:10px; display:grid; gap:10px; }
 .interp { border-radius:8px; padding:10px 14px; }
-.interp summary { cursor:pointer; font-weight:700; font-size:13.5px; }
-.interp p { margin:8px 0 2px !important; font-size:14px; }
+.interp b { font-size:13px; }
+.interp p { margin:6px 0 2px !important; font-size:14px; }
 .interp.basic { background:var(--note-bg); border-left:3px solid var(--note-line); }
 .interp.tech { background:var(--tech-bg); border-left:3px solid var(--tech-line); }
+/* desplegable tipo tarjeta (Referencias del Marco Teórico) */
+details.fold > summary { cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px;
+  font-weight:700; font-size:16px; }
+details.fold > summary::-webkit-details-marker { display:none; }
+details.fold > summary::after { content:'+'; margin-left:auto; font-size:20px; font-weight:400; color:var(--accent-2); }
+details.fold[open] > summary::after { content:'−'; }
+details.fold > summary .ico { color:var(--accent-2); }
+details.fold[open] > summary { margin-bottom:10px; }
+/* fórmulas LaTeX (MathJax) */
+.formula.dash-markdown, .formula > div { overflow-x:auto; }
+.formula { text-align:center; }
+.formula mjx-container { margin:2px 0 !important; font-size:118% !important; }
+.formula p { margin:0; }
 
 /* ---------- Contenido de texto ---------- */
 .callout { background:var(--note-bg); border-left:3px solid var(--note-line); border-radius:8px; padding:14px 18px; font-size:15.5px; font-weight:600; }
@@ -3000,7 +3014,7 @@ CSS += NEW_CSS
 CSS += _icon_css()
 
 
-# ---------- Asistente Kyo: panel lateral derecho (tipo Copilot) y mascota caminante ----------
+# ---------- Asistente Kyo: panel lateral derecho (tipo Copilot) y mascota fija ----------
 # La lógica del bot vive en asistente/ (motor entrenado, base de conocimiento y mascota SVG).
 from asistente import Asistente, construir_conocimiento, mascota_svg, mascota_uri  # noqa: E402
 
@@ -3056,35 +3070,24 @@ BOT_CSS = """
 .bot-foot { margin:0; padding:2px 16px 12px; font-size:11px; color:var(--muted); }
 @keyframes bot-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 
-/* ---- Kyo caminando por la parte inferior ---- */
+/* ---- Kyo, fijo en la esquina inferior derecha ---- */
 /* z-index por encima de la barra de depuración de Dash (10000), que solo aparece con python app.py */
 .kyo-walker { position:fixed; right:22px; bottom:4px; width:68px; height:82px; z-index:10001; cursor:pointer;
   transition:opacity .25s ease; -webkit-tap-highlight-color:transparent; }
 .kyo-walker:focus-visible { outline:2px solid var(--focus); outline-offset:4px; border-radius:12px; }
 .bot-open .kyo-walker { opacity:0; pointer-events:none; }
 .kyo-flip { width:100%; height:100%; transition:transform .25s ease; }
-.kyo-walker.face-left .kyo-flip { transform:scaleX(-1); }
 .kyo-svg { width:100%; height:100%; overflow:visible; display:block; filter:drop-shadow(0 4px 6px rgba(20,16,43,.25));
   transition:transform .2s ease; }
 .kyo-walker:hover .kyo-svg { transform:translateY(-4px) scale(1.06); }
 .kyo-svg .a-eyes { transform-box:fill-box; transform-origin:center; animation:kyo-blink 4.6s infinite; }
 .kyo-svg .a-leg, .kyo-svg .a-arm { transform-box:fill-box; transform-origin:50% 0; }
 .kyo-svg .a-spark { transform-box:fill-box; transform-origin:center; animation:kyo-twinkle 2.4s ease-in-out infinite; }
-.kyo-walker.walking .a-leg-l { animation:kyo-step .46s ease-in-out infinite alternate; }
-.kyo-walker.walking .a-leg-r { animation:kyo-step .46s ease-in-out -.46s infinite alternate-reverse; }
-.kyo-walker.walking .a-arm-l { animation:kyo-swing .46s ease-in-out infinite alternate-reverse; }
-.kyo-walker.walking .a-arm-r { animation:kyo-swing .46s ease-in-out infinite alternate; }
-.kyo-walker.walking .a-body { animation:kyo-bob .23s ease-in-out infinite alternate; }
-.kyo-walker:not(.walking) .a-body { animation:kyo-idle 3s ease-in-out infinite; }
 .kyo-bubble { position:absolute; right:58px; bottom:64px; width:max-content; max-width:210px; padding:7px 11px;
   border-radius:12px 12px 2px 12px; background:var(--surface); color:var(--text); border:1px solid var(--line-strong);
   box-shadow:0 6px 18px rgba(10,14,30,.16); font-size:12.5px; font-weight:600; line-height:1.35;
   opacity:0; transform:translateY(6px); pointer-events:none; transition:opacity .25s ease, transform .25s ease; }
 .kyo-walker.talk .kyo-bubble, .kyo-walker:hover .kyo-bubble { opacity:1; transform:none; }
-@keyframes kyo-step { from { transform:rotate(-20deg); } to { transform:rotate(20deg); } }
-@keyframes kyo-swing { from { transform:rotate(-16deg); } to { transform:rotate(16deg); } }
-@keyframes kyo-bob { from { transform:translateY(0); } to { transform:translateY(-2.5px); } }
-@keyframes kyo-idle { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
 @keyframes kyo-blink { 0%,92%,100% { transform:scaleY(1); } 95% { transform:scaleY(.12); } }
 @keyframes kyo-twinkle { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(.7); opacity:.6; } }
 @media (max-width:900px) {
@@ -3093,12 +3096,12 @@ BOT_CSS = """
   .kyo-walker { width:56px; height:68px; right:12px; }
   .kyo-bubble { right:46px; bottom:52px; } }
 @media (prefers-reduced-motion:reduce) {
-  .kyo-svg .a-eyes, .kyo-svg .a-spark, .kyo-walker .a-body { animation:none !important; }
+  .kyo-svg .a-eyes, .kyo-svg .a-spark { animation:none !important; }
   .bm { animation:none; } }
 """.replace("%%W%%", str(BOT_W))
 CSS += BOT_CSS
 
-# Mascota fija en la página (fuera de Dash) para que nunca se vuelva a dibujar mientras camina
+# Mascota fija en la página (fuera de Dash), en la esquina inferior derecha
 WALKER_HTML = (
     '<div id="kyo-walker" class="kyo-walker" role="button" tabindex="0" '
     'aria-label="Abrir a Kyo, el asistente del tablero" title="Abrir a Kyo, el asistente del tablero">'
@@ -3106,25 +3109,15 @@ WALKER_HTML = (
     f'<div class="kyo-flip">{mascota_svg("happy", cls="kyo-svg", uid="walker")}</div></div>')
 
 BOT_JS = """
-// ---------- Kyo: abrir y cerrar el panel, y paseo por la parte inferior cada 2 minutos ----------
+// ---------- Kyo: abrir y cerrar el panel (Kyo se queda fijo en la esquina inferior derecha) ----------
 (function () {
   var root = document.documentElement;
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var PASEO_CADA = 120000, VELOCIDAD = 75;   // ms entre paseos · px por segundo
-  var timers = [], walking = false;
   function walker() { return document.getElementById('kyo-walker'); }
-  function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
   function relayout() { setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 330); }
-  function say(w, ms) { w.classList.add('talk'); later(function () { w.classList.remove('talk'); }, ms); }
-  function stopWalk() {
-    timers.forEach(clearTimeout); timers = []; walking = false;
-    var w = walker(); if (!w) return;
-    w.classList.remove('walking', 'face-left', 'talk');
-    w.style.transition = 'none'; w.style.transform = 'none';
-  }
   function openBot() {
     if (root.classList.contains('bot-open')) return;
-    stopWalk(); root.classList.add('bot-open'); relayout();
+    var w = walker(); if (w) w.classList.remove('talk');
+    root.classList.add('bot-open'); relayout();
     setTimeout(function () { var i = document.getElementById('bot-input'); if (i) i.focus(); }, 340);
   }
   function closeBot() {
@@ -3143,36 +3136,11 @@ BOT_JS = """
     if ((e.key === 'Enter' || e.key === ' ') && a && a.id === 'kyo-walker') { e.preventDefault(); openBot(); }
     if (e.key === 'Escape' && root.classList.contains('bot-open')) closeBot();
   });
-  // Paseo: sale de su esquina, camina hacia la izquierda por el borde inferior, se da vuelta y regresa.
-  function leftLimit() {
-    var sb = document.querySelector('.sidebar');
-    if (!sb) return 16;
-    var r = sb.getBoundingClientRect();
-    return (getComputedStyle(sb).position === 'fixed' && r.right > 0 && r.height > 0) ? r.right + 16 : 16;
-  }
-  function stroll() {
-    var w = walker();
-    if (!w || walking || reduce || document.hidden || root.classList.contains('bot-open')) return;
-    var dist = Math.round(w.getBoundingClientRect().left - leftLimit());
-    if (dist < 140) { say(w, 4000); return; }
-    var secs = dist / VELOCIDAD;
-    walking = true;
-    say(w, 3500);
-    w.classList.add('walking', 'face-left');
-    w.style.transition = 'transform ' + secs + 's linear';
-    requestAnimationFrame(function () { w.style.transform = 'translateX(-' + dist + 'px)'; });
-    later(function () {                 // llega al otro lado: se detiene, saluda y se da vuelta
-      w.classList.remove('walking'); say(w, 2200);
-      later(function () {
-        w.classList.remove('face-left'); w.classList.add('walking');
-        w.style.transform = 'translateX(0)';
-        later(function () { w.classList.remove('walking'); walking = false; }, secs * 1000);
-      }, 1600);
-    }, secs * 1000);
-  }
-  window.addEventListener('resize', function () { if (walking && !root.classList.contains('bot-open')) stopWalk(); });
-  setTimeout(stroll, 6000);
-  setInterval(stroll, PASEO_CADA);
+  // Al entrar, Kyo saluda unos segundos con su globo y luego solo lo muestra al pasar el mouse
+  setTimeout(function () {
+    var w = walker(); if (!w || root.classList.contains('bot-open')) return;
+    w.classList.add('talk'); setTimeout(function () { w.classList.remove('talk'); }, 5000);
+  }, 1500);
   // Desplaza el chat al último mensaje cuando llega una respuesta
   new MutationObserver(function () {
     var m = document.getElementById('bot-msgs');
