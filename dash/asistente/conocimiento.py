@@ -842,12 +842,13 @@ def construir_conocimiento(A):
         ["cómo leo el puntaje de riesgo", "qué significa el porcentaje de la tarjeta", "qué es el umbral de decisión", "riesgo alto o bajo",
          "por qué 50 por ciento", "es una probabilidad el puntaje", "qué significa el veredicto", "el puntaje de la tarjeta",
          "qué son las señales del resultado", "a partir de qué puntaje es riesgo alto", "cuándo se considera riesgo alto",
-         "por qué la tarjeta está rota", "qué significan las grietas de la tarjeta", "por qué se parte la tarjeta",
+         "por qué la tarjeta está rota", "qué significa la grieta de la tarjeta", "por qué se parte la tarjeta",
          "la tarjeta de crédito del resultado"],
         f"La **tarjeta de crédito** del resultado muestra el puntaje de 0 a 100 %. Desde el **umbral de {thr:.0%}** el veredicto es "
         "«riesgo alto: probable incumplimiento» (dorado); por debajo, «riesgo bajo» (azul).\n\n"
-        "Además se rompe según el riesgo: está intacta con riesgo bajo, **se agrieta desde 30 %**, se tiñe de "
-        "rojo y muestra la fractura principal desde el umbral, y **se parte en dos desde 75 %**.\n\nDebajo aparecen "
+        "Además se rompe según el riesgo: está intacta con riesgo bajo; **desde 30 %** aparece una fractura por la "
+        "mitad que crece hasta cruzarla, y **desde el umbral (50 %)** la tarjeta se abre por ahí, más cuanto más "
+        "alto es el puntaje.\n\nDebajo aparecen "
         "**señales** en lenguaje simple: atrasos, qué parte de lo facturado pagó y cómo es su cupo frente a los demás.\n\n"
         + (f"Con ese umbral el modelo detecta {prueba.get('recall', 0):.0%} de quienes incumplen y acierta en "
            f"{prueba.get('precision', 0):.0%} de los que marca (datos de prueba). " if prueba else "")
