@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Kyo, la mascota del asistente: una estrella morada con ojos grandes, brazos y piernas.
+"""Kyo, la mascota del asistente: una estrella dorada de 5 puntas con ojos grandes, brazos y piernas.
 
 `mascota_svg` devuelve el SVG como texto (para incrustarlo en la página y animarlo con CSS)
 y `mascota_uri` lo devuelve como data URI (para usarlo en <img> dentro del chat).
@@ -8,13 +8,14 @@ Cada parte tiene una clase (a-leg-l, a-arm-r, a-eyes...) para poder animarla.
 import math
 from urllib.parse import quote
 
-BODY_TOP, BODY_BOT = "#8E7BE0", "#5532B0"   # degradado de la estrella
-LIMB = "#3E1C8C"                            # brazos y piernas
-INK = "#14102B"                             # pupilas y boca
-SPARK = "#D2BB89"                           # destello dorado (paleta del tablero)
+# Dorados de la paleta del tablero (los mismos del chip de las tarjetas)
+BODY_TOP, BODY_BOT = "#E6D3A3", "#B88F3D"   # degradado de la estrella: dorado pálido -> dorado cálido
+LIMB = "#8A6E3A"                            # brazos y piernas: dorado oscuro (BROWN del tablero)
+INK = "#1A233D"                             # pupilas y boca: azul profundo del tablero
+SPARK = "#B88F3D"                           # destello: dorado cálido (se ve en claro y oscuro)
 
 
-def _star(cx=50.0, cy=47.0, r_out=33.0, r_in=20.0, n=7, rot=-96.0):
+def _star(cx=50.0, cy=48.0, r_out=36.0, r_in=19.0, n=5, rot=-90.0):
     pts = []
     for i in range(2 * n):
         a = math.radians(rot + i * 180.0 / n)
