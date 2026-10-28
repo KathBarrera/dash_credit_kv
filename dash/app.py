@@ -1181,23 +1181,6 @@ def tree_votes(values):
     return int(round(yes)), len(trees)
 
 
-def fig_risk_gauge(score=None):
-    """Indicador del puntaje de riesgo con el umbral de decisión (0.5)."""
-    thr = MODELO_META.get("umbral", 0.5) * 100
-    val = 0 if score is None else score * 100
-    color = WARM_GOLD if val >= thr else NAVY
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number", value=val, number=dict(suffix="%", valueformat=".0f", font=dict(size=46)),
-        gauge=dict(
-            axis=dict(range=[0, 100], ticksuffix="%", tickwidth=1, tickcolor=GREY_BLUE),
-            bar=dict(color=color, thickness=.32), bgcolor="rgba(0,0,0,0)", borderwidth=0,
-            steps=[dict(range=[0, thr], color=f"{DEEP_RGBA}0.06)"), dict(range=[thr, 100], color="rgba(184,143,61,0.16)")],
-            threshold=dict(line=dict(color=DEEP_NAVY, width=3), thickness=.85, value=thr))))
-    fig.update_layout(height=240, margin=dict(l=30, r=30, t=16, b=6), paper_bgcolor=WHITE,
-                      font=dict(color=DEEP_NAVY, family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"))
-    return fig
-
-
 def fig_client_history(values):
     """Facturado vs. pagado por mes y estado de pago (eje derecho)."""
     fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -2139,7 +2122,6 @@ def page_predict():
         ], className="pf-amounts"), className="table-wrap"),
     ], cls="pf-form")
     result = card("Resultado", [
-        dcc.Graph(id="pf-gauge", figure=fig_risk_gauge(), config=gcfg),
         html.Div(id="pf-verdict"),
         html.Div(id="pf-trees"),
     ], subtitle="Se actualiza en vivo con cada cambio", cls="pf-result")
@@ -2210,43 +2192,22 @@ def _rc_geometry():
     rnd = random.Random(2005)
     cx, cy = RC_IMPACT
     cracks = []
-    n = 14
-    order = [0, 7, 3, 10, 5, 12, 1, 8, 4, 11, 2, 9, 6, 13]          # alterna direcciones al aparecer
-    for i in order:
-        ang = math.radians(i * 360 / n + rnd.uniform(-10, 10))
-        length = rnd.uniform(38, 95)
-        pts, x, y, a = [(cx, cy)], cx, cy, ang
-        steps = rnd.randint(5, 8)
-        for _ in range(steps):
-            a += rnd.uniform(-0.45, 0.45)
-            seg = length / steps
-            x, y = x + seg * math.cos(a), y + seg * math.sin(a)
+    for ang_deg in (205, 35, 150, 330, 250, 95):        # orden en que aparecen, alternando lados
+        a = math.radians(ang_deg + rnd.uniform(-8, 8))
+        length = rnd.uniform(30, 55)
+        pts, x, y = [(cx, cy)], cx, cy
+        for _ in range(3):                               # pocos tramos y poco quiebre: grietas limpias
+            a += rnd.uniform(-0.18, 0.18)
+            x, y = x + length / 3 * math.cos(a), y + length / 3 * math.sin(a)
             pts.append((x, y))
-        branch = None
-        if rnd.random() < 0.6:                                     # una rama secundaria
-            k = rnd.randint(2, len(pts) - 2)
-            bx, by = pts[k]
-            ba = a + rnd.choice([-1, 1]) * rnd.uniform(0.5, 1.0)
-            branch = [(bx, by)]
-            for _ in range(3):
-                ba += rnd.uniform(-0.4, 0.4)
-                bx, by = bx + 7 * math.cos(ba), by + 7 * math.sin(ba)
-                branch.append((bx, by))
-        cracks.append((pts, branch))
-    # fractura principal, de arriba abajo pasando por el impacto (sirve para partir la tarjeta)
-    split, y = [], 0.0
-    while y < 100:
-        x = cx + (y - cy) * 0.12 + (0 if abs(y - cy) < 1 else rnd.uniform(-5, 5))
-        split.append((round(x, 1), round(y, 1)))
-        y += rnd.uniform(9, 14)
-    split[-1] = (split[-1][0], 100.0)
-    split[0] = (split[0][0], 0.0)
-    ring = [(cx + 6 * math.cos(math.radians(t)) + rnd.uniform(-1.2, 1.2),
-             cy + 6 * math.sin(math.radians(t)) + rnd.uniform(-1.2, 1.2)) for t in range(0, 360, 40)]
-    return cracks, split, ring
+        cracks.append(pts)
+    # fractura principal, de arriba abajo pasando por el impacto (por aquí se parte la tarjeta)
+    split = [(round(cx + (y - cy) * 0.12 + (0 if y in (0, cy, 100) else rnd.uniform(-2.5, 2.5)), 1), y)
+             for y in (0, 14, 29, cy, 58, 72, 86, 100)]
+    return cracks, split
 
 
-RC_CRACKS, RC_SPLIT, RC_RING = _rc_geometry()
+RC_CRACKS, RC_SPLIT = _rc_geometry()
 
 
 def _rc_path(pts):
@@ -2257,25 +2218,20 @@ def _rc_svg(score):
     """SVG (data URI) con las grietas visibles para este puntaje."""
     t = min(max((score - RC_CRACK_FROM) / (1 - RC_CRACK_FROM), 0), 1)
     paths = []
-    for i, (pts, branch) in enumerate(RC_CRACKS):
+    for i, pts in enumerate(RC_CRACKS):
         if i >= round(t * len(RC_CRACKS) + 0.49):
             break
-        keep = max(2, round(len(pts) * min(1, 0.3 + t * 0.9)))
+        keep = max(2, round(len(pts) * min(1, 0.4 + t * 0.8)))
         paths.append(_rc_path(pts[:keep]))
-        if branch and t > 0.45:
-            paths.append(_rc_path(branch))
     if score >= 0.5:
         paths.append(_rc_path(RC_SPLIT))
-    if score >= 0.6:
-        paths.append(_rc_path(RC_RING + RC_RING[:1]))
     if not paths:
         return "none"
     d = " ".join(paths)
-    w = 0.5 + t * 0.5
     svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" preserveAspectRatio="none">'
-           f'<path d="{d}" fill="none" stroke="rgba(5,8,20,.75)" stroke-width="{w + 1.1:.2f}" '
+           f'<path d="{d}" fill="none" stroke="rgba(5,8,20,.6)" stroke-width="1.3" '
            'stroke-linecap="round" stroke-linejoin="round"/>'
-           f'<path d="{d}" fill="none" stroke="rgba(255,255,255,.82)" stroke-width="{w:.2f}" '
+           f'<path d="{d}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width=".55" '
            'stroke-linecap="round" stroke-linejoin="round"/></svg>')
     return f'url("data:image/svg+xml,{quote(svg)}")'
 
@@ -3565,7 +3521,7 @@ def _pf_values(vals):
     return values, missing
 
 
-@app.callback(Output("pf-gauge", "figure"), Output("pf-verdict", "children"), Output("pf-trees", "children"),
+@app.callback(Output("pf-verdict", "children"), Output("pf-trees", "children"),
               Output("pf-history", "figure"), Output("pf-drivers", "figure"),
               *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("theme", "data"))
 def cb_predict(*vals):
@@ -3576,9 +3532,9 @@ def cb_predict(*vals):
         msg = html.P("Completa los campos: " + ", ".join(missing[:4]) + ("…" if len(missing) > 4 else ""),
                      className="callout") if missing else ""
         empty = style_fig(go.Figure(), 340, legend_top=False)
-        return themed(fig_risk_gauge(), dark), msg, "", themed(empty, dark), themed(empty, dark)
+        return msg, "", themed(empty, dark), themed(empty, dark)
     score = predict_risk(values)
-    return (themed(fig_risk_gauge(score), dark), predict_verdict(values, score), trees_block(values),
+    return (predict_verdict(values, score), trees_block(values),
             themed(fig_client_history(values), dark), themed(fig_drivers(values, score), dark))
 
 

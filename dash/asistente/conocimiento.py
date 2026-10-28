@@ -817,7 +817,7 @@ def construir_conocimiento(A):
         "En **Predecir** llenas los datos de un cliente y el modelo serializado calcula su riesgo **en vivo**:\n\n"
         f"1. **Flujo:** datos → transformaciones → {n_trees} árboles opinan → puntaje y decisión.\n"
         "2. **Formulario:** perfil (cupo, edad, sexo, educación, estado civil), estado de pago por mes y montos.\n"
-        "3. **Resultado:** indicador del puntaje, veredicto, señales y votos de los árboles.\n"
+        "3. **Resultado:** una tarjeta de crédito con el puntaje y el veredicto, señales y votos de los árboles.\n"
         "4. **Historial del cliente**, **¿Qué empuja su riesgo?** y **¿Qué pasaría si…?**\n"
         "5. **Cómo se serializó el modelo** (joblib).",
         pagina="/predecir",
@@ -839,16 +839,15 @@ def construir_conocimiento(A):
     thr = meta.get("umbral", 0.5)
     add(Intencion(
         "gauge", "Puntaje de riesgo y veredicto",
-        ["cómo leo el puntaje de riesgo", "qué significa el indicador", "qué es el umbral de decisión", "riesgo alto o bajo",
-         "por qué 50 por ciento", "es una probabilidad el puntaje", "qué significa el veredicto", "el velocímetro",
+        ["cómo leo el puntaje de riesgo", "qué significa el porcentaje de la tarjeta", "qué es el umbral de decisión", "riesgo alto o bajo",
+         "por qué 50 por ciento", "es una probabilidad el puntaje", "qué significa el veredicto", "el puntaje de la tarjeta",
          "qué son las señales del resultado", "a partir de qué puntaje es riesgo alto", "cuándo se considera riesgo alto",
          "por qué la tarjeta está rota", "qué significan las grietas de la tarjeta", "por qué se parte la tarjeta",
          "la tarjeta de crédito del resultado"],
-        f"El **indicador** muestra el puntaje de 0 a 100 %. Desde el **umbral de {thr:.0%}** el veredicto es "
+        f"La **tarjeta de crédito** del resultado muestra el puntaje de 0 a 100 %. Desde el **umbral de {thr:.0%}** el veredicto es "
         "«riesgo alto: probable incumplimiento» (dorado); por debajo, «riesgo bajo» (azul).\n\n"
-        "La **tarjeta de crédito** del resultado muestra lo mismo de forma visual: está intacta con riesgo bajo, "
-        "se **agrieta desde 30 %** (más grietas cuanto más sube), se tiñe de rojo y muestra la fractura principal "
-        "desde el umbral, y **se parte en dos desde 75 %**.\n\nDebajo aparecen "
+        "Además se rompe según el riesgo: está intacta con riesgo bajo, **se agrieta desde 30 %**, se tiñe de "
+        "rojo y muestra la fractura principal desde el umbral, y **se parte en dos desde 75 %**.\n\nDebajo aparecen "
         "**señales** en lenguaje simple: atrasos, qué parte de lo facturado pagó y cómo es su cupo frente a los demás.\n\n"
         + (f"Con ese umbral el modelo detecta {prueba.get('recall', 0):.0%} de quienes incumplen y acierta en "
            f"{prueba.get('precision', 0):.0%} de los que marca (datos de prueba). " if prueba else "")
