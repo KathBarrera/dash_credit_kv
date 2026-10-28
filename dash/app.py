@@ -28,6 +28,8 @@
 """
 
 import json
+import math
+import random
 import sys
 import warnings
 from pathlib import Path
@@ -2195,9 +2197,133 @@ def trees_block(values):
     ], className="pf-trees")
 
 
+# ---------- Tarjeta de riesgo: una tarjeta de crédito que se agrieta según el puntaje ----------
+# Coordenadas en un lienzo de 160 x 100 (proporción de una tarjeta). Las grietas se generan una
+# sola vez con semilla fija: al subir el puntaje aparecen más y se alargan; al bajar, retroceden.
+RC_IMPACT = (104.0, 44.0)          # punto de impacto
+RC_CRACK_FROM = 0.30               # desde este puntaje aparecen grietas
+RC_SPLIT_FROM = 0.75               # desde este puntaje la tarjeta se parte en dos
+RC_SPLIT_FULL = 0.92               # aquí los pedazos ya están separados del todo (el 1 % más riesgoso)
+
+
+def _rc_geometry():
+    rnd = random.Random(2005)
+    cx, cy = RC_IMPACT
+    cracks = []
+    n = 14
+    order = [0, 7, 3, 10, 5, 12, 1, 8, 4, 11, 2, 9, 6, 13]          # alterna direcciones al aparecer
+    for i in order:
+        ang = math.radians(i * 360 / n + rnd.uniform(-10, 10))
+        length = rnd.uniform(38, 95)
+        pts, x, y, a = [(cx, cy)], cx, cy, ang
+        steps = rnd.randint(5, 8)
+        for _ in range(steps):
+            a += rnd.uniform(-0.45, 0.45)
+            seg = length / steps
+            x, y = x + seg * math.cos(a), y + seg * math.sin(a)
+            pts.append((x, y))
+        branch = None
+        if rnd.random() < 0.6:                                     # una rama secundaria
+            k = rnd.randint(2, len(pts) - 2)
+            bx, by = pts[k]
+            ba = a + rnd.choice([-1, 1]) * rnd.uniform(0.5, 1.0)
+            branch = [(bx, by)]
+            for _ in range(3):
+                ba += rnd.uniform(-0.4, 0.4)
+                bx, by = bx + 7 * math.cos(ba), by + 7 * math.sin(ba)
+                branch.append((bx, by))
+        cracks.append((pts, branch))
+    # fractura principal, de arriba abajo pasando por el impacto (sirve para partir la tarjeta)
+    split, y = [], 0.0
+    while y < 100:
+        x = cx + (y - cy) * 0.12 + (0 if abs(y - cy) < 1 else rnd.uniform(-5, 5))
+        split.append((round(x, 1), round(y, 1)))
+        y += rnd.uniform(9, 14)
+    split[-1] = (split[-1][0], 100.0)
+    split[0] = (split[0][0], 0.0)
+    ring = [(cx + 6 * math.cos(math.radians(t)) + rnd.uniform(-1.2, 1.2),
+             cy + 6 * math.sin(math.radians(t)) + rnd.uniform(-1.2, 1.2)) for t in range(0, 360, 40)]
+    return cracks, split, ring
+
+
+RC_CRACKS, RC_SPLIT, RC_RING = _rc_geometry()
+
+
+def _rc_path(pts):
+    return "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in pts)
+
+
+def _rc_svg(score):
+    """SVG (data URI) con las grietas visibles para este puntaje."""
+    t = min(max((score - RC_CRACK_FROM) / (1 - RC_CRACK_FROM), 0), 1)
+    paths = []
+    for i, (pts, branch) in enumerate(RC_CRACKS):
+        if i >= round(t * len(RC_CRACKS) + 0.49):
+            break
+        keep = max(2, round(len(pts) * min(1, 0.3 + t * 0.9)))
+        paths.append(_rc_path(pts[:keep]))
+        if branch and t > 0.45:
+            paths.append(_rc_path(branch))
+    if score >= 0.5:
+        paths.append(_rc_path(RC_SPLIT))
+    if score >= 0.6:
+        paths.append(_rc_path(RC_RING + RC_RING[:1]))
+    if not paths:
+        return "none"
+    d = " ".join(paths)
+    w = 0.5 + t * 0.5
+    svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" preserveAspectRatio="none">'
+           f'<path d="{d}" fill="none" stroke="rgba(5,8,20,.75)" stroke-width="{w + 1.1:.2f}" '
+           'stroke-linecap="round" stroke-linejoin="round"/>'
+           f'<path d="{d}" fill="none" stroke="rgba(255,255,255,.82)" stroke-width="{w:.2f}" '
+           'stroke-linecap="round" stroke-linejoin="round"/></svg>')
+    return f'url("data:image/svg+xml,{quote(svg)}")'
+
+
+def _rc_clip(side):
+    """clip-path de cada pedazo, siguiendo la fractura principal."""
+    line = [f"{x / 1.6:.1f}% {y:.1f}%" for x, y in RC_SPLIT]
+    if side == "l":
+        return "polygon(0% 0%, " + ", ".join(line) + ", 0% 100%)"
+    return "polygon(100% 0%, " + ", ".join(line) + ", 100% 100%)"
+
+
+def risk_card(score, thr):
+    """Veredicto como tarjeta de crédito: intacta con riesgo bajo, agrietada y partida con riesgo alto."""
+    high = score >= thr
+    k = min(max((score - RC_SPLIT_FROM) / (RC_SPLIT_FULL - RC_SPLIT_FROM), 0), 1)   # cuánto se separan los pedazos
+    title = "Riesgo alto: probable incumplimiento" if high else "Riesgo bajo: probable pago"
+    cracks = _rc_svg(score)
+
+    def face(clip, hidden=False):
+        return html.Div([
+            html.Div(className="cc-gloss"),
+            html.Div([html.Span("Riesgo de crédito", className="cc-brand"), icon("contactless", "cc-nfc")],
+                     className="cc-top"),
+            html.Div([html.Div(className="cc-chip rc-chip"),
+                      html.Div([html.Span("Puntaje de riesgo", className="cc-lbl"),
+                                html.Div(f"{score:.0%}", className="rc-score")])], className="rc-mid"),
+            html.Div([html.Div([html.Span("Veredicto", className="cc-lbl"), html.Div(title, className="rc-verdict")]),
+                      html.Div([html.Span("Umbral", className="cc-lbl"), html.Div(f"{thr:.0%}", className="cc-name")],
+                               className="cc-valid")], className="cc-bottom"),
+            html.Div(className="rc-cracks", style={"backgroundImage": cracks}),
+        ], className="cc-face rc-face", style={"clipPath": clip}, **({"aria-hidden": "true"} if hidden else {}))
+
+    # el recorte va en la cara y la sombra en el pedazo, así la sombra sigue la forma rota
+    left_style = {"transform": f"translate({-12 * k:.1f}px, {5 * k:.1f}px) rotate({-3.5 * k:.2f}deg)"}
+    right_style = {"visibility": "visible" if k > 0 else "hidden",
+                   "transform": f"translate({12 * k:.1f}px, {-3 * k:.1f}px) rotate({4.5 * k:.2f}deg)"}
+    heat = min(max((score - 0.3) / 0.6, 0), 1)
+    return html.Div([
+        html.Div(face(_rc_clip("l") if k > 0 else "none"), className="rc-piece", style=left_style),
+        html.Div(face(_rc_clip("r"), hidden=True), className="rc-piece", style=right_style),
+    ], className="rc " + ("hi" if high else "lo") + (" split" if k > 0 else ""),
+        style={"--heat": f"{heat:.3f}"}, role="img",
+        **{"aria-label": f"{title}. Puntaje {score:.0%}, umbral {thr:.0%}."})
+
+
 def predict_verdict(values, score):
     thr = MODELO_META.get("umbral", 0.5)
-    high = score >= thr
     pr = MODELO_META.get("prueba", {})
     late = [m for m, c in zip(MONTH_LBL, PAY_CHRONO) if (values.get(c) or 0) >= 1]
     signals = []
@@ -2216,10 +2342,7 @@ def predict_verdict(values, score):
     q = (df["LIMIT_BAL"] < (values.get("LIMIT_BAL") or 0)).mean()
     signals.append(("card", f"Su cupo supera al de {q:.0%} de los clientes."))
     return html.Div([
-        html.Div([icon("alert" if high else "target"),
-                  html.Div([html.B("Riesgo alto: probable incumplimiento" if high else "Riesgo bajo: probable pago"),
-                            html.Span(f"Puntaje {score:.0%} · umbral {thr:.0%}")])],
-                 className="pf-badge " + ("hi" if high else "lo")),
+        risk_card(score, thr),
         html.Ul([html.Li([icon(ic), html.Span(s)]) for ic, s in signals], className="pf-signals"),
         html.Details([html.Summary("¿Cómo leer el puntaje?"), html.P(
             (f"Con el umbral de 50 % el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
@@ -2849,6 +2972,30 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-rh { font-size:12.5px; font-weight:600; color:var(--muted); }
 /* resultado */
 .pf-result { border-top:3px solid var(--accent-2); }
+/* ---- tarjeta de riesgo: se agrieta con el puntaje y se parte con riesgo muy alto ---- */
+.rc { position:relative; width:100%; max-width:440px; margin:4px auto 16px; aspect-ratio:1.6; --heat:0; }
+.rc-piece { position:absolute; inset:0; transition:transform .6s cubic-bezier(.3,.7,.2,1);
+  filter:drop-shadow(0 18px 22px rgba(8,12,30,.35)); }
+.rc .rc-face { display:flex; flex-direction:column; justify-content:space-between; padding:6% 7%;
+  box-shadow:none; transition:background .5s ease, border-color .5s ease;
+  background:repeating-radial-gradient(circle at 88% 12%, rgba(210,187,137,.08) 0 1px, transparent 1px 8px),
+    linear-gradient(135deg,
+      color-mix(in srgb, #2A3860, #7A2E1F calc(var(--heat) * 70%)) 0%,
+      color-mix(in srgb, #1A233D, #4A1A14 calc(var(--heat) * 70%)) 60%,
+      color-mix(in srgb, #141B30, #2B0F0C calc(var(--heat) * 70%)) 100%); }
+.rc.hi .rc-face { border-color:rgba(232,120,90,.55); }
+.rc-mid { display:flex; align-items:center; gap:7%; }
+.rc-chip { width:19%; }
+.rc-score { font-family:Consolas,'Courier New',monospace; font-size:clamp(30px,4.6vw,44px); font-weight:700;
+  letter-spacing:.06em; line-height:1; font-variant-numeric:tabular-nums;
+  text-shadow:0 1px 0 rgba(0,0,0,.45), 0 -1px 0 rgba(255,255,255,.14); }
+.rc.hi .rc-score { color:#F2C27A; }
+.rc-verdict { font-size:clamp(11.5px,1.5vw,13.5px); font-weight:700; letter-spacing:.02em; }
+.rc-cracks { position:absolute; inset:0; z-index:0; pointer-events:none; background:center/100% 100% no-repeat; }
+.rc-face > :not(.rc-cracks):not(.cc-gloss) { position:relative; z-index:1; }   /* el texto queda sobre las grietas */
+.rc.split .rc-piece:first-child { animation:rc-crack .45s ease-out; }
+@keyframes rc-crack { 0% { translate:0 0; } 25% { translate:-3px 1px; } 50% { translate:3px -1px; } 75% { translate:-1px 0; } 100% { translate:0 0; } }
+@media (prefers-reduced-motion:reduce) { .rc-piece { transition:none; } .rc.split .rc-piece:first-child { animation:none; } }
 .pf-badge { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin:0 0 10px;
   animation:pf-in .35s ease both; }
 .pf-badge .ico { width:26px; height:26px; flex:none; }
