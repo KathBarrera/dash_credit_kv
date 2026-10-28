@@ -28,8 +28,6 @@
 """
 
 import json
-import math
-import random
 import sys
 import warnings
 from pathlib import Path
@@ -2179,59 +2177,41 @@ def trees_block(values):
     ], className="pf-trees")
 
 
-# ---------- Tarjeta de riesgo: una tarjeta de crédito que se agrieta según el puntaje ----------
-# Coordenadas en un lienzo de 160 x 100 (proporción de una tarjeta). Las grietas se generan una
-# sola vez con semilla fija: al subir el puntaje aparecen más y se alargan; al bajar, retroceden.
-RC_IMPACT = (104.0, 44.0)          # punto de impacto
-RC_CRACK_FROM = 0.30               # desde este puntaje aparecen grietas
-RC_SPLIT_FROM = 0.75               # desde este puntaje la tarjeta se parte en dos
-RC_SPLIT_FULL = 0.92               # aquí los pedazos ya están separados del todo (el 1 % más riesgoso)
-
-
-def _rc_geometry():
-    rnd = random.Random(2005)
-    cx, cy = RC_IMPACT
-    cracks = []
-    for ang_deg in (205, 35, 150, 330, 250, 95):        # orden en que aparecen, alternando lados
-        a = math.radians(ang_deg + rnd.uniform(-8, 8))
-        length = rnd.uniform(30, 55)
-        pts, x, y = [(cx, cy)], cx, cy
-        for _ in range(3):                               # pocos tramos y poco quiebre: grietas limpias
-            a += rnd.uniform(-0.18, 0.18)
-            x, y = x + length / 3 * math.cos(a), y + length / 3 * math.sin(a)
-            pts.append((x, y))
-        cracks.append(pts)
-    # fractura principal, de arriba abajo pasando por el impacto (por aquí se parte la tarjeta)
-    split = [(round(cx + (y - cy) * 0.12 + (0 if y in (0, cy, 100) else rnd.uniform(-2.5, 2.5)), 1), y)
-             for y in (0, 14, 29, cy, 58, 72, 86, 100)]
-    return cracks, split
-
-
-RC_CRACKS, RC_SPLIT = _rc_geometry()
+# ---------- Tarjeta de riesgo: una tarjeta de crédito que se rompe por la mitad según el puntaje ----------
+# Coordenadas en un lienzo de 160 x 100 (proporción de una tarjeta). Una sola fractura, de arriba abajo:
+#   < 30 %  intacta · 30–50 %  la fractura crece desde el centro · 50–92 %  la tarjeta se abre por ella.
+RC_SPLIT = [(98.7, 0.0), (101.9, 14.0), (101.9, 29.0), (104.0, 44.0), (107.2, 58.0), (108.9, 72.0),
+            (111.5, 86.0), (110.7, 100.0)]
+RC_CENTER_Y = 44.0                 # desde aquí crece la fractura, hacia arriba y hacia abajo
+RC_CRACK_FROM = 0.30               # aparece la fractura
+RC_SPLIT_FROM = 0.50               # (umbral) la tarjeta empieza a abrirse
+RC_SPLIT_FULL = 0.92               # abierta del todo (el 1 % más riesgoso del dataset)
 
 
 def _rc_path(pts):
     return "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in pts)
 
 
+def _rc_x_at(y):
+    """x de la fractura a la altura y (interpolación entre sus puntos)."""
+    for (x0, y0), (x1, y1) in zip(RC_SPLIT, RC_SPLIT[1:]):
+        if y0 <= y <= y1:
+            return x0 + (x1 - x0) * (y - y0) / (y1 - y0)
+    return RC_SPLIT[-1][0]
+
+
 def _rc_svg(score):
-    """SVG (data URI) con las grietas visibles para este puntaje."""
-    t = min(max((score - RC_CRACK_FROM) / (1 - RC_CRACK_FROM), 0), 1)
-    paths = []
-    for i, pts in enumerate(RC_CRACKS):
-        if i >= round(t * len(RC_CRACKS) + 0.49):
-            break
-        keep = max(2, round(len(pts) * min(1, 0.4 + t * 0.8)))
-        paths.append(_rc_path(pts[:keep]))
-    if score >= 0.5:
-        paths.append(_rc_path(RC_SPLIT))
-    if not paths:
+    """SVG (data URI) con la parte visible de la fractura para este puntaje."""
+    t = min(max((score - RC_CRACK_FROM) / (RC_SPLIT_FROM - RC_CRACK_FROM), 0), 1)
+    if t <= 0:
         return "none"
-    d = " ".join(paths)
+    top, bot = RC_CENTER_Y * (1 - t), RC_CENTER_Y + (100 - RC_CENTER_Y) * t
+    pts = [(_rc_x_at(top), top)] + [(x, y) for x, y in RC_SPLIT if top < y < bot] + [(_rc_x_at(bot), bot)]
+    d = _rc_path(pts)
     svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" preserveAspectRatio="none">'
-           f'<path d="{d}" fill="none" stroke="rgba(5,8,20,.6)" stroke-width="1.3" '
+           f'<path d="{d}" fill="none" stroke="rgba(5,8,20,.6)" stroke-width="1.4" '
            'stroke-linecap="round" stroke-linejoin="round"/>'
-           f'<path d="{d}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width=".55" '
+           f'<path d="{d}" fill="none" stroke="rgba(255,255,255,.8)" stroke-width=".6" '
            'stroke-linecap="round" stroke-linejoin="round"/></svg>')
     return f'url("data:image/svg+xml,{quote(svg)}")'
 
@@ -2245,7 +2225,7 @@ def _rc_clip(side):
 
 
 def risk_card(score, thr):
-    """Veredicto como tarjeta de crédito: intacta con riesgo bajo, agrietada y partida con riesgo alto."""
+    """Veredicto como tarjeta de crédito: intacta con riesgo bajo; con riesgo alto se rompe y se abre."""
     high = score >= thr
     k = min(max((score - RC_SPLIT_FROM) / (RC_SPLIT_FULL - RC_SPLIT_FROM), 0), 1)   # cuánto se separan los pedazos
     title = "Riesgo alto: probable incumplimiento" if high else "Riesgo bajo: probable pago"
