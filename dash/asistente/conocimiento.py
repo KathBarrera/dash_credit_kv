@@ -244,16 +244,14 @@ def _construir(A, EN):
           "- **Vistazo rápido:** una gráfica que muestra que el atraso de septiembre anticipa el incumplimiento.\n"
           f"- **KPIs:** {n:,} clientes, 24 variables (23 predictoras + 1 objetivo), {pct(rate)} de default y el "
           "periodo abril–septiembre 2005.\n"
-          "- **Fuente y alcance:** datos de Yeh & Lien (2009) en UCI; montos en NT$; el análisis es descriptivo.\n"
-          "- **Preparación de los datos:** qué limpieza se hizo.\n"
-          "- **Cómo recorrer el tablero:** qué hay en cada sección.",
+          "- **Introducción:** el problema del riesgo en tarjetas de crédito y qué analiza el tablero.\n"
+          "- **Fuentes:** el artículo de Yeh & Lien (2009) y los datos del repositorio UCI; montos en NT$.",
           "The **Introduction** gives the context:\n\n"
           "- **Quick look:** a chart showing that September's delay anticipates default.\n"
           f"- **KPIs:** {n:,} clients, 24 variables (23 predictors + 1 target), {pct(rate)} default and the "
           "April–September 2005 period.\n"
-          "- **Source and scope:** Yeh & Lien (2009) data on UCI; amounts in NT$; the analysis is descriptive.\n"
-          "- **Data preparation:** what cleaning was done.\n"
-          "- **How to navigate the dashboard:** what each section contains."),
+          "- **Introduction:** the risk problem in credit cards and what the dashboard analyzes.\n"
+          "- **Sources:** the Yeh & Lien (2009) article and the UCI repository data; amounts in NT$."),
         pagina="/introduccion", sug=t(["Explícame el vistazo rápido", "¿Cómo se limpiaron los datos?",
                                        "¿De dónde salen los datos?"],
                                       ["Explain the quick look", "How was the data cleaned?",
@@ -294,21 +292,21 @@ def _construir(A, EN):
            "what happened to the undocumented codes", "negative balances", "why is there no PAY_1", "data quality",
            "how many duplicates were there", "were rows removed", "dataset cleaning", "removed rows",
            "deleted duplicated rows", "repeated rows removed", "were duplicated records dropped"]),
-        t(f"La preparación de los datos (Introducción):\n\n"
+        t(f"Así se prepararon los datos:\n\n"
           f"- Se eliminaron **{DI['duplicados']}** filas duplicadas exactas (de {DI['filas_originales']:,} a {n:,}).\n"
           f"- **{DI['edu_reagrupadas']}** registros con EDUCATION = 0, 5 o 6 (códigos sin documentar) pasaron a «Otros».\n"
           f"- **{DI['mar_reagrupadas']}** registros con MARRIAGE = 0 pasaron a «Otros».\n"
           f"- Se conservaron **{DI['bill_neg_clientes']:,}** clientes con saldo facturado negativo: es saldo a favor "
           "y es válido.\n"
           "- El estado de pago de septiembre se llama PAY_0: el dataset no trae PAY_1.",
-          f"Data preparation (Introduction):\n\n"
+          f"This is how the data was prepared:\n\n"
           f"- **{DI['duplicados']}** exact duplicate rows were removed (from {DI['filas_originales']:,} to {n:,}).\n"
           f"- **{DI['edu_reagrupadas']}** records with EDUCATION = 0, 5 or 6 (undocumented codes) were moved to “Others”.\n"
           f"- **{DI['mar_reagrupadas']}** records with MARRIAGE = 0 were moved to “Others”.\n"
           f"- **{DI['bill_neg_clientes']:,}** clients with a negative bill amount were kept: it is a credit balance "
           "and it is valid.\n"
           "- September's repayment status is called PAY_0: the dataset has no PAY_1."),
-        pagina="/introduccion", sug=t(["¿De dónde salen los datos?", "¿Qué es EDUCATION?", "¿Qué es BILL_AMT?"],
+        pagina="/univariado", sug=t(["¿De dónde salen los datos?", "¿Qué es EDUCATION?", "¿Qué es BILL_AMT?"],
                                       ["Where does the data come from?", "What is EDUCATION?", "What is BILL_AMT?"])))
     add(Intencion(
         "dataset", t("Fuente de los datos", "Data source"),
@@ -498,13 +496,13 @@ def _construir(A, EN):
           ["what is expected loss", "EL = PD x LGD x EAD", "what is PD", "what is LGD", "what is EAD",
            "what is credit risk", "what is default", "what does default mean", "Basel"]),
         t("El **riesgo de crédito** es la posibilidad de perder dinero porque un deudor no paga. En Basilea II la "
-          "pérdida esperada es **EL = PD × LGD × EAD**:\n\n"
+          "pérdida esperada es:\n\n$$\\mathrm{EL} = \\mathrm{PD} \\times \\mathrm{LGD} \\times \\mathrm{EAD}$$\n\n"
           "- **PD:** probabilidad de incumplimiento (lo que estudian estos datos).\n"
           "- **LGD:** porcentaje que se pierde si hay incumplimiento.\n"
           "- **EAD:** monto expuesto en ese momento.\n\n"
           "Aquí **default** es la variable binaria que indica si el cliente no pagó el mes siguiente.",
           "**Credit risk** is the possibility of losing money because a debtor does not pay. In Basel II expected "
-          "loss is **EL = PD × LGD × EAD**:\n\n"
+          "loss is:\n\n$$\\mathrm{EL} = \\mathrm{PD} \\times \\mathrm{LGD} \\times \\mathrm{EAD}$$\n\n"
           "- **PD:** probability of default (what this data studies).\n"
           "- **LGD:** percentage lost if there is a default.\n"
           "- **EAD:** amount exposed at that moment.\n\n"
@@ -556,17 +554,18 @@ def _construir(A, EN):
            "what is the P99 trim", "what is the 99th percentile"]),
         t("- **Asimetría (skewness):** hacia dónde se alarga la cola; los montos de dinero suelen tener una cola "
           "larga a la derecha.\n- **Curtosis:** qué tan pesadas son las colas.\n"
-          "- **Atípico de Tukey:** x < Q1 − 1.5·IQR o x > Q3 + 1.5·IQR, con IQR = Q3 − Q1.\n"
+          "- **Atípico de Tukey:**\n\n$$\\begin{gathered} x < Q_1 - 1.5\\,\\mathrm{IQR} \\;\\;\\text{o} \\\\ x > Q_3 + 1.5\\,\\mathrm{IQR} \\\\ \\mathrm{IQR} = Q_3 - Q_1 \\end{gathered}$$\n\n"
           "- **Winsorizar:** recortar los extremos a percentiles (p. ej. P1–P99) sin eliminar clientes.\n"
-          "- **Recorte P99 en las gráficas:** solo cambia la *vista*, para que unos pocos montos enormes no aplasten "
-          "el gráfico; los datos no se modifican.\n"
+          "- **Atípicos en las gráficas:** los boxplots marcan los atípicos como puntos tenues y el eje se ajusta a "
+          "los bigotes (1,5·IQR), para que unos pocos montos enormes no aplasten el gráfico; no se elimina ningún "
+          "cliente.\n"
           "- **Log con signo:** suaviza colas largas cuando hay ceros o negativos.",
           "- **Skewness:** which way the tail stretches; money amounts usually have a long right tail.\n"
           "- **Kurtosis:** how heavy the tails are.\n"
-          "- **Tukey outlier:** x < Q1 − 1.5·IQR or x > Q3 + 1.5·IQR, with IQR = Q3 − Q1.\n"
+          "- **Tukey outlier:**\n\n$$\\begin{gathered} x < Q_1 - 1.5\\,\\mathrm{IQR} \\;\\;\\text{or} \\\\ x > Q_3 + 1.5\\,\\mathrm{IQR} \\\\ \\mathrm{IQR} = Q_3 - Q_1 \\end{gathered}$$\n\n"
           "- **Winsorizing:** capping the extremes at percentiles (e.g. P1–P99) without removing clients.\n"
-          "- **P99 trim in the charts:** only changes the *view*, so that a few huge amounts don't squash the "
-          "chart; the data is not modified.\n"
+          "- **Outliers in the charts:** boxplots show outliers as faint points and the axis is fitted to the "
+          "whiskers (1.5·IQR), so a few huge amounts don't squash the chart; no client is removed.\n"
           "- **Signed log:** smooths long tails when there are zeros or negatives."),
         pagina="/marco", sug=t(["Explícame el explorador univariado", "¿Qué es BILL_AMT?"],
                                ["Explain the univariate explorer", "What is BILL_AMT?"])))
@@ -600,13 +599,13 @@ def _construir(A, EN):
           "monótona, no exige linealidad ni normalidad y resiste valores extremos. Se eligió sobre Pearson porque los "
           "montos son muy asimétricos, PAY_x es ordinal y la variable objetivo es binaria.\n\n"
           "**Multicolinealidad:** predictoras casi redundantes que inflan la varianza de los coeficientes. Se mide "
-          "con el **VIF = 1 / (1 − R²)**; un VIF > 10 (o > 5) es alerta. En este dataset las BILL_AMT superan 20.",
+          "con el **VIF**:\n\n$$\\mathrm{VIF}_j = \\frac{1}{1 - R_j^2}$$\n\nUn VIF > 10 (o > 5) es alerta. En este dataset las BILL_AMT superan 20.",
           "**Spearman** (ρ) is the Pearson correlation computed on the *ranks* of the data. It measures monotonic "
           "association, requires neither linearity nor normality and is robust to extreme values. It was chosen "
           "over Pearson because the amounts are highly skewed, PAY_x is ordinal and the target is binary.\n\n"
           "**Multicollinearity:** nearly redundant predictors that inflate the variance of the coefficients. It is "
-          "measured with **VIF = 1 / (1 − R²)**; a VIF > 10 (or > 5) is a warning. In this dataset the BILL_AMT "
-          "exceed 20."),
+          "measured with the **VIF**:\n\n$$\\mathrm{VIF}_j = \\frac{1}{1 - R_j^2}$$\n\nA VIF > 10 (or > 5) is a warning. In this dataset the "
+          "BILL_AMT exceed 20."),
         pagina="/marco", sug=t(["Explícame la matriz de correlación", "¿Qué es BILL_AMT?"],
                                ["Explain the correlation matrix", "What is BILL_AMT?"])))
     add(Intencion(
@@ -616,10 +615,10 @@ def _construir(A, EN):
           ["what is Cramér's V", "what is Cramer's V", "what is chi square", "chi square test", "what is χ²",
            "categorical effect size", "association between categorical variables", "chi2"]),
         t("La prueba **χ² de independencia** contrasta si dos variables categóricas están asociadas. Su tamaño de "
-          "efecto es la **V de Cramér** = √(χ² / (n · min(r−1, c−1))), de 0 a 1: V < 0.1 es pequeño y V ≈ 0.3 "
+          "efecto es la **V de Cramér**, de 0 a 1:\n\n$$V = \\sqrt{\\frac{\\chi^2}{n \\cdot \\min(r - 1,\\; c - 1)}}$$\n\nV < 0.1 es pequeño y V ≈ 0.3 "
           "moderado. En el tablero, educación, estado civil y sexo dan V < 0.1: hay diferencias, pero pequeñas.",
           "The **χ² test of independence** checks whether two categorical variables are associated. Its effect "
-          "size is **Cramér's V** = √(χ² / (n · min(r−1, c−1))), from 0 to 1: V < 0.1 is small and V ≈ 0.3 "
+          "size is **Cramér's V**, from 0 to 1:\n\n$$V = \\sqrt{\\frac{\\chi^2}{n \\cdot \\min(r - 1,\\; c - 1)}}$$\n\nV < 0.1 is small and V ≈ 0.3 "
           "moderate. In the dashboard, education, marital status and sex give V < 0.1: there are differences, "
           "but they are small."),
         pagina="/marco", sug=t(["Explícame las tasas por educación, estado civil y sexo", "¿Qué es el p-value?"],
@@ -654,14 +653,18 @@ def _construir(A, EN):
           "k vecinos, Naive Bayes, redes neuronales y árboles) con estos mismos datos y propusieron el *Sorting "
           "Smoothing Method* para estimar la probabilidad real de incumplimiento. La sección **Modelos** retoma esa "
           "comparación con 7 clasificadores, 4 técnicas de balanceo y 4 métodos de optimización.\n\n"
-          "Las **referencias** (desplegable al final del Marco Teórico) incluyen Basilea II, Chawla et al. (SMOTE), "
-          "Cramér, Kruskal-Wallis, Mann-Whitney, Spearman, Tukey y Yeh & Lien.",
+          "Las **referencias** (desplegable al final del Marco Teórico, formato IEEE) incluyen Yeh & Lien, el "
+          "repositorio UCI, SHAP (Lundberg y Lee), ML explicable en riesgo de crédito (Bussmann et al.), "
+          "desbalance de clases (Branco et al.), SMOTE (Fernández et al.), ISLR (James et al.), AUROC vs. AUPRC "
+          "(McDermott et al.) y XGBoost (Chen y Guestrin).",
           "**Background:** Yeh and Lien (2009) compared six techniques (logistic regression, discriminant analysis, "
           "k-nearest neighbors, Naive Bayes, neural networks and trees) on this same data and proposed the *Sorting "
           "Smoothing Method* to estimate the real probability of default. The **Models** section revisits that "
           "comparison with 7 classifiers, 4 balancing techniques and 4 optimization methods.\n\n"
-          "The **references** (collapsible at the end of the Theoretical Framework) include Basel II, Chawla et al. "
-          "(SMOTE), Cramér, Kruskal-Wallis, Mann-Whitney, Spearman, Tukey and Yeh & Lien."),
+          "The **references** (collapsible at the end of the Theoretical Framework, IEEE format) include Yeh & Lien, "
+          "the UCI repository, SHAP (Lundberg and Lee), explainable ML in credit risk (Bussmann et al.), class "
+          "imbalance (Branco et al.), SMOTE (Fernández et al.), ISLR (James et al.), AUROC vs. AUPRC (McDermott et "
+          "al.) and XGBoost (Chen and Guestrin)."),
         pagina="/marco", sug=t(["Explícame la página de modelos", "¿Qué es SMOTE?"],
                                ["Explain the models page", "What is SMOTE?"])))
     add(Intencion(
@@ -843,24 +846,24 @@ def _construir(A, EN):
     add(Intencion(
         "uni_explorador", t("Explorador univariado", "Univariate explorer"),
         t(["explícame el explorador univariado", "cómo uso el explorador univariado", "histograma con boxplot",
-           "qué significa la línea de la mediana", "qué es recortar cola superior", "el selector de variable",
-           "para qué sirve el checkbox de P99"],
+           "qué significa la línea de la mediana", "cómo se muestran los atípicos", "el selector de variable",
+           "qué son los puntos sueltos del boxplot"],
           ["explain the univariate explorer", "how do I use the univariate explorer", "histogram with boxplot",
-           "what does the median line mean", "what is trimming the upper tail", "the variable selector",
-           "what is the P99 checkbox for"]),
+           "what does the median line mean", "how are outliers shown", "the variable selector",
+           "what are the loose points in the boxplot"]),
         t("En el **Explorador univariado** eliges cualquier variable:\n\n"
           "- **Numéricas:** histograma arriba y boxplot abajo; la línea dorada punteada es la **mediana** y en el "
           "boxplot la línea punteada es la media.\n"
           "- **Categóricas** (SEX, EDUCATION, PAY_x…): barras con el porcentaje de cada categoría.\n"
-          "- **Recortar cola superior (P99):** oculta el 1 % de valores más altos *solo en la vista*, para que se "
-          "vea la forma de la distribución.\n\n"
+          "- **Atípicos:** el boxplot los marca como puntos tenues y el eje se ajusta para que unos pocos valores "
+          "enormes no aplasten la forma de la distribución; el título indica cuántos quedan fuera de la vista.\n\n"
           "En **Ver interpretación**, la explicación se actualiza sola con la variable que elijas.",
           "In the **Univariate explorer** you choose any variable:\n\n"
           "- **Numeric:** histogram on top and boxplot below; the dashed gold line is the **median** and in the "
           "boxplot the dashed line is the mean.\n"
           "- **Categorical** (SEX, EDUCATION, PAY_x…): bars with the percentage of each category.\n"
-          "- **Trim the upper tail (P99):** hides the top 1% of values *only in the view*, so the shape of the "
-          "distribution can be seen.\n\n"
+          "- **Outliers:** the boxplot marks them as faint points and the axis is fitted so a few huge values don't "
+          "squash the shape of the distribution; the title says how many fall outside the view.\n\n"
           "In **Show interpretation**, the explanation updates automatically with the variable you choose."),
         tecnico=t("La interpretación técnica reporta n, media, mediana, σ, IQR, asimetría, curtosis y % de atípicos de "
                   "Tukey. Si |asimetría| > 2 sugiere transformación logarítmica con signo. Para PAY_x informa la moda y "
@@ -987,10 +990,10 @@ def _construir(A, EN):
     add(Intencion(
         "cross", t("Módulo interactivo de cruce de variables", "Interactive variable cross module"),
         t(["explícame el cruce de variables", "módulo interactivo", "cómo uso el cruce de variables",
-           "variable X variable Y color", "qué gráfico sale en el cruce", "ejes ajustados al percentil 99",
+           "variable X variable Y color", "qué gráfico sale en el cruce", "cómo se tratan los atípicos en el cruce",
            "cruzar dos variables"],
           ["explain the variable cross", "interactive module", "how do I use the variable cross",
-           "X variable Y variable color", "which chart appears in the cross", "axes fitted to the 99th percentile",
+           "X variable Y variable color", "which chart appears in the cross", "how are outliers handled in the cross",
            "cross two variables"]),
         t("En el **cruce de variables** eliges **X**, **Y** y, si quieres, una tercera como **color/grupo**. El "
           "tipo de gráfico se ajusta solo:\n\n"
@@ -998,7 +1001,8 @@ def _construir(A, EN):
           "- categórica × numérica → **boxplots** por grupo;\n"
           "- categórica × default → **barras de tasa**;\n"
           "- categórica × categórica → **mapa de calor**.\n\n"
-          "«Ejes ajustados al percentil 99» corta la vista donde está el 99 % de los clientes. La interpretación "
+          "En los boxplots los bigotes llegan a 1,5·IQR y los atípicos se ven como puntos tenues; el eje se ajusta "
+          "a los bigotes para que unos pocos montos enormes no distorsionen la escala. La interpretación "
           "(botón **Ver interpretación**) cambia con tu elección.",
           "In the **variable cross** you choose **X**, **Y** and, optionally, a third one as **color/group**. The "
           "chart type adjusts automatically:\n\n"
@@ -1006,7 +1010,8 @@ def _construir(A, EN):
           "- categorical × numeric → **boxplots** by group;\n"
           "- categorical × default → **rate bars**;\n"
           "- categorical × categorical → **heatmap**.\n\n"
-          "“Axes fitted to the 99th percentile” cuts the view where 99% of clients are. The interpretation "
+          "In the boxplots the whiskers reach 1.5·IQR and outliers show as faint points; the axis is fitted to the "
+          "whiskers so a few huge amounts don't distort the scale. The interpretation "
           "(**Show interpretation** button) changes with your choice."),
         tecnico=t("Según el tipo de par se reportan Spearman, Mann-Whitney / Kruskal-Wallis o χ² con V de Cramér. "
                   "Con n ≈ 30 000 el p-value casi siempre es significativo, por eso conviene mirar el tamaño del efecto.",
@@ -1145,16 +1150,16 @@ def _construir(A, EN):
     add(Intencion(
         "scatter_modelos", t("F1 vs. ROC-AUC", "F1 vs. ROC-AUC"),
         t(["explícame la gráfica de F1 vs ROC-AUC", "balancear mueve el umbral", "dispersión de las 112 combinaciones",
-           "por qué los puntos grises están abajo", "qué es la estrella en la dispersión de modelos",
+           "por qué los puntos grises están abajo", "qué es el punto dorado en la dispersión de modelos",
            "balancear mueve el umbral no la capacidad de ordenar"],
           ["explain the F1 vs ROC-AUC chart", "balancing moves the threshold", "scatter of the 112 combinations",
-           "why are the grey points at the bottom", "what is the star in the models scatter",
+           "why are the grey points at the bottom", "what is the gold dot in the models scatter",
            "balancing moves the threshold not the ranking ability"]),
-        t("Cada punto es una de las 112 combinaciones (color = técnica de balanceo; la **estrella** es la mejor). Las "
+        t("Cada punto es una de las 112 combinaciones (color = técnica de balanceo; el **punto dorado brillante** es la mejor). Las "
           "que no balancean (**gris**) quedan abajo: aciertan poco con quienes incumplen. Pero **no** quedan más a la "
           "izquierda: ordenan a los clientes casi igual de bien. Lo que cambia es dónde se pone el corte entre "
           "«paga» e «incumple».",
-          "Each point is one of the 112 combinations (color = balancing technique; the **star** is the best). Those "
+          "Each point is one of the 112 combinations (color = balancing technique; the **bright gold dot** is the best). Those "
           "without balancing (**grey**) sit at the bottom: they rarely get defaulters right. But they are **not** "
           "further left: they rank clients almost equally well. What changes is where the cut between “pays” and "
           "“defaults” is placed."),

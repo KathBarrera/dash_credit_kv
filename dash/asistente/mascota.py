@@ -9,10 +9,11 @@ import math
 from urllib.parse import quote
 
 # Dorados de la paleta del tablero (los mismos del chip de las tarjetas)
-BODY_TOP, BODY_BOT = "#E6D3A3", "#B88F3D"   # degradado de la estrella: dorado pálido -> dorado cálido
-LIMB = "#8A6E3A"                            # brazos y piernas: dorado oscuro (BROWN del tablero)
+# Versión más luminosa: crema brillante -> oro vivo -> dorado cálido (siguen la paleta, con más brillo)
+BODY_TOP, BODY_MID, BODY_BOT = "#FFF1C4", "#F4CC63", "#D49A2E"
+LIMB = "#A57A2C"                            # brazos y piernas: dorado tostado (más vivo que BROWN)
 INK = "#1A233D"                             # pupilas y boca: azul profundo del tablero
-SPARK = "#B88F3D"                           # destello: dorado cálido (se ve en claro y oscuro)
+SPARK = "#E8B23F"                           # destello: oro vivo (se ve en claro y oscuro)
 
 
 def _star(cx=50.0, cy=48.0, r_out=36.0, r_in=19.0, n=5, rot=-90.0):
@@ -77,7 +78,8 @@ def mascota_svg(mood="happy", cls="", uid="a"):
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" class="{cls}" aria-hidden="true">'
         f'<defs><linearGradient id="{g}" x1="0" y1="0" x2="0.35" y2="1">'
-        f'<stop offset="0" stop-color="{BODY_TOP}"/><stop offset="1" stop-color="{BODY_BOT}"/></linearGradient></defs>'
+        f'<stop offset="0" stop-color="{BODY_TOP}"/><stop offset=".45" stop-color="{BODY_MID}"/>'
+        f'<stop offset="1" stop-color="{BODY_BOT}"/></linearGradient></defs>'
         '<ellipse class="a-shadow" cx="50" cy="114" rx="20" ry="3.4" fill="#000" opacity=".16"/>'
         f'<g stroke="{LIMB}" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round" fill="none">'
         '<path class="a-leg a-leg-l" d="M44 70 L43 106 L36 108"/>'
@@ -86,6 +88,9 @@ def mascota_svg(mood="happy", cls="", uid="a"):
         f'<path class="a-arm a-arm-r" d="{arm_r}"/></g>'
         f'<g class="a-body"><path d="{STAR_PATH}" fill="url(#{g})" stroke="url(#{g})" stroke-width="7" '
         'stroke-linejoin="round"/>'
+        # brillo especular arriba a la izquierda: le da volumen y luz
+        '<path d="M44 20 Q47 14 50 13 Q49 19 46 25 Z" fill="#FFFFFF" opacity=".55"/>'
+        '<ellipse cx="30" cy="36" rx="5" ry="2.2" transform="rotate(-18 30 36)" fill="#FFFFFF" opacity=".35"/>'
         '<ellipse cx="32" cy="52" rx="3.6" ry="2.2" fill="#F2A7C9" opacity=".55"/>'
         '<ellipse cx="66" cy="51" rx="3.6" ry="2.2" fill="#F2A7C9" opacity=".55"/>'
         f'{_eyes(mood)}{_mouth(mood)}</g>{spark}</svg>')

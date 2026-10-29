@@ -166,10 +166,14 @@ El repositorio trae `render.yaml`, así que Render toma la configuración solo:
 
 ### Mantenerlo despierto
 
-En el plan gratis, Render apaga el servicio tras 15 minutos sin visitas y la siguiente visita tarda entre 30 y 60 segundos en despertarlo. Para evitarlo, algo externo debe visitar `/ping` (una respuesta mínima que no carga la página) cada pocos minutos. Hay dos opciones; se pueden usar las dos:
+En el plan gratis, Render apaga el servicio tras 15 minutos sin visitas y la siguiente visita tarda entre 30 y 60 segundos en despertarlo. Para evitarlo, algo externo debe visitar `/health` (o `/ping`) cada pocos minutos; son respuestas mínimas que no cargan la página. Conviene usar las dos opciones a la vez:
 
-- **UptimeRobot o cron-job.org** (necesaria): en [uptimerobot.com](https://uptimerobot.com) crea un monitor *HTTP(s)* con la URL `https://dash-credit-kv.onrender.com/ping` y un intervalo de 5 minutos (o en [cron-job.org](https://cron-job.org) una tarea cada 5 minutos a esa URL).
-- **GitHub Actions** (solo respaldo): `.github/workflows/mantener-despierto.yml` pide visitar `/ping` cada 10 minutos, pero GitHub retrasa mucho las tareas programadas (en la práctica se ejecutó cada 4–5 horas), así que por sí sola no evita que Render duerma el servicio. Si tu URL no es `https://dash-credit-kv.onrender.com`, créala como variable del repositorio `RENDER_URL` en *Settings → Secrets and variables → Actions → Variables*. GitHub desactiva las tareas programadas si el repositorio pasa 60 días sin cambios; se reactivan desde la pestaña *Actions*.
+- **GitHub Actions** (ya activo en el repositorio): `.github/workflows/mantener-despierto.yml`. GitHub retrasa mucho las tareas programadas (en la práctica llegaban cada 4–5 horas), así que cada ejecución se queda viva unas 5 h 50 min visitando `/health` cada 9 minutos y la siguiente espera en cola para relevarla. Si tu URL no es `https://dash-credit-kv.onrender.com`, créala como variable del repositorio `RENDER_URL` en *Settings → Secrets and variables → Actions → Variables*. GitHub desactiva las tareas programadas si el repositorio pasa 60 días sin cambios; se reactivan desde la pestaña *Actions*.
+- **UptimeRobot** (recomendado como segundo seguro, gratis):
+  1. Crea una cuenta en [uptimerobot.com](https://uptimerobot.com) y pulsa **+ New monitor**.
+  2. *Monitor type*: **HTTP(s)**. *URL*: `https://dash-credit-kv.onrender.com/health`.
+  3. *Monitoring interval*: **5 minutes** y guarda (**Create monitor**).
+- **cron-job.org** (alternativa a UptimeRobot): crea una cuenta en [cron-job.org](https://cron-job.org), **Create cronjob**, URL `https://dash-credit-kv.onrender.com/health`, *Execution schedule* **Every 5 minutes**, y guarda.
 
 Un servicio encendido todo el mes usa unas 744 de las 750 horas gratis mensuales de Render, así que conviene tener un solo servicio gratis en la cuenta.
 
