@@ -1826,6 +1826,7 @@ def _tbl(header, rows):
 def page_intro():
     n_def = int(df[TARGET].sum())
     I = DATA_INFO
+    best_lbl = minfo(BEST["model"], "label")
     return html.Div([
         page_title(tx("Introducción", "Introduction"), ""),
         quick_look(),
@@ -1847,24 +1848,30 @@ def page_intro():
                           "Credit cards are one of the retail banking lines with the highest risk exposure: each client "
                           "receives a limit and is expected to repay it on the agreed dates. When they do not, the bank "
                           "faces losses, higher collection costs and the need to set aside capital.")),
-                html.P(tx(f"Este tablero presenta un análisis exploratorio de datos (EDA) del conjunto Default of Credit "
-                          f"Card Clients (UCI), con {I['filas_originales']:,} clientes observados entre abril y septiembre "
-                          "de 2005. Para cada cliente se conoce su límite de crédito, sus características demográficas, "
-                          "su historial de pagos de seis meses, los montos facturados, los montos pagados y si incumplió "
-                          "el pago del mes siguiente (variable objetivo).",
-                          f"This dashboard presents an exploratory data analysis (EDA) of the Default of Credit Card "
-                          f"Clients dataset (UCI), with {I['filas_originales']:,} clients observed between April and "
-                          "September 2005. For each client we know their credit limit, demographic characteristics, "
-                          "six-month payment history, billed amounts, paid amounts and whether they defaulted the "
-                          "following month (target variable).")),
-                html.P(tx("El análisis se organiza en cuatro capas: fundamentos (problema, objetivos y marco teórico), "
-                          "exploración univariada, exploración multivariada y los resultados de los modelos "
-                          "predictivos del proyecto. Cada gráfico trae una interpretación "
-                          "básica (lenguaje cotidiano) y una técnica (estadísticos y recomendaciones de modelado).",
-                          "The analysis is organized in four layers: foundations (problem, objectives and theoretical "
-                          "framework), univariate exploration, multivariate exploration and the results of the project's "
-                          "predictive models. Each chart comes with a basic interpretation (everyday language) and a "
-                          "technical one (statistics and modeling recommendations).")),
+                html.P(tx(f"Este tablero recorre el proyecto completo con el conjunto Default of Credit Card Clients "
+                          f"(UCI): {I['filas_originales']:,} clientes observados entre abril y septiembre de 2005, de "
+                          "quienes se conoce su límite de crédito, sus datos demográficos, seis meses de historial de "
+                          "pagos, los montos facturados y pagados, y si incumplieron el pago del mes siguiente.",
+                          f"This dashboard walks through the whole project using the Default of Credit Card Clients "
+                          f"dataset (UCI): {I['filas_originales']:,} clients observed between April and September 2005, "
+                          "with their credit limit, demographics, six-month payment history, billed and paid amounts, "
+                          "and whether they defaulted the following month.")),
+                html.P(tx("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables "
+                          f"anticipan el incumplimiento. Luego se entrenan y comparan {len(MR)} combinaciones de modelos "
+                          "(7 algoritmos × 4 técnicas de balanceo × 4 optimizadores). La mejor, "
+                          f"{best_lbl} con {tech_lbl(BEST['technique']).lower()}, logra un F1 de {BEST['f1_mean']:.3f} y "
+                          f"detecta el {BEST['recall_mean']:.0%} de los incumplimientos. Por último, la página Predecir "
+                          "usa ese modelo para estimar el riesgo de un cliente nuevo.",
+                          "First the data is explored (univariate and multivariate EDA) to see which variables "
+                          f"anticipate default. Then {len(MR)} model combinations are trained and compared "
+                          "(7 algorithms × 4 balancing techniques × 4 optimizers). The best one, "
+                          f"{best_lbl} with {tech_lbl(BEST['technique']).lower()}, reaches an F1 of {BEST['f1_mean']:.3f} "
+                          f"and detects {BEST['recall_mean']:.0%} of defaults. Finally, the Predict page uses that model "
+                          "to estimate the risk of a new client.")),
+                html.P(tx("Cada gráfico trae una interpretación básica (lenguaje cotidiano) y una técnica "
+                          "(estadísticos y recomendaciones de modelado).",
+                          "Each chart comes with a basic interpretation (everyday language) and a technical one "
+                          "(statistics and modeling recommendations).")),
             ], cls="span-2"),
             card(tx("Fuentes", "Sources"), [
                 html.P("Yeh, I-C. & Lien, C. (2009). The comparisons of data mining techniques for the predictive "
