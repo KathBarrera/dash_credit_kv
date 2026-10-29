@@ -1,0 +1,3905 @@
+{
+ "es": {
+  "intenciones": [
+   {
+    "id": "saludo",
+    "titulo": "Saludo",
+    "ejemplos": [
+     "hola",
+     "buenas",
+     "buenos días",
+     "buenas tardes",
+     "hey kyo",
+     "hola kyo",
+     "qué tal",
+     "holi",
+     "hola cómo estás",
+     "buenas noches"
+    ],
+    "texto": "¡Hola! Soy **Kyo**. Puedo explicarte cualquier página, gráfica, variable o modelo de este tablero. Si quieres, empiezo por la página en la que estás.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "Explícame esta página",
+     "¿Qué puedo preguntarte?",
+     "¿Cuál es el hallazgo principal?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "quien_eres",
+    "titulo": "Quién es Kyo",
+    "ejemplos": [
+     "quién eres",
+     "qué eres",
+     "hola quién eres",
+     "y tú quién eres",
+     "cómo funcionas",
+     "cómo te entrenaron",
+     "eres una inteligencia artificial",
+     "cómo aprendiste",
+     "con qué te entrenaron",
+     "qué modelo usas para responder",
+     "eres un bot",
+     "cómo sabes las respuestas",
+     "de dónde sacas la información"
+    ],
+    "texto": "Soy **Kyo**, un bot entrenado con el contenido de este tablero:\n\n- Cada página, gráfica, variable y modelo es una *intención* con varias preguntas de ejemplo.\n- Las preguntas se convierten en vectores **TF-IDF** (palabras y fragmentos de letras, así tolero errores de escritura) y con ellos se entrena una **regresión logística** de ranger (R).\n- Cuando preguntas, calculo la intención más probable. Si no me parezco a nada de lo aprendido, te lo digo en vez de inventar.\n- Las cifras salen de las mismas funciones que dibujan el tablero, así que coinciden con lo que ves.\n\nNo me conecto a servicios externos: todo corre dentro de la app. Entiendo español e inglés.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "¿Qué puedo preguntarte?",
+     "Explícame esta página"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "ayuda",
+    "titulo": "Qué puedo preguntar",
+    "ejemplos": [
+     "qué puedo preguntarte",
+     "ayuda",
+     "en qué me ayudas",
+     "qué sabes hacer",
+     "qué sabes",
+     "dame ideas de preguntas",
+     "qué temas conoces",
+     "help",
+     "no sé qué preguntar",
+     "opciones"
+    ],
+    "texto": "Puedo explicarte:\n\n- **Cualquier página**: escribe «explícame esta página» o el nombre de la sección.\n- **Cada gráfica**: la matriz de correlación, las tasas por perfil, el boxplot del límite, la edad, el cruce de variables, el carrusel de modelos, la matriz de confusión, el puntaje de riesgo…\n- **Variables**: PAY_0, LIMIT_BAL, BILL_AMT, PAY_AMT, EDUCATION…\n- **Conceptos**: Spearman, V de Cramér, F1, recall, SMOTE, SHAP, validación cruzada…\n\nDespués de cada respuesta puedes pedir **la explicación técnica**.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "Explícame esta página",
+     "¿Qué es PAY_0?",
+     "¿Cuál es el mejor modelo?",
+     "¿Qué es el F1?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "gracias",
+    "titulo": "Agradecimiento",
+    "ejemplos": [
+     "gracias",
+     "muchas gracias",
+     "perfecto gracias",
+     "genial",
+     "listo",
+     "ok gracias",
+     "chévere",
+     "excelente",
+     "súper",
+     "entendido",
+     "vale gracias",
+     "adiós",
+     "chao",
+     "hasta luego"
+    ],
+    "texto": "¡Con gusto! Cuando quieras, tócame de nuevo: estoy en la esquina inferior derecha de la pantalla.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "Explícame esta página",
+     "¿Cuál es el hallazgo principal?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "esta_pagina",
+    "titulo": "Esta página",
+    "ejemplos": [
+     "explícame esta página",
+     "qué hay en esta página",
+     "qué estoy viendo",
+     "de qué trata esta sección",
+     "explica esto",
+     "qué es esto",
+     "qué muestra esta página",
+     "resúmeme esta página",
+     "dónde estoy",
+     "qué significa lo que estoy viendo",
+     "explícame lo que hay aquí",
+     "qué hay aquí",
+     "explica la página actual",
+     "explícame esta parte",
+     "qué contiene esta sección",
+     "no entiendo esta página",
+     "ayúdame a entender esta sección",
+     "no entiendo lo que veo"
+    ],
+    "texto": "",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [],
+    "mood": "explaining"
+   },
+   {
+    "id": "mas_tecnico",
+    "titulo": "Versión técnica",
+    "ejemplos": [
+     "dame la explicación técnica",
+     "explicación técnica",
+     "más técnico",
+     "explícalo técnicamente",
+     "dame más detalle",
+     "con estadísticos",
+     "versión técnica",
+     "quiero más detalle técnico",
+     "profundiza",
+     "detalles técnicos",
+     "explícalo con más rigor",
+     "interpretación técnica"
+    ],
+    "texto": "",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [],
+    "mood": "explaining"
+   },
+   {
+    "id": "navegacion",
+    "titulo": "Cómo usar el tablero",
+    "ejemplos": [
+     "cómo uso el tablero",
+     "cómo navego",
+     "cómo cambio a modo oscuro",
+     "cómo oculto el menú",
+     "para qué sirve el botón de sol y luna",
+     "cómo voy a la siguiente página",
+     "cómo me muevo por el dash",
+     "dónde está el menú",
+     "modo oscuro",
+     "botones anterior y siguiente",
+     "cómo se usa el dashboard",
+     "cambiar el tema",
+     "tema oscuro",
+     "modo claro",
+     "cómo cambio el idioma",
+     "poner en inglés",
+     "botón ES EN",
+     "cambiar idioma"
+    ],
+    "texto": "Así te mueves por el tablero:\n\n- **Menú lateral** (izquierda): las diez secciones en orden. El botón de panel de la barra superior lo oculta o lo muestra.\n- **ES | EN**: cambia el idioma de todo el tablero (y el mío).\n- **Sol y luna**: cambia entre modo claro y oscuro (se recuerda en tu navegador).\n- **Anterior / Siguiente**: al final de cada página te llevan por el tablero en orden.\n- **Interpretaciones**: bajo cada gráfica, el botón **Ver interpretación** despliega la explicación básica y la técnica.\n- **Yo**: estoy en la esquina inferior derecha; tócame para abrir este panel y la **X** para cerrarlo.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "Explícame esta página",
+     "¿Qué puedo preguntarte?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "resumen",
+    "titulo": "Resumen del proyecto",
+    "ejemplos": [
+     "de qué trata el proyecto",
+     "resumen del tablero",
+     "resume todo el dashboard",
+     "cuál es el hallazgo principal",
+     "conclusiones",
+     "qué encontraron",
+     "cuáles son las conclusiones del análisis",
+     "en pocas palabras qué dice el dash",
+     "qué aprendieron",
+     "hallazgos principales",
+     "qué es lo más importante del análisis"
+    ],
+    "texto": "El tablero estudia **29,965 clientes** de tarjeta de crédito de un banco de Taiwán (abril–septiembre 2005) para entender quién deja de pagar el mes siguiente (22.1% lo hizo). Lo más importante:\n\n1. **El historial de pagos domina.** PAY_0 es la variable más asociada al default (ρ de Spearman = +0.29). Los clientes con ≥1 mes de atraso en PAY_0 incumplen en 50.4% de los casos, frente a 13.8% de quienes están al día.\n2. **Menor cupo, más riesgo.** Mediana de LIMIT_BAL: NT$90,000 (default) vs. NT$150,000 (no default). Un menor cupo se asocia con mayor riesgo.\n3. **Lo demográfico pesa poco.** Las tasas por educación van de 7.1% a 25.2%: diferencias significativas pero con tamaño de efecto pequeño. La edad tampoco separa por sí sola.\n4. **Las facturas son redundantes.** Las seis BILL_AMT se correlacionan (Spearman) entre 0.73 y 0.91. Para modelos lineales conviene resumirlas (promedio + tendencia) o usar PCA.\n5. **Modelos:** el mejor es Random Forest con pesos de clase (F1 0.546 frente a 0.378 de la línea base); balancear las clases es lo que más ayuda.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "¿Qué es PAY_0?",
+     "¿Cuál es el mejor modelo?",
+     "Explícame la matriz de correlación"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "p_inicio",
+    "titulo": "Inicio (portada)",
+    "ejemplos": [
+     "portada",
+     "página de inicio",
+     "inicio",
+     "qué es la tarjeta de la portada",
+     "por qué hay una tarjeta de crédito",
+     "la tarjeta que se voltea",
+     "qué dice la tarjeta",
+     "pantalla principal",
+     "home"
+    ],
+    "texto": "La **portada** presenta el proyecto con una tarjeta de crédito interactiva:\n\n- **Frente:** los titulares (las autoras) y el periodo de los datos (abril–septiembre 2005).\n- **Reverso** (haz clic para voltearla): 29,965 clientes, 22.1% de default y el periodo.\n- **Iniciar recorrido** te lleva a la Introducción; desde ahí el menú lateral muestra todas las secciones.",
+    "tecnico": null,
+    "pagina": "/",
+    "sug": [
+     "¿De qué trata el proyecto?",
+     "Explícame la introducción",
+     "¿Cómo uso el tablero?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "p_intro",
+    "titulo": "Introducción",
+    "ejemplos": [
+     "explícame la introducción",
+     "qué hay en la introducción",
+     "página de introducción",
+     "contexto del proyecto",
+     "para qué es este tablero",
+     "cuál es el contexto"
+    ],
+    "texto": "La **Introducción** da el contexto:\n\n- **Vistazo rápido:** una gráfica que muestra que el atraso de septiembre anticipa el incumplimiento.\n- **KPIs:** 29,965 clientes, 24 variables (23 predictoras + 1 objetivo), 22.1% de default y el periodo abril–septiembre 2005.\n- **Introducción:** el problema del riesgo en tarjetas de crédito y el recorrido del proyecto: EDA, comparación de 112 combinaciones de modelos (la mejor, Random Forest con pesos de clase, F1 0.546) y la página Predecir.\n- **Fuentes:** el artículo de Yeh & Lien (2009) y los datos del repositorio UCI; montos en NT$.",
+    "tecnico": null,
+    "pagina": "/introduccion",
+    "sug": [
+     "Explícame el vistazo rápido",
+     "¿Cómo se limpiaron los datos?",
+     "¿De dónde salen los datos?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "intro_vistazo",
+    "titulo": "Vistazo rápido (PAY_0)",
+    "ejemplos": [
+     "explícame el vistazo rápido",
+     "gráfica del vistazo rápido",
+     "la gráfica de barras de la introducción",
+     "el atraso de septiembre anticipa el incumplimiento",
+     "tasa de default según PAY_0",
+     "qué muestra la primera gráfica",
+     "barras por estado de pago de septiembre"
+    ],
+    "texto": "Cada barra es la tasa de default para un valor de **PAY_0** (estado de pago de septiembre). Entre quienes tenían 2 o más meses de atraso, **70%** incumplió el mes siguiente; entre quienes iban al día o pagaban el mínimo, **14%**. La línea punteada es la tasa global (22.1%). Solo se muestran valores con al menos 100 clientes.",
+    "tecnico": "Se agrupa por PAY_0 y se calcula la media de la variable objetivo en cada grupo (grupos con n ≥ 100). La tasa salta de forma no lineal al pasar de 0 (pago mínimo) a 1–2 meses de atraso, por eso PAY_0 conviene tratarla como ordinal o categórica (dummies) y no como una variable lineal. Es la variable con mayor ρ de Spearman con el default y la primera en importancia SHAP del mejor modelo.",
+    "pagina": "/introduccion",
+    "sug": [
+     "¿Qué es PAY_0?",
+     "¿Qué variables pesan más en el modelo?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "intro_limpieza",
+    "titulo": "Preparación de los datos",
+    "ejemplos": [
+     "cómo se limpiaron los datos",
+     "qué limpieza hicieron",
+     "preparación de los datos",
+     "duplicados",
+     "qué pasó con los códigos no documentados",
+     "saldos negativos",
+     "por qué no hay PAY_1",
+     "calidad de los datos",
+     "transformaciones aplicadas a los datos",
+     "cuántos duplicados había",
+     "borraron filas",
+     "quitaron registros duplicados",
+     "limpieza del dataset",
+     "filas eliminadas"
+    ],
+    "texto": "Así se prepararon los datos:\n\n- Se eliminaron **35** filas duplicadas exactas (de 30,000 a 29,965).\n- **345** registros con EDUCATION = 0, 5 o 6 (códigos sin documentar) pasaron a «Otros».\n- **54** registros con MARRIAGE = 0 pasaron a «Otros».\n- Se conservaron **1,930** clientes con saldo facturado negativo: es saldo a favor y es válido.\n- El estado de pago de septiembre se llama PAY_0: el dataset no trae PAY_1.",
+    "tecnico": null,
+    "pagina": "/univariado",
+    "sug": [
+     "¿De dónde salen los datos?",
+     "¿Qué es EDUCATION?",
+     "¿Qué es BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "dataset",
+    "titulo": "Fuente de los datos",
+    "ejemplos": [
+     "de dónde salen los datos",
+     "qué dataset usaron",
+     "fuente de los datos",
+     "UCI",
+     "Yeh y Lien",
+     "cuántos clientes hay",
+     "de qué banco son los datos",
+     "de qué año son los datos",
+     "en qué moneda están",
+     "cuántas variables tiene el dataset",
+     "default of credit card clients",
+     "qué periodo cubren los datos"
+    ],
+    "texto": "Los datos son **Default of Credit Card Clients** (UCI Machine Learning Repository), publicados por Yeh & Lien (2009). Son 30,000 clientes de un banco de **Taiwán** observados de **abril a septiembre de 2005** (29,965 tras quitar duplicados), con 24 variables: cupo, datos demográficos, estado de pago de seis meses, montos facturados y montos pagados, y si incumplió en octubre (variable objetivo). Los montos están en **dólares taiwaneses (NT$)**.",
+    "tecnico": null,
+    "pagina": "/introduccion",
+    "sug": [
+     "¿Qué variables tiene?",
+     "¿Qué es la variable objetivo?",
+     "¿Cómo se limpiaron los datos?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_problema",
+    "titulo": "Problema y Objetivos",
+    "ejemplos": [
+     "explícame problema y objetivos",
+     "cuál es el problema",
+     "planteamiento del problema",
+     "página del problema",
+     "por qué es importante este análisis",
+     "qué problema resuelven",
+     "justificación del proyecto"
+    ],
+    "texto": "**Problema y Objetivos** explica por qué importa el análisis:\n\n- **Planteamiento:** el banco presta sin saber quién pagará; si se equivoca pierde capital o, si restringe de más, pierde ingresos. Aquí 22.1% (6,630 clientes) no pagó.\n- **KPIs:** clientes en default, límite expuesto (NT$862 M) y saldo facturado de septiembre de quienes incumplen (NT$322 M).\n- **Pregunta de investigación**, **justificación**, **alcance y limitaciones**.\n- **Cinco hipótesis** (H1–H5) y los **objetivos** general y específicos.",
+    "tecnico": "Los errores no son simétricos: un falso negativo (no detectar a quien incumplirá) suele costar más que un falso positivo. Por eso más adelante se privilegian F1 y recall de la clase default sobre la exactitud (accuracy).",
+    "pagina": "/problema",
+    "sug": [
+     "¿Cuáles son las hipótesis?",
+     "¿Cuál es la pregunta de investigación?",
+     "¿Cuáles son los objetivos?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "pregunta",
+    "titulo": "Pregunta de investigación",
+    "ejemplos": [
+     "cuál es la pregunta de investigación",
+     "qué pregunta responde el análisis",
+     "preguntas específicas",
+     "qué se quiere responder"
+    ],
+    "texto": "**Pregunta de investigación:** ¿qué características del cliente, de su línea de crédito y de su historial reciente de pagos se asocian con el incumplimiento del mes siguiente, y con qué intensidad?\n\nPreguntas específicas: cómo se distribuyen las variables y qué problemas de calidad tienen, qué tan desbalanceada está la variable objetivo, qué variables separan mejor a quienes incumplen y si hay redundancia entre predictoras.",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "¿Cuáles son las hipótesis?",
+     "¿Cuáles son los objetivos?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "hipotesis",
+    "titulo": "Hipótesis",
+    "ejemplos": [
+     "cuáles son las hipótesis",
+     "hipótesis exploratorias",
+     "H1",
+     "qué hipótesis plantearon",
+     "se cumplieron las hipótesis",
+     "tabla de hipótesis",
+     "H2 H3 H4 H5"
+    ],
+    "texto": "Las **cinco hipótesis** y lo que muestra el tablero:\n\n- **H1** El historial de pagos (PAY_0…PAY_6) es el factor más asociado al default → **se apoya**: PAY_0 tiene la mayor correlación y domina en SHAP.\n- **H2** Menor límite de crédito, más default → **se apoya**: mediana NT$90,000 (default) vs. NT$150,000.\n- **H3** Lo demográfico se asocia, pero con efecto pequeño → **se apoya**: V de Cramér < 0.1.\n- **H4** Las BILL_AMT están muy correlacionadas → **se apoya**: ρ entre 0.73 y 0.91.\n- **H5** La clase default es minoritaria → **se apoya**: 22.1% frente a 77.9%.",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "Explícame la matriz de correlación",
+     "¿Qué es la V de Cramér?",
+     "¿Qué es el desbalance de clases?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "objetivos",
+    "titulo": "Objetivos",
+    "ejemplos": [
+     "cuáles son los objetivos",
+     "objetivo general",
+     "objetivos específicos",
+     "qué buscan con el análisis",
+     "metas del análisis"
+    ],
+    "texto": "**Objetivo general:** analizar los factores que se asocian con el incumplimiento de pago de los clientes de tarjeta de crédito mediante un EDA univariado y multivariado.\n\n**Específicos:** documentar la calidad y la limpieza de los datos (Introducción); caracterizar cada variable y cuantificar el desbalance (Univariado); comparar clientes con y sin default y detectar multicolinealidad (Multivariado); y definir lineamientos de preprocesamiento para el modelado (Hallazgos clave).",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "¿Cuáles son las hipótesis?",
+     "¿Cuáles son los hallazgos clave?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "limitaciones",
+    "titulo": "Alcance y limitaciones",
+    "ejemplos": [
+     "limitaciones",
+     "alcance del análisis",
+     "qué limitaciones tiene",
+     "se puede generalizar",
+     "correlación implica causalidad",
+     "es causal el análisis",
+     "causalidad",
+     "los hallazgos son causa y efecto",
+     "sirve para otros países",
+     "por qué no se puede generalizar"
+    ],
+    "texto": "**Alcance y limitaciones:**\n\n- Datos de un solo banco de Taiwán y un periodo corto (abril–septiembre 2005): no se generalizan sin cautela.\n- El análisis es **asociativo**: una correlación no implica causalidad.\n- El EDA no construye modelos; los modelos se entrenaron en el repositorio del proyecto y se resumen en la sección Modelos.\n- Los códigos −2 y 0 de PAY_x no están documentados con precisión; se conservan sin recodificar.",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "¿Qué es PAY_0?",
+     "¿De dónde salen los datos?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "kpis_problema",
+    "titulo": "Límite expuesto y saldo facturado",
+    "ejemplos": [
+     "qué es el límite expuesto",
+     "saldo facturado de septiembre",
+     "KPIs del problema",
+     "cuánto dinero está en riesgo",
+     "cuánto suman los cupos de quienes incumplen"
+    ],
+    "texto": "En Problema y Objetivos hay tres cifras de negocio:\n\n- **Clientes en default:** 6,630 (22.1%).\n- **Límite expuesto:** NT$862 millones, la suma de los cupos (LIMIT_BAL) de quienes incumplen.\n- **Saldo facturado (Sep):** NT$322 millones, la suma de BILL_AMT1 positivo de quienes incumplen.\n\nDan una idea del tamaño del problema para el banco.",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "¿Qué es LIMIT_BAL?",
+     "¿Qué es la pérdida esperada?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_marco",
+    "titulo": "Marco Teórico",
+    "ejemplos": [
+     "explícame el marco teórico",
+     "qué hay en el marco teórico",
+     "página del marco teórico",
+     "qué conceptos usan",
+     "fundamentos teóricos",
+     "teoría del proyecto"
+    ],
+    "texto": "El **Marco Teórico** reúne los conceptos que sustentan el análisis, en ocho tarjetas:\n\n1. Riesgo de crédito y default (EL = PD × LGD × EAD)\n2. Scoring crediticio\n3. EDA (Tukey)\n4. Estadística descriptiva y atípicos\n5. Desbalance de clases\n6. Spearman y multicolinealidad (VIF)\n7. χ² y V de Cramér\n8. Mann-Whitney, Kruskal-Wallis y t de Welch\n\nAdemás: antecedentes (Yeh & Lien, 2009), el **diccionario de variables** y las referencias (desplegable).",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "¿Qué es la pérdida esperada?",
+     "¿Qué es Spearman?",
+     "Muéstrame el diccionario de variables"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "perdida_esperada",
+    "titulo": "Riesgo de crédito y pérdida esperada",
+    "ejemplos": [
+     "qué es la pérdida esperada",
+     "EL = PD x LGD x EAD",
+     "qué es PD",
+     "qué es LGD",
+     "qué es EAD",
+     "qué es el riesgo de crédito",
+     "qué es default",
+     "qué significa default",
+     "Basilea"
+    ],
+    "texto": "El **riesgo de crédito** es la posibilidad de perder dinero porque un deudor no paga. En Basilea II la pérdida esperada es:\n\n$$\\mathrm{EL} = \\mathrm{PD} \\times \\mathrm{LGD} \\times \\mathrm{EAD}$$\n\n- **PD:** probabilidad de incumplimiento (lo que estudian estos datos).\n- **LGD:** porcentaje que se pierde si hay incumplimiento.\n- **EAD:** monto expuesto en ese momento.\n\nAquí **default** es la variable binaria que indica si el cliente no pagó el mes siguiente.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "¿Qué es el scoring crediticio?",
+     "¿Qué es la variable objetivo?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "scoring",
+    "titulo": "Scoring crediticio",
+    "ejemplos": [
+     "qué es el scoring crediticio",
+     "qué es un modelo de scoring",
+     "para qué sirve el scoring",
+     "puntaje crediticio",
+     "score crediticio",
+     "para qué sirve un score",
+     "qué es un score de riesgo"
+    ],
+    "texto": "Un **modelo de scoring** estima la probabilidad de incumplimiento (PD) con datos del cliente: comportamiento de pago, límite, deuda y perfil. Sirve para aprobar o rechazar solicitudes, fijar cupos y priorizar la cobranza. Antes de modelar, el EDA revela la calidad de los datos, las variables más informativas y los problemas (colinealidad, desbalance, atípicos). La sección **Predecir** es un ejemplo de scoring con el mejor modelo.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explícame la página Predecir",
+     "¿Qué es el EDA?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "eda_concepto",
+    "titulo": "Qué es el EDA",
+    "ejemplos": [
+     "qué es el EDA",
+     "qué es análisis exploratorio de datos",
+     "qué significa EDA",
+     "Tukey",
+     "diferencia entre univariado y multivariado",
+     "qué es univariado",
+     "qué es multivariado"
+    ],
+    "texto": "El **análisis exploratorio de datos (EDA)**, propuesto por John W. Tukey (1977), explora los datos con resúmenes y gráficos antes de ajustar modelos, para descubrir patrones, anomalías y supuestos.\n\n- **Univariado:** una variable a la vez (frecuencias, histograma, boxplot) → página EDA Univariado.\n- **Multivariado:** relaciones entre variables (correlaciones, cruces, comparaciones por grupo) → página EDA Multivariado.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explícame el EDA univariado",
+     "Explícame el EDA multivariado"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "atipicos",
+    "titulo": "Asimetría, atípicos y winsorización",
+    "ejemplos": [
+     "qué es un valor atípico",
+     "qué son los outliers",
+     "regla de Tukey",
+     "qué es la asimetría",
+     "qué es la curtosis",
+     "qué es winsorizar",
+     "qué es la winsorización",
+     "qué es el IQR",
+     "transformación logarítmica",
+     "qué es skewness",
+     "qué es el recorte P99",
+     "qué es el percentil 99"
+    ],
+    "texto": "- **Asimetría (skewness):** hacia dónde se alarga la cola; los montos de dinero suelen tener una cola larga a la derecha.\n- **Curtosis:** qué tan pesadas son las colas.\n- **Atípico de Tukey:**\n\n$$\\begin{gathered} x < Q_1 - 1.5\\,\\mathrm{IQR} \\;\\;\\text{o} \\\\ x > Q_3 + 1.5\\,\\mathrm{IQR} \\\\ \\mathrm{IQR} = Q_3 - Q_1 \\end{gathered}$$\n\n- **Winsorizar:** recortar los extremos a percentiles (p. ej. P1–P99) sin eliminar clientes.\n- **Atípicos en las gráficas:** los boxplots marcan los atípicos como puntos tenues y el eje se ajusta a los bigotes (1,5·IQR), para que unos pocos montos enormes no aplasten el gráfico; no se elimina ningún cliente.\n- **Log con signo:** suaviza colas largas cuando hay ceros o negativos.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explícame el explorador univariado",
+     "¿Qué es BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "desbalance",
+    "titulo": "Desbalance de clases",
+    "ejemplos": [
+     "qué es el desbalance de clases",
+     "por qué las clases están desbalanceadas",
+     "clases desbalanceadas",
+     "por qué no usar accuracy",
+     "qué tan desbalanceada está la variable objetivo",
+     "clase minoritaria"
+    ],
+    "texto": "Hay **desbalance de clases** cuando una clase es mucho menos frecuente. Aquí solo 22.1% incumple (razón ≈ 3.5:1), así que un modelo que diga «todos pagan» acertaría 77.9% de las veces sin servir para nada. Por eso:\n\n- se ponderan las clases (**class_weight**) o se sobremuestrea la minoritaria (**SMOTE**, **ADASYN**);\n- se ajusta el umbral de decisión;\n- se evalúa con **F1, recall y AUC** en lugar de accuracy.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "¿Qué técnicas de balanceo usaron?",
+     "¿Qué es el F1?",
+     "Explícame la variable objetivo"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "spearman",
+    "titulo": "Correlación de Spearman y VIF",
+    "ejemplos": [
+     "qué es Spearman",
+     "qué es la correlación de Spearman",
+     "por qué Spearman y no Pearson",
+     "qué es rho",
+     "qué es el VIF",
+     "qué es la multicolinealidad",
+     "factor de inflación de la varianza",
+     "qué es ρ"
+    ],
+    "texto": "**Spearman** (ρ) es la correlación de Pearson calculada sobre los *rangos* de los datos. Mide asociación monótona, no exige linealidad ni normalidad y resiste valores extremos. Se eligió sobre Pearson porque los montos son muy asimétricos, PAY_x es ordinal y la variable objetivo es binaria.\n\n**Multicolinealidad:** predictoras casi redundantes que inflan la varianza de los coeficientes. Se mide con el **VIF**:\n\n$$\\mathrm{VIF}_j = \\frac{1}{1 - R_j^2}$$\n\nUn VIF > 10 (o > 5) es alerta. En este dataset las BILL_AMT superan 20.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explícame la matriz de correlación",
+     "¿Qué es BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "cramer",
+    "titulo": "χ² y V de Cramér",
+    "ejemplos": [
+     "qué es la V de Cramér",
+     "qué es chi cuadrado",
+     "prueba chi cuadrado",
+     "qué es χ²",
+     "tamaño del efecto categórico",
+     "asociación entre variables categóricas",
+     "chi2"
+    ],
+    "texto": "La prueba **χ² de independencia** contrasta si dos variables categóricas están asociadas. Su tamaño de efecto es la **V de Cramér**, de 0 a 1:\n\n$$V = \\sqrt{\\frac{\\chi^2}{n \\cdot \\min(r - 1,\\; c - 1)}}$$\n\nV < 0.1 es pequeño y V ≈ 0.3 moderado. En el tablero, educación, estado civil y sexo dan V < 0.1: hay diferencias, pero pequeñas.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explícame las tasas por educación, estado civil y sexo",
+     "¿Qué es el p-value?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "pruebas_grupos",
+    "titulo": "Mann-Whitney, Kruskal-Wallis y t de Welch",
+    "ejemplos": [
+     "qué es Mann-Whitney",
+     "qué es Kruskal-Wallis",
+     "qué es la t de Welch",
+     "pruebas no paramétricas",
+     "comparación de grupos",
+     "qué es el p-value",
+     "qué significa p<0.001",
+     "qué es significancia estadística",
+     "tamaño del efecto"
+    ],
+    "texto": "- **Mann-Whitney U:** compara dos grupos sin suponer normalidad (usa rangos).\n- **Kruskal-Wallis H:** lo mismo para tres o más grupos.\n- **t de Welch:** compara medias con varianzas distintas.\n\nOjo con el **p-value**: con n ≈ 29,965 casi cualquier diferencia sale «significativa» (p < 0.05). Por eso el tablero reporta también el **tamaño del efecto** y la relevancia práctica.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explícame el boxplot del límite de crédito",
+     "¿Qué es la V de Cramér?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "antecedentes",
+    "titulo": "Antecedentes y referencias",
+    "ejemplos": [
+     "antecedentes",
+     "referencias",
+     "bibliografía",
+     "qué hicieron Yeh y Lien",
+     "estudios previos",
+     "sorting smoothing method"
+    ],
+    "texto": "**Antecedentes:** Yeh y Lien (2009) compararon seis técnicas (regresión logística, análisis discriminante, k vecinos, Naive Bayes, redes neuronales y árboles) con estos mismos datos y propusieron el *Sorting Smoothing Method* para estimar la probabilidad real de incumplimiento. La sección **Modelos** retoma esa comparación con 7 clasificadores, 4 técnicas de balanceo y 4 métodos de optimización.\n\nLas **referencias** (desplegable al final del Marco Teórico, formato IEEE) incluyen Yeh & Lien, el repositorio UCI, SHAP (Lundberg y Lee), ML explicable en riesgo de crédito (Bussmann et al.), desbalance de clases (Branco et al.), SMOTE (Fernández et al.), ISLR (James et al.), AUROC vs. AUPRC (McDermott et al.) y XGBoost (Chen y Guestrin).",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explícame la página de modelos",
+     "¿Qué es SMOTE?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "diccionario",
+    "titulo": "Diccionario de variables",
+    "ejemplos": [
+     "muéstrame el diccionario de variables",
+     "qué variables tiene",
+     "lista de variables",
+     "diccionario de datos",
+     "qué significa cada variable",
+     "qué columnas hay",
+     "variables del dataset"
+    ],
+    "texto": "**Diccionario de variables** (Marco Teórico):\n\n- **LIMIT_BAL:** cupo de crédito en NT$.\n- **SEX:** 1 hombre, 2 mujer.\n- **EDUCATION:** 1 posgrado, 2 universidad, 3 secundaria, 4 otros.\n- **MARRIAGE:** 1 casado, 2 soltero, 3 otros.\n- **AGE:** edad en años.\n- **PAY_0, PAY_2…PAY_6:** estado de pago de septiembre a abril (−2/−1/0 sin atraso; 1…8 meses de atraso).\n- **BILL_AMT1–6:** monto facturado de septiembre (1) a abril (6).\n- **PAY_AMT1–6:** monto pagado de septiembre (1) a abril (6).\n- **default_payment_next_month:** 1 si incumple en octubre de 2005.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "¿Qué es PAY_0?",
+     "¿Qué es LIMIT_BAL?",
+     "¿Qué es la variable objetivo?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_limit",
+    "titulo": "LIMIT_BAL (cupo de crédito)",
+    "ejemplos": [
+     "qué es LIMIT_BAL",
+     "limit_bal",
+     "límite de crédito",
+     "qué es el cupo",
+     "cuánto cupo tienen los clientes",
+     "distribución del límite de crédito"
+    ],
+    "texto": "**LIMIT_BAL** es el cupo de crédito (individual + familiar) en NT$. La mitad de los clientes tiene NT$140,000 o menos; la distribución se inclina ligeramente hacia valores altos (promedio NT$167,442).",
+    "tecnico": "n = 29,965; media = NT$167,442; mediana = NT$140,000; σ = NT$129,760; IQR = NT$190,000; asimetría = 0.99; curtosis = 0.54; outliers de Tukey = 0.6%. No requiere transformaciones drásticas por forma.",
+    "pagina": "/univariado",
+    "sug": [
+     "Explícame el boxplot del límite de crédito",
+     "¿Qué es PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_age",
+    "titulo": "AGE (edad)",
+    "ejemplos": [
+     "qué es AGE",
+     "edad de los clientes",
+     "cuántos años tienen los clientes",
+     "distribución de la edad",
+     "edad promedio"
+    ],
+    "texto": "**AGE** es la edad en años. La mitad de los clientes tiene 34.0 o menos; la distribución se inclina ligeramente hacia valores altos (promedio 35.5).",
+    "tecnico": "n = 29,965; media = 35.5; mediana = 34.0; σ = 9.2; IQR = 13.0; asimetría = 0.73; curtosis = 0.04; outliers de Tukey = 0.9%. No requiere transformaciones drásticas por forma.",
+    "pagina": "/univariado",
+    "sug": [
+     "Explícame la gráfica de edad y atrasos",
+     "¿Influye la edad en el default?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_sex",
+    "titulo": "SEX (sexo)",
+    "ejemplos": [
+     "qué es SEX",
+     "variable sexo",
+     "hombres y mujeres",
+     "género",
+     "incumplen más los hombres o las mujeres",
+     "diferencia por sexo"
+    ],
+    "texto": "**SEX** es el sexo registrado: 1 = hombre, 2 = mujer (el dataset solo trae esas dos categorías). La categoría más frecuente es «Mujer» con 60% de los clientes. Distribución completa: Hombre 39.6%, Mujer 60.4%. En la tasa de default: Los hombres incumplen un poco más (24.2%) que las mujeres (20.8%).",
+    "tecnico": "Variable categórica nominal de 2 niveles; moda «Mujer» (60.4%). Frecuencias: Hombre 39.6%, Mujer 60.4%. Las categorías no documentadas del archivo original se reagruparon en «Otros» (EDUCATION 0/5/6 → 4; MARRIAGE 0 → 3).",
+    "pagina": "/univariado",
+    "sug": [
+     "Explícame las tasas por educación, estado civil y sexo",
+     "¿Qué es la V de Cramér?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_edu",
+    "titulo": "EDUCATION (educación)",
+    "ejemplos": [
+     "qué es EDUCATION",
+     "nivel educativo",
+     "educación de los clientes",
+     "variable educación",
+     "influye la educación",
+     "categoría otros en educación"
+    ],
+    "texto": "**EDUCATION**: 1 = posgrado, 2 = universidad, 3 = secundaria, 4 = otros (los códigos 0, 5 y 6 sin documentar se agruparon en «Otros»). La categoría más frecuente es «Universidad» con 47% de los clientes. Distribución completa: Posgrado 35.3%, Universidad 46.8%, Secundaria 16.4%, Otros 1.6%.",
+    "tecnico": "Variable categórica nominal de 4 niveles; moda «Universidad» (46.8%). Frecuencias: Posgrado 35.3%, Universidad 46.8%, Secundaria 16.4%, Otros 1.6%. Las categorías no documentadas del archivo original se reagruparon en «Otros» (EDUCATION 0/5/6 → 4; MARRIAGE 0 → 3).",
+    "pagina": "/univariado",
+    "sug": [
+     "Explícame las tasas por educación, estado civil y sexo",
+     "¿Cómo se limpiaron los datos?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_mar",
+    "titulo": "MARRIAGE (estado civil)",
+    "ejemplos": [
+     "qué es MARRIAGE",
+     "estado civil",
+     "casados y solteros",
+     "variable estado civil"
+    ],
+    "texto": "**MARRIAGE**: 1 = casado, 2 = soltero, 3 = otros (el código 0 pasó a «Otros»). La categoría más frecuente es «Soltero» con 53% de los clientes. Distribución completa: Casado 45.5%, Soltero 53.2%, Otros 1.3%.",
+    "tecnico": "Variable categórica nominal de 3 niveles; moda «Soltero» (53.2%). Frecuencias: Casado 45.5%, Soltero 53.2%, Otros 1.3%. Las categorías no documentadas del archivo original se reagruparon en «Otros» (EDUCATION 0/5/6 → 4; MARRIAGE 0 → 3).",
+    "pagina": "/univariado",
+    "sug": [
+     "Explícame las tasas por educación, estado civil y sexo"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_pay",
+    "titulo": "PAY_0 … PAY_6 (estado de pago)",
+    "ejemplos": [
+     "qué es PAY_0",
+     "pay_0",
+     "qué significa PAY",
+     "estado de pago",
+     "qué significa -2 -1 0 en PAY",
+     "historial de pagos",
+     "PAY_2",
+     "PAY_6",
+     "meses de atraso",
+     "qué es el atraso",
+     "por qué no existe PAY_1",
+     "qué significa pago mínimo en PAY"
+    ],
+    "texto": "**PAY_0, PAY_2 … PAY_6** son el estado de pago mensual: PAY_0 es septiembre y PAY_6 abril.\n\n- **−2:** sin consumo · **−1:** pagó todo · **0:** pago mínimo (crédito rotativo)\n- **1 a 8:** meses de atraso\n\nEn Sep, 77% de los clientes estaba al día (valores 0 o menores) y 23% tenía al menos un mes de atraso. El valor más común es 0 (49%). Es **la variable más importante** del análisis: PAY_0 es la variable más asociada al default (ρ de Spearman = +0.29). Los clientes con ≥1 mes de atraso en PAY_0 incumplen en 50.4% de los casos, frente a 13.8% de quienes están al día.",
+    "tecnico": "Variable ordinal con 11 niveles; moda = 0 (49.2%). Los valores −2, −1 y 0 concentran 77.3% de los casos; atraso ≥1 mes: 22.7%. La definición exacta de −2/−1/0 no está estandarizada en la fuente: se conservan sin recodificar y no se sobre-interpreta la frontera entre ellos. Se recomienda tratarla como ordinal/categórica (dummies) pues el efecto de pasar de 'al día' a 1 mes de atraso no es lineal.",
+    "pagina": "/univariado",
+    "sug": [
+     "Explícame el vistazo rápido",
+     "¿Qué variables pesan más en el modelo?",
+     "¿Qué es BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_bill",
+    "titulo": "BILL_AMT1–6 (facturación)",
+    "ejemplos": [
+     "qué es BILL_AMT",
+     "bill_amt",
+     "monto facturado",
+     "facturas mensuales",
+     "qué es la facturación",
+     "por qué hay facturas negativas",
+     "saldo a favor",
+     "BILL_AMT1"
+    ],
+    "texto": "**BILL_AMT1–6** es el monto facturado en el estado de cuenta, de septiembre (1) a abril (6), en NT$. Los seis meses de facturación se parecen mucho entre sí: la mediana ronda NT$17,124–NT$22,438 y casi todos los meses tienen unos pocos clientes con saldos muy altos. Además, 6.4% de los clientes tuvo saldo a favor (negativo) en algún mes.",
+    "tecnico": "Asimetría entre 2.66 y 3.09; outliers de Tukey entre 8.0% y 9.1%. Distribuciones casi idénticas mes a mes (alta autocorrelación del saldo). Los montos negativos son económicamente válidos (pago en exceso) y no se eliminan. Esta redundancia anticipa multicolinealidad severa (ver VIF en el notebook / pestaña Multivariado).",
+    "pagina": "/univariado",
+    "sug": [
+     "¿Qué es PAY_AMT?",
+     "¿Qué es la multicolinealidad?",
+     "Explícame la matriz de correlación"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_payamt",
+    "titulo": "PAY_AMT1–6 (montos pagados)",
+    "ejemplos": [
+     "qué es PAY_AMT",
+     "pay_amt",
+     "montos pagados",
+     "cuánto pagan los clientes",
+     "pagos mensuales",
+     "diferencia entre PAY y PAY_AMT",
+     "PAY_AMT1"
+    ],
+    "texto": "**PAY_AMT1–6** es lo que el cliente pagó, de septiembre (1) a abril (6), en NT$. No confundir con PAY_x, que es el *estado* de pago. Los pagos son pequeños frente a las facturas: la mediana mensual va de NT$1,500 a NT$2,102. Entre 17% y 24% de los clientes no pagó nada en cada mes; unos pocos hacen pagos enormes.",
+    "tecnico": "Asimetría entre 10.6 y 30.4 (hasta ≈ 30), curtosis muy alta y cola derecha extrema (máx. NT$1,684,259). La masa en cero (sin pago) y los valores extremos justifican transformación log con signo y métodos robustos (medianas, Mann-Whitney) antes de comparar grupos.",
+    "pagina": "/univariado",
+    "sug": [
+     "¿Qué es BILL_AMT?",
+     "¿Qué es PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_target",
+    "titulo": "Variable objetivo (default)",
+    "ejemplos": [
+     "qué es la variable objetivo",
+     "default_payment_next_month",
+     "explícame la variable objetivo",
+     "cuántos clientes incumplen",
+     "tasa de default",
+     "qué porcentaje no paga",
+     "gráfica default vs no default",
+     "qué es target",
+     "cuál es la tasa global de default"
+    ],
+    "texto": "La **variable objetivo** (default_payment_next_month) vale 1 si el cliente no pagó en octubre de 2005. Aproximadamente 22 de cada 100 clientes (6,630 personas) no pagó la tarjeta al mes siguiente. El resto (77.9%) sí cumplió. Hay muchos más clientes cumplidos que incumplidos, lo que hay que tener en cuenta al construir modelos.",
+    "tecnico": "Desbalance de clases: 77.9% (clase 0) vs. 22.1% (clase 1), razón ≈ 3.5:1. Un clasificador sin ajustes tenderá a favorecer la clase mayoritaria; se recomienda class_weight='balanced', remuestreo (SMOTE/ADASYN) o umbrales ajustados, y evaluar con AUC-ROC, F1 y recall de la clase 1 en lugar de accuracy.",
+    "pagina": "/univariado",
+    "sug": [
+     "¿Qué es el desbalance de clases?",
+     "¿Qué técnicas de balanceo usaron?"
+    ],
+    "mood": "alert"
+   },
+   {
+    "id": "p_uni",
+    "titulo": "EDA Univariado",
+    "ejemplos": [
+     "explícame el EDA univariado",
+     "qué hay en el EDA univariado",
+     "página univariada",
+     "análisis univariado",
+     "qué muestra el univariado"
+    ],
+    "texto": "El **EDA Univariado** mira cada variable por separado:\n\n- **KPIs:** 29,965 registros, tasa de default 22.1%, límite promedio NT$167,442 y edad promedio 35.5 años.\n- **Variable objetivo:** barras con cuántos pagan y cuántos no (desbalance).\n- **Explorador univariado:** eliges una variable y ves su histograma + boxplot o sus barras.\n- **Distribuciones cuantitativas:** LIMIT_BAL, AGE y los seis meses de BILL_AMT y PAY_AMT en histograma, boxplot o densidad.",
+    "tecnico": null,
+    "pagina": "/univariado",
+    "sug": [
+     "Explícame la variable objetivo",
+     "Explícame el explorador univariado",
+     "Explícame las distribuciones cuantitativas"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "uni_explorador",
+    "titulo": "Explorador univariado",
+    "ejemplos": [
+     "explícame el explorador univariado",
+     "cómo uso el explorador univariado",
+     "histograma con boxplot",
+     "qué significa la línea de la mediana",
+     "cómo se muestran los atípicos",
+     "el selector de variable",
+     "qué son los puntos sueltos del boxplot"
+    ],
+    "texto": "En el **Explorador univariado** eliges cualquier variable:\n\n- **Numéricas:** histograma arriba y boxplot abajo; la línea dorada punteada es la **mediana** y en el boxplot la línea punteada es la media.\n- **Categóricas** (SEX, EDUCATION, PAY_x…): barras con el porcentaje de cada categoría.\n- **Atípicos:** el boxplot los marca como puntos tenues y el eje se ajusta para que unos pocos valores enormes no aplasten la forma de la distribución; el título indica cuántos quedan fuera de la vista.\n\nEn **Ver interpretación**, la explicación se actualiza sola con la variable que elijas.",
+    "tecnico": "La interpretación técnica reporta n, media, mediana, σ, IQR, asimetría, curtosis y % de atípicos de Tukey. Si |asimetría| > 2 sugiere transformación logarítmica con signo. Para PAY_x informa la moda y el % con atraso ≥ 1 mes, y recomienda tratarla como ordinal/categórica.",
+    "pagina": "/univariado",
+    "sug": [
+     "¿Qué es un valor atípico?",
+     "¿Qué es LIMIT_BAL?",
+     "¿Qué es PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "uni_cuant",
+    "titulo": "Distribuciones de variables cuantitativas",
+    "ejemplos": [
+     "explícame las distribuciones cuantitativas",
+     "histograma boxplot densidad",
+     "qué es la densidad",
+     "qué es un boxplot",
+     "qué es un histograma",
+     "comparar los seis meses de BILL_AMT",
+     "familia de variables",
+     "gráfica de densidad"
+    ],
+    "texto": "La tarjeta **Distribuciones de variables cuantitativas** compara LIMIT_BAL, AGE y las familias BILL_AMT y PAY_AMT (un color por mes). Puedes verla como:\n\n- **Histograma:** cuántos clientes caen en cada rango.\n- **Boxplot:** la caja va del 25 % al 75 % de los datos, la línea es la mediana y los bigotes los valores típicos.\n- **Densidad:** una curva suavizada de la forma de la distribución.\n\nLa vista se limita al rango P1–P99. Por ejemplo, para BILL_AMT: Los seis meses de facturación se parecen mucho entre sí: la mediana ronda NT$17,124–NT$22,438 y casi todos los meses tienen unos pocos clientes con saldos muy altos. Además, 6.4% de los clientes tuvo saldo a favor (negativo) en algún mes.",
+    "tecnico": "Asimetría entre 2.66 y 3.09; outliers de Tukey entre 8.0% y 9.1%. Distribuciones casi idénticas mes a mes (alta autocorrelación del saldo). Los montos negativos son económicamente válidos (pago en exceso) y no se eliminan. Esta redundancia anticipa multicolinealidad severa (ver VIF en el notebook / pestaña Multivariado).",
+    "pagina": "/univariado",
+    "sug": [
+     "¿Qué es PAY_AMT?",
+     "¿Qué es un valor atípico?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_multi",
+    "titulo": "EDA Multivariado",
+    "ejemplos": [
+     "explícame el EDA multivariado",
+     "qué hay en el multivariado",
+     "página multivariada",
+     "análisis multivariado",
+     "qué muestra el multivariado"
+    ],
+    "texto": "El **EDA Multivariado** estudia relaciones entre variables y con el default:\n\n1. **Matriz de correlación de Spearman**\n2. **Incumplimiento por educación, estado civil y sexo**\n3. **Límite de crédito según default** (boxplots)\n4. **Edad y patrones de atraso** (tres vistas)\n5. **Módulo interactivo de cruce de variables**\n6. **Matriz de dispersión**\n7. **Hallazgos multivariados clave**",
+    "tecnico": null,
+    "pagina": "/multivariado",
+    "sug": [
+     "Explícame la matriz de correlación",
+     "Explícame las tasas por educación, estado civil y sexo",
+     "¿Cuáles son los hallazgos clave?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "corr",
+    "titulo": "Matriz de correlación de Spearman",
+    "ejemplos": [
+     "explícame la matriz de correlación",
+     "mapa de calor de correlación",
+     "qué significan los colores de la matriz",
+     "correlaciones entre variables",
+     "heatmap de correlación",
+     "qué variable se relaciona más con el default",
+     "bloque dorado de la matriz",
+     "matriz de Spearman"
+    ],
+    "texto": "Cada celda es la correlación de Spearman entre dos variables: **dorado** = relación directa, **azul** = inversa, crema = casi nada. Las seis facturas mensuales (BILL_AMT) se mueven casi igual: quien debe mucho un mes suele deber mucho al siguiente, por eso aparece un gran bloque dorado. Los estados de pago (PAY) también se parecen entre sí. En cambio, lo que realmente se pagó (PAY_AMT) casi no se relaciona con nada. La variable más ligada al incumplimiento es PAY_0.",
+    "tecnico": "Spearman (ρ): correlación entre BILL_AMT1–6 de 0.73 a 0.91 (multicolinealidad severa; el VIF del notebook supera 20 en BILL_AMT2–5); entre PAY_x de 0.47 a 0.82; entre PAY_AMT de 0.45 a 0.55. Mayor asociación con default (|ρ|): PAY_0 (+0.29), PAY_2 (+0.22), PAY_3 (+0.19), PAY_4 (+0.17). Se usa Spearman y no Pearson porque las variables monetarias son muy asimétricas y con colas extremas, PAY_x es ordinal y la variable objetivo es binaria; los rangos no exigen linealidad ni normalidad. Recomendación: no usar las seis BILL_AMT por separado en modelos lineales (usar nivel promedio + tendencia, solo la más reciente o PCA).",
+    "pagina": "/multivariado",
+    "sug": [
+     "¿Qué es Spearman?",
+     "¿Qué es la multicolinealidad?",
+     "¿Qué es PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "rates",
+    "titulo": "Default por educación, estado civil y sexo",
+    "ejemplos": [
+     "explícame las tasas por educación, estado civil y sexo",
+     "tasa de default por perfil demográfico",
+     "barras doradas y azules",
+     "incumplimiento por educación",
+     "default por estado civil",
+     "quién incumple más",
+     "perfil demográfico",
+     "influye el sexo en el default"
+    ],
+    "texto": "Cada barra es la tasa de default de un grupo; la línea punteada es la tasa global (22.1%). Las barras **doradas** están por encima del promedio y las **azules** por debajo. Los hombres incumplen un poco más (24.2%) que las mujeres (20.8%). Por educación, el grupo con más incumplimiento es «Secundaria» (25.2%) y el menor es «Otros» (7.1%). Las diferencias existen pero son moderadas: el perfil demográfico explica poco comparado con el historial de pagos.",
+    "tecnico": "χ² EDUCATION = 160.5 (p<0.001, V de Cramér = 0.073); MARRIAGE = 27.5 (p<0.001, V = 0.030); SEX = 47.1 (p<0.001, V = 0.040). Con n ≈ 29,965 casi cualquier diferencia es significativa; los tamaños de efecto (V < 0.1) son pequeños, así que lo relevante es la magnitud y no el p-value. Tasas por MARRIAGE: Casado 23.5%, Soltero 20.9%, Otros 23.6%.",
+    "pagina": "/multivariado",
+    "sug": [
+     "¿Qué es la V de Cramér?",
+     "¿Qué es EDUCATION?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "limit_box",
+    "titulo": "Límite de crédito según default",
+    "ejemplos": [
+     "explícame el boxplot del límite de crédito",
+     "límite de crédito según default",
+     "LIMIT_BAL por default",
+     "tienen menos cupo los que incumplen",
+     "escala logarítmica del boxplot",
+     "boxplot de LIMIT_BAL",
+     "cómo leo el boxplot",
+     "cupo de quienes no pagan frente a quienes pagan",
+     "límite de los morosos vs los cumplidos",
+     "los que incumplen tienen un límite menor",
+     "mediana del límite por default"
+    ],
+    "texto": "Son dos cajas: **azul** = clientes que pagaron, **dorada** = los que incumplieron. La línea dentro de la caja es la mediana. Los clientes que cayeron en default tenían, en la mitad de los casos, un límite de NT$90,000 o menos, frente a NT$150,000 de quienes pagaron. Es decir, quienes incumplen suelen tener líneas de crédito más bajas. Puedes cambiar a escala **logarítmica** para ver mejor los valores bajos.",
+    "tecnico": "Media: NT$178,085 (no default) vs. NT$129,985 (default); mediana NT$150,000 vs. NT$90,000. Mann-Whitney U = 95,604,368 (p<0.001); t de Welch = 29.02 (p<0.001). Diferencia significativa y de relevancia de negocio: un límite alto actúa como proxy de buena calificación crediticia previa. Distribución muy sesgada a la derecha, por eso se prefieren pruebas no paramétricas (alterna la escala log).",
+    "pagina": "/multivariado",
+    "sug": [
+     "¿Qué es Mann-Whitney?",
+     "¿Qué es LIMIT_BAL?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "age",
+    "titulo": "Edad y patrones de atraso",
+    "ejemplos": [
+     "explícame la gráfica de edad y atrasos",
+     "influye la edad en el default",
+     "edad y patrones de atraso",
+     "atraso promedio por mes y grupo de edad",
+     "porcentaje con atraso por edad",
+     "tasa de default por edad",
+     "los jóvenes incumplen más",
+     "mapa de calor de edad"
+    ],
+    "texto": "La tarjeta **Edad y patrones de atraso** tiene tres vistas:\n\n- **Atraso promedio por mes:** Todas las edades siguen una forma parecida: el atraso promedio sube hacia los últimos meses (septiembre). El grupo con atraso más alto en el mes más reciente es 21–25 años (0.23) y el más bajo es 31–35 (-0.11).\n- **% con atraso ≥ 1 mes:** Cada celda indica qué porcentaje de ese grupo de edad llevaba al menos un mes de atraso. El valor más alto aparece en 61+ años, mes de Sep (28.3%). Las diferencias entre edades son pequeñas comparadas con las diferencias entre meses.\n- **Tasa de default por edad:** El riesgo es más alto en el grupo de 61+ años (26.8%) y más bajo en el de 31–35 (19.4%). La relación con la edad es suave y no tan marcada como la del historial de pagos.",
+    "tecnico": "Correlación de Spearman AGE–PAY_0: ρ = -0.064 (p<0.001), relación muy débil. Los promedios de PAY mezclan los códigos −2/−1/0 (sin atraso) con atrasos ≥1, por lo que se complementan con la vista de % con atraso. Proporción con PAY ≥ 1 entre 8.4% y 28.3%. Spearman AGE–PAY_0: ρ = -0.064 (p<0.001). La edad aporta información marginal; el estado de pago de meses previos es el predictor dominante (ver SHAP en el notebook). Tasa de default por grupo entre 19.4% y 26.8% (global 22.1%). Patrón posiblemente no lineal (en forma de U suave); los grupos extremos de edad tienen menos observaciones y, por ende, estimaciones más inestables. Conviene considerar AGE con términos no lineales o categorizada en modelos paramétricos.",
+    "pagina": "/multivariado",
+    "sug": [
+     "¿Qué es AGE?",
+     "¿Qué es PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "cross",
+    "titulo": "Módulo interactivo de cruce de variables",
+    "ejemplos": [
+     "explícame el cruce de variables",
+     "módulo interactivo",
+     "cómo uso el cruce de variables",
+     "variable X variable Y color",
+     "qué gráfico sale en el cruce",
+     "cómo se tratan los atípicos en el cruce",
+     "cruzar dos variables"
+    ],
+    "texto": "En el **cruce de variables** eliges **X**, **Y** y, si quieres, una tercera como **color/grupo**. El tipo de gráfico se ajusta solo:\n\n- numérica × numérica → **dispersión** con línea de tendencia;\n- categórica × numérica → **boxplots** por grupo;\n- categórica × default → **barras de tasa**;\n- categórica × categórica → **mapa de calor**.\n\nEn los boxplots los bigotes llegan a 1,5·IQR y los atípicos se ven como puntos tenues; el eje se ajusta a los bigotes para que unos pocos montos enormes no distorsionen la escala. La interpretación (botón **Ver interpretación**) cambia con tu elección.",
+    "tecnico": "Según el tipo de par se reportan Spearman, Mann-Whitney / Kruskal-Wallis o χ² con V de Cramér. Con n ≈ 30 000 el p-value casi siempre es significativo, por eso conviene mirar el tamaño del efecto.",
+    "pagina": "/multivariado",
+    "sug": [
+     "¿Qué es Kruskal-Wallis?",
+     "¿Qué es la V de Cramér?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "splom",
+    "titulo": "Matriz de dispersión",
+    "ejemplos": [
+     "explícame la matriz de dispersión",
+     "scatter matrix",
+     "splom",
+     "puntos azules y dorados",
+     "cruzar varias variables a la vez",
+     "matriz de dispersión de 2 a 6 variables"
+    ],
+    "texto": "La **matriz de dispersión** cruza entre 2 y 6 variables numéricas a la vez sobre una muestra de 1,500 clientes. Cada punto es un cliente: **azul** = pagó, **dorado** = incumplió. Si los puntos dorados se concentran en una zona, esa combinación separa a los clientes de riesgo. La interpretación indica qué par de variables se parece más.",
+    "tecnico": "Se reportan los pares con mayor |ρ| de Spearman; sirve para detectar colinealidad entre predictoras y regiones donde se concentra la clase 1.",
+    "pagina": "/multivariado",
+    "sug": [
+     "Explícame la matriz de correlación",
+     "Explícame el cruce de variables"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "hallazgos",
+    "titulo": "Hallazgos multivariados clave",
+    "ejemplos": [
+     "cuáles son los hallazgos clave",
+     "hallazgos multivariados",
+     "tarjetas de hallazgos",
+     "qué concluye el multivariado",
+     "resumen del multivariado",
+     "conclusiones del EDA multivariado",
+     "hallazgos de las relaciones entre variables",
+     "tarjetas finales del multivariado",
+     "qué conclusiones hay en esta página multivariada"
+    ],
+    "texto": "**Hallazgos multivariados clave:**\n\n- **El historial de pagos domina.** PAY_0 es la variable más asociada al default (ρ de Spearman = +0.29). Los clientes con ≥1 mes de atraso en PAY_0 incumplen en 50.4% de los casos, frente a 13.8% de quienes están al día.\n- **Multicolinealidad en la facturación.** Las seis BILL_AMT se correlacionan (Spearman) entre 0.73 y 0.91. Para modelos lineales conviene resumirlas (promedio + tendencia) o usar PCA.\n- **Límite de crédito más bajo en default.** Mediana de LIMIT_BAL: NT$90,000 (default) vs. NT$150,000 (no default). Un menor cupo se asocia con mayor riesgo.\n- **El perfil demográfico pesa poco.** Las tasas por educación van de 7.1% a 25.2%: diferencias significativas pero con tamaño de efecto pequeño. La edad tampoco separa por sí sola.",
+    "tecnico": null,
+    "pagina": "/multivariado",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "¿Qué es PAY_0?"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "p_modelos",
+    "titulo": "Modelos",
+    "ejemplos": [
+     "explícame la página de modelos",
+     "qué hay en modelos",
+     "sección de modelos",
+     "qué modelos usaron",
+     "cuántos modelos compararon",
+     "qué clasificadores probaron",
+     "112 combinaciones"
+    ],
+    "texto": "**Modelos** resume 112 combinaciones: **7 clasificadores × 4 técnicas de balanceo × 4 métodos de optimización**, con validación cruzada anidada.\n\n- **KPIs:** mejor F1 0.546 (Random Forest), mejora de +0.168 sobre la línea base y 60% de incumplimientos detectados.\n- **Carrusel:** la mejor combinación de cada modelo.\n- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "Explícame el carrusel de modelos",
+     "¿Qué técnicas de balanceo usaron?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "mejor_modelo",
+    "titulo": "Mejor modelo",
+    "ejemplos": [
+     "cuál es el mejor modelo",
+     "mejor modelo del ranking",
+     "modelo campeón",
+     "cuál fue el mejor F1",
+     "qué modelo eligieron",
+     "cuánto mejoró sobre la línea base",
+     "qué tan bueno es el modelo",
+     "qué modelo funcionó mejor",
+     "cuál dio mejores resultados",
+     "el modelo ganador"
+    ],
+    "texto": "El mejor es **Random Forest** con **pesos de clase** y optimización **genética (deap)**:\n\n- **F1:** 0.546 ± 0.011 (línea base: 0.378, +0.168)\n- **Recall:** 60.4% · **Precisión:** 49.8%\n- **ROC-AUC:** 0.781 · **PR-AUC:** 0.558\n\nOjo: está prácticamente **empatado** con XGBoost y SVM; la diferencia es menor que la variación entre folds.",
+    "tecnico": "Validación cruzada anidada 3×3; la prueba de Nemenyi no separa a Random Forest, XGBoost y SVM (p ≥ 0.88), aunque Random Forest sí supera al árbol de decisión (p = 0.018). 15 de las 112 combinaciones quedan a menos de una desviación estándar del mejor F1.",
+    "pagina": "/modelos",
+    "sug": [
+     "Explícame la matriz de confusión",
+     "¿Qué es el F1?",
+     "¿Cómo le fue a XGBoost?"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "carrusel",
+    "titulo": "Carrusel de modelos",
+    "ejemplos": [
+     "explícame el carrusel de modelos",
+     "cómo leo las tarjetas de los modelos",
+     "qué significan las barras del carrusel",
+     "tarjetas deslizables de modelos",
+     "qué es el borde dorado",
+     "comparación de modelos",
+     "ranking de modelos"
+    ],
+    "texto": "El **carrusel** muestra una tarjeta por modelo, con su **mejor combinación**, ordenadas por F1:\n\n- puesto, familia del modelo y F1 ± desviación estándar;\n- la técnica de balanceo y el método de optimización que lo lograron;\n- barras de precisión, recall, ROC-AUC y PR-AUC;\n- su mejor F1 con cada técnica de balanceo;\n- una descripción y una nota.\n\nEl **borde dorado** marca el mejor. Ranking: 1. Random Forest (0.546), 2. XGBoost (0.545), 3. SVM (0.538), 4. KNN (0.527), 5. Árbol de decisión (0.519), 6. Regresión logística (0.517), 7. Naive Bayes (0.499).",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "¿Qué es el F1?",
+     "¿Qué es el PR-AUC?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "heat_modelos",
+    "titulo": "F1 por modelo y técnica de balanceo",
+    "ejemplos": [
+     "explícame el mapa de calor de F1",
+     "F1 por modelo y técnica de balanceo",
+     "qué técnica de balanceo es mejor",
+     "sirve balancear",
+     "sin balanceo vs pesos de clase",
+     "heatmap de modelos"
+    ],
+    "texto": "Cada celda es el **mejor F1** de un modelo con una técnica de balanceo. Sin balanceo todos rinden peor porque casi no detectan a quienes incumplen; con **pesos de clase**, Random Forest y XGBoost llegan a 0.55.",
+    "tecnico": "Friedman (28 bloques modelo × método): χ² = 59.8, p ≈ 7·10⁻¹³. F1 medio: 0.453 sin balanceo, 0.526 pesos de clase, 0.519 SMOTE y 0.513 ADASYN. «Sin balanceo» es peor que las tres (Nemenyi p ≤ 10⁻⁴); pesos de clase supera a ADASYN (p = 0.020) y empata con SMOTE (p = 0.67). Naive Bayes casi no cambia.",
+    "pagina": "/modelos",
+    "sug": [
+     "¿Qué técnicas de balanceo usaron?",
+     "Explícame la gráfica de F1 vs ROC-AUC"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "scatter_modelos",
+    "titulo": "F1 vs. ROC-AUC",
+    "ejemplos": [
+     "explícame la gráfica de F1 vs ROC-AUC",
+     "balancear mueve el umbral",
+     "dispersión de las 112 combinaciones",
+     "por qué los puntos grises están abajo",
+     "qué es el punto dorado en la dispersión de modelos",
+     "balancear mueve el umbral no la capacidad de ordenar"
+    ],
+    "texto": "Cada punto es una de las 112 combinaciones (color = técnica de balanceo; el **punto dorado brillante** es la mejor). Las que no balancean (**gris**) quedan abajo: aciertan poco con quienes incumplen. Pero **no** quedan más a la izquierda: ordenan a los clientes casi igual de bien. Lo que cambia es dónde se pone el corte entre «paga» e «incumple».",
+    "tecnico": "ROC-AUC medio: 0.758 sin balanceo, 0.761 pesos de clase, 0.754 SMOTE y 0.749 ADASYN. Con umbral 0.5 el recall pasa de 0.377 a 0.610 y la precisión baja de 0.618 a 0.460: la ganancia de F1 (0.456 → 0.523) viene sobre todo del umbral y no de un modelo que discrimine mejor.",
+    "pagina": "/modelos",
+    "sug": [
+     "¿Qué es el ROC-AUC?",
+     "¿Qué es el umbral de decisión?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "cm",
+    "titulo": "Matriz de confusión del mejor modelo",
+    "ejemplos": [
+     "explícame la matriz de confusión",
+     "qué es una matriz de confusión",
+     "falsas alarmas",
+     "no detectados",
+     "cuántos falsos negativos hay",
+     "cuántos morosos no detecta",
+     "falsos positivos y falsos negativos",
+     "cuántos morosos detecta el modelo",
+     "verdaderos positivos"
+    ],
+    "texto": "La **matriz de confusión** cruza lo real con lo que predijo Random Forest (umbral 0.5) sobre 29,965 clientes:\n\n- **Detectados:** 4,006 de 6,630 que incumplieron (60%).\n- **No detectados** (falsos negativos): 2,624.\n- **Falsas alarmas** (falsos positivos): 4,040.\n- **Bien clasificados que pagan:** 19,295.\n\nDe los 8,046 que marca como riesgosos, 50% sí incumple.",
+    "tecnico": "Predicciones out-of-fold de los tres modelos de los folds externos (AUC agrupado 0.781). Las probabilidades no están calibradas (ECE = 0.196) porque el balanceo infla la clase positiva; una recalibración isotónica la baja a 0.017 en un fold. Ajustar el umbral según el costo de cada error es el siguiente paso.",
+    "pagina": "/modelos",
+    "sug": [
+     "¿Qué es el recall?",
+     "¿Qué es el umbral de decisión?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "shap",
+    "titulo": "SHAP: variables que más pesan",
+    "ejemplos": [
+     "qué variables pesan más en el modelo",
+     "qué es SHAP",
+     "importancia de variables",
+     "interpretabilidad",
+     "qué variable es más importante para el modelo",
+     "explícame el resumen SHAP",
+     "LIME"
+    ],
+    "texto": "**SHAP** reparte la predicción de un modelo entre las variables para ver cuánto aporta cada una. En el mejor modelo:\n\n- **PAY_0 domina:** más meses de atraso en septiembre empujan hacia el default.\n- Le siguen **PAY_2 y PAY_3**, luego PAY_4 a PAY_6.\n- **Mayor LIMIT_BAL, menor riesgo.**\n- **Montos pagados y facturados:** efecto pequeño.\n\nCoincide con el EDA: el historial de pagos es la señal más fuerte y lo demográfico pesa poco.",
+    "tecnico": "SHAP del Random Forest sobre 100 clientes de un fold (notebook 06_interpretability). Con variables correlacionadas SHAP reparte la importancia entre ellas, así que el orden exacto entre PAY_2…PAY_6 es aproximado.",
+    "pagina": "/modelos",
+    "sug": [
+     "¿Qué es PAY_0?",
+     "Explícame «¿Qué empuja su riesgo?»"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "como_leer",
+    "titulo": "Qué tan distintos son los modelos",
+    "ejemplos": [
+     "cómo leer los resultados de los modelos",
+     "están empatados los modelos",
+     "qué es Nemenyi",
+     "qué es la prueba de Friedman",
+     "importa el método de optimización",
+     "son comparables los resultados de SVM",
+     "diferencia significativa entre modelos"
+    ],
+    "texto": "**Qué tan distintos son los modelos:**\n\n- Los primeros lugares están **prácticamente empatados**: 15 de 112 combinaciones quedan a menos de una desviación del mejor F1 y Nemenyi no separa ningún par.\n- Lo que sí importa es **balancear**. El método de optimización casi no cambia el F1 (0.5022 a 0.5032): conviene elegirlo por su costo.\n- SVM se corrió en Colab con GPU y no es estrictamente comparable; KNN y Naive Bayes con pesos de clase usan ajustes propios.\n- Validación cruzada anidada 3×3: con 3 folds las pruebas tienen poca potencia.",
+    "tecnico": "Friedman + Nemenyi: diferencia crítica 115.4 frente a 107.7 de diferencia máxima de rangos. La desviación del F1 usa ddof = 1.",
+    "pagina": "/modelos",
+    "sug": [
+     "¿Qué es la validación cruzada anidada?",
+     "¿Qué métodos de optimización usaron?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "metricas",
+    "titulo": "Métricas: F1, precisión, recall, ROC-AUC, PR-AUC",
+    "ejemplos": [
+     "qué es el F1",
+     "qué es el recall",
+     "qué es la precisión",
+     "qué es el ROC-AUC",
+     "qué es el PR-AUC",
+     "qué métricas usaron",
+     "diferencia entre precisión y recall",
+     "qué es AUC",
+     "qué es sensibilidad",
+     "por qué usan F1"
+    ],
+    "texto": "Métricas de la clase **default**:\n\n- **Recall:** de quienes incumplen, qué parte detecta el modelo.\n- **Precisión:** de quienes marca como riesgosos, qué parte sí incumple.\n- **F1:** equilibrio entre ambas (media armónica). Es la métrica principal.\n- **ROC-AUC:** qué tan bien *ordena* a los clientes de más a menos riesgo (0.5 = azar, 1 = perfecto).\n- **PR-AUC:** como el AUC pero centrado en la clase minoritaria.\n\nNo se usa accuracy porque, con 78 % de clientes que pagan, engaña.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "¿Qué es el desbalance de clases?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "balanceo",
+    "titulo": "Técnicas de balanceo",
+    "ejemplos": [
+     "qué técnicas de balanceo usaron",
+     "qué es SMOTE",
+     "qué es ADASYN",
+     "qué es class weight",
+     "qué son pesos de clase",
+     "class_weight balanced",
+     "sobremuestreo",
+     "cómo balancearon las clases"
+    ],
+    "texto": "Las 4 opciones de **balanceo** comparadas:\n\n- **Sin balanceo:** los datos tal cual (línea base).\n- **Pesos de clase** (class_weight): equivocarse con un cliente que incumple «cuesta» más al entrenar. Fue la mejor.\n- **SMOTE:** crea clientes sintéticos de la clase minoritaria interpolando entre vecinos.\n- **ADASYN:** como SMOTE, pero genera más ejemplos donde la clase es más difícil de aprender.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Explícame el mapa de calor de F1",
+     "¿Qué métodos de optimización usaron?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "optimizacion",
+    "titulo": "Métodos de optimización",
+    "ejemplos": [
+     "qué métodos de optimización usaron",
+     "qué es grid search",
+     "qué es random search",
+     "optimización bayesiana",
+     "qué es Optuna",
+     "algoritmo genético",
+     "qué es DEAP",
+     "hiperparámetros",
+     "cómo optimizaron los hiperparámetros"
+    ],
+    "texto": "Los **4 métodos de optimización** de hiperparámetros:\n\n- **Grid search:** prueba todas las combinaciones de una rejilla.\n- **Random search:** prueba combinaciones al azar.\n- **Bayesiana (Optuna):** usa los resultados previos para elegir la siguiente prueba.\n- **Genética (DEAP):** «evoluciona» una población de configuraciones.\n\nCasi no cambian el F1 (0.5022 a 0.5032 en promedio), así que conviene elegir por costo computacional.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Qué es la validación cruzada anidada?",
+     "¿Qué técnicas de balanceo usaron?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "validacion",
+    "titulo": "Validación cruzada anidada",
+    "ejemplos": [
+     "qué es la validación cruzada anidada",
+     "validación cruzada",
+     "folds",
+     "cómo validaron los modelos",
+     "qué son los folds externos e internos",
+     "cross validation",
+     "nested cv"
+    ],
+    "texto": "En la **validación cruzada anidada** hay dos niveles: los **3 folds internos** eligen los hiperparámetros y los **3 folds externos** miden el rendimiento con datos que el ajuste nunca vio. Así el F1 reportado no está inflado por la búsqueda de hiperparámetros. El «±» del F1 es la desviación entre los folds externos.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Están empatados los modelos?",
+     "¿Qué es el F1?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_random_forest",
+    "titulo": "Random Forest",
+    "ejemplos": [
+     "qué es bosque aleatorio",
+     "cómo le fue a bosque aleatorio",
+     "resultados de bosque aleatorio",
+     "explícame bosque aleatorio",
+     "qué es random forest",
+     "cómo le fue a random forest",
+     "resultados de random forest",
+     "explícame random forest",
+     "en qué puesto quedó bosque aleatorio",
+     "F1 de bosque aleatorio"
+    ],
+    "texto": "**Random Forest** · Ensamble de árboles (bagging) · puesto **#1** de 7.\n\nPromedia muchos árboles entrenados sobre muestras distintas de clientes; capta relaciones no lineales entre el historial de pagos y el riesgo.\n\nMejor combinación: pesos de clase + genética (deap) → **F1 0.546** ± 0.011, recall 0.604, precisión 0.498, ROC-AUC 0.781.\n\nMayor F1 medio de las 112 combinaciones. Encabeza el grupo superior junto a XGBoost y SVM, sin diferencia significativa entre los tres (Nemenyi, p ≥ 0.88).",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "Explícame el carrusel de modelos"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "m_xgboost",
+    "titulo": "XGBoost",
+    "ejemplos": [
+     "qué es xgboost",
+     "cómo le fue a xgboost",
+     "resultados de xgboost",
+     "explícame xgboost",
+     "qué es xgb",
+     "cómo le fue a xgb",
+     "resultados de xgb",
+     "explícame xgb",
+     "qué es gradient boosting",
+     "cómo le fue a gradient boosting",
+     "resultados de gradient boosting",
+     "explícame gradient boosting",
+     "en qué puesto quedó xgboost",
+     "F1 de xgboost"
+    ],
+    "texto": "**XGBoost** · Ensamble de árboles (boosting) · puesto **#2** de 7.\n\nConstruye árboles en secuencia: cada uno corrige los errores del anterior.\n\nMejor combinación: pesos de clase + bayesiana (optuna) → **F1 0.545** ± 0.012, recall 0.615, precisión 0.490, ROC-AUC 0.782.\n\nA menos de una milésima del primer lugar: la diferencia es mucho menor que la variación entre folds, así que en la práctica empata con Random Forest.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "Explícame el carrusel de modelos"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_svm",
+    "titulo": "SVM",
+    "ejemplos": [
+     "qué es svm",
+     "cómo le fue a svm",
+     "resultados de svm",
+     "explícame svm",
+     "qué es máquina de vectores de soporte",
+     "cómo le fue a máquina de vectores de soporte",
+     "resultados de máquina de vectores de soporte",
+     "explícame máquina de vectores de soporte",
+     "qué es support vector machine",
+     "cómo le fue a support vector machine",
+     "resultados de support vector machine",
+     "explícame support vector machine",
+     "en qué puesto quedó svm",
+     "F1 de svm"
+    ],
+    "texto": "**SVM** · Máquina de vectores de soporte (kernel RBF) · puesto **#3** de 7.\n\nBusca la frontera que separa mejor a quienes pagan de quienes incumplen, con un margen máximo.\n\nMejor combinación: pesos de clase + genética (deap) → **F1 0.538** ± 0.006, recall 0.621, precisión 0.475, ROC-AUC 0.763.\n\nCorrida en Colab con GPU (cuML): no es estrictamente comparable con los demás modelos y no tiene PR-AUC calculado.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "Explícame el carrusel de modelos"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_knn",
+    "titulo": "KNN",
+    "ejemplos": [
+     "qué es knn",
+     "cómo le fue a knn",
+     "resultados de knn",
+     "explícame knn",
+     "qué es k vecinos",
+     "cómo le fue a k vecinos",
+     "resultados de k vecinos",
+     "explícame k vecinos",
+     "qué es vecinos más cercanos",
+     "cómo le fue a vecinos más cercanos",
+     "resultados de vecinos más cercanos",
+     "explícame vecinos más cercanos",
+     "en qué puesto quedó knn",
+     "F1 de knn"
+    ],
+    "texto": "**KNN** · Vecinos más cercanos · puesto **#4** de 7.\n\nClasifica a cada cliente según lo que hicieron los clientes más parecidos a él.\n\nMejor combinación: pesos de clase + bayesiana (optuna) → **F1 0.527** ± 0.006, recall 0.617, precisión 0.459, ROC-AUC 0.762.\n\nCon pesos de clase usa un ajuste propio del proyecto (el voto de cada vecino se pondera por la rareza de su clase), no un mecanismo estándar de ranger (R).",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "Explícame el carrusel de modelos"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_decision_tree",
+    "titulo": "Árbol de decisión",
+    "ejemplos": [
+     "qué es árbol de decisión",
+     "cómo le fue a árbol de decisión",
+     "resultados de árbol de decisión",
+     "explícame árbol de decisión",
+     "qué es decision tree",
+     "cómo le fue a decision tree",
+     "resultados de decision tree",
+     "explícame decision tree",
+     "qué es árbol",
+     "cómo le fue a árbol",
+     "resultados de árbol",
+     "explícame árbol",
+     "en qué puesto quedó árbol de decisión",
+     "F1 de árbol de decisión"
+    ],
+    "texto": "**Árbol de decisión** · Árbol de clasificación · puesto **#5** de 7.\n\nUna secuencia de preguntas sí/no sobre las variables; fácil de leer, pero inestable.\n\nMejor combinación: pesos de clase + genética (deap) → **F1 0.519** ± 0.008, recall 0.622, precisión 0.446, ROC-AUC 0.753.\n\nQueda por debajo del grupo superior: Random Forest lo supera de forma significativa (p = 0.018).",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "Explícame el carrusel de modelos"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_logistic_regression",
+    "titulo": "Regresión logística",
+    "ejemplos": [
+     "qué es regresión logística",
+     "cómo le fue a regresión logística",
+     "resultados de regresión logística",
+     "explícame regresión logística",
+     "qué es línea base",
+     "cómo le fue a línea base",
+     "resultados de línea base",
+     "explícame línea base",
+     "qué es logistic regression",
+     "cómo le fue a logistic regression",
+     "resultados de logistic regression",
+     "explícame logistic regression",
+     "en qué puesto quedó regresión logística",
+     "F1 de regresión logística"
+    ],
+    "texto": "**Regresión logística** · Modelo lineal · línea base · puesto **#6** de 7.\n\nModelo de referencia: combina las variables de forma lineal para estimar la probabilidad de default.\n\nMejor combinación: smote + genética (deap) → **F1 0.517** ± 0.013, recall 0.619, precisión 0.444, ROC-AUC 0.747.\n\nSin balanceo es la combinación con menor F1 (0.378): solo detecta 26 % de quienes incumplen. Con SMOTE o pesos de clase sube a 0.515, con un ROC-AUC casi igual.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "Explícame el carrusel de modelos"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_naive_bayes",
+    "titulo": "Naive Bayes",
+    "ejemplos": [
+     "qué es naive bayes",
+     "cómo le fue a naive bayes",
+     "resultados de naive bayes",
+     "explícame naive bayes",
+     "qué es bayes ingenuo",
+     "cómo le fue a bayes ingenuo",
+     "resultados de bayes ingenuo",
+     "explícame bayes ingenuo",
+     "en qué puesto quedó naive bayes",
+     "F1 de naive bayes"
+    ],
+    "texto": "**Naive Bayes** · Probabilístico (gaussiano) · puesto **#7** de 7.\n\nAplica el teorema de Bayes suponiendo que las variables son independientes entre sí.\n\nMejor combinación: smote + genética (deap) → **F1 0.499** ± 0.005, recall 0.627, precisión 0.415, ROC-AUC 0.745.\n\nEse supuesto no se cumple con el historial de pagos, muy correlacionado mes a mes; por eso el balanceo casi no lo cambia (F1 entre 0.494 y 0.499).",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "¿Cuál es el mejor modelo?",
+     "Explícame el carrusel de modelos"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_conclusiones",
+    "titulo": "Conclusiones",
+    "ejemplos": [
+     "explícame la página de conclusiones",
+     "qué hay en conclusiones",
+     "página de conclusiones",
+     "qué acciones debe tomar la entidad",
+     "implicaciones para el negocio",
+     "recomendaciones finales del proyecto",
+     "limitaciones y próximos pasos",
+     "cuáles son los próximos pasos",
+     "respuesta a la pregunta de investigación",
+     "veredicto de las hipótesis"
+    ],
+    "texto": "**Conclusiones** cierra el proyecto en cuatro bloques:\n\n1. **Respuesta a la pregunta de investigación:** el atraso reciente (sobre todo PAY_0) es lo que más anticipa el default; le sigue el límite de crédito; lo demográfico aporta poco.\n2. **Veredicto de las hipótesis:** las cinco (H1–H5) se cumplen, cada una con su evidencia.\n3. **Qué significa para el banco:** usar el atraso como alerta temprana, revisar los cupos bajos y usar el modelo (Random Forest, F1 0.546) como filtro para un analista, no como decisión final.\n4. **Limitaciones y próximos pasos:** datos de 2005 y de un solo banco, análisis asociativo, umbral fijo en 0.5 que conviene ajustar según el costo de cada error.",
+    "tecnico": null,
+    "pagina": "/conclusiones",
+    "sug": [
+     "¿Se cumplieron las hipótesis?",
+     "¿Cuál es el mejor modelo?",
+     "¿Qué es el umbral de decisión?"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "p_predecir",
+    "titulo": "Predecir",
+    "ejemplos": [
+     "explícame la página Predecir",
+     "cómo funciona Predecir",
+     "cómo predigo el riesgo de un cliente",
+     "qué hace la sección predecir",
+     "simulador de riesgo",
+     "cómo evalúo un cliente",
+     "calcular el riesgo de un cliente",
+     "predecir si un cliente nuevo va a pagar",
+     "probar el modelo con un cliente"
+    ],
+    "texto": "En **Predecir** llenas los datos de un cliente y el modelo serializado calcula su riesgo **en vivo**:\n\n1. **Flujo:** datos → transformaciones → 291 árboles opinan → puntaje y decisión.\n2. **Formulario:** perfil (cupo, edad, sexo, educación, estado civil), estado de pago por mes y montos.\n3. **Resultado:** una tarjeta de crédito con el puntaje y el veredicto, señales y votos de los árboles.\n4. **Historial del cliente**, **¿Qué empuja su riesgo?** y **¿Qué pasaría si…?**\n5. **Cómo se serializó el modelo** (saveRDS/readRDS).",
+    "tecnico": null,
+    "pagina": "/predecir",
+    "sug": [
+     "¿Cómo lleno el formulario?",
+     "¿Cómo leo el puntaje de riesgo?",
+     "Explícame «¿Qué pasaría si…?»"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "formulario",
+    "titulo": "Formulario del cliente",
+    "ejemplos": [
+     "cómo lleno el formulario",
+     "qué son los perfiles de ejemplo",
+     "cliente típico",
+     "atrasos recientes",
+     "al día cupo alto",
+     "deslizadores de estado de pago",
+     "qué pongo en facturado y pagado",
+     "qué significa Otro en sexo",
+     "botones prueba un ejemplo"
+    ],
+    "texto": "El **formulario** tiene tres bloques:\n\n- **Perfil:** cupo y edad con deslizadores; sexo, educación y estado civil con tarjetas.\n- **Estado de pago por mes** (abril → septiembre): −2 sin consumo, −1 pagó todo, 0 pago mínimo, 1–8 meses de atraso.\n- **Montos por mes:** lo facturado y lo pagado en NT$.\n\nLos botones **Prueba un ejemplo** cargan tres perfiles: *cliente típico* (mediana y moda), *al día, cupo alto* y *atrasos recientes*. Con sexo «Otro» el modelo promedia las predicciones como hombre y mujer, porque el dataset solo registra esas dos.",
+    "tecnico": null,
+    "pagina": "/predecir",
+    "sug": [
+     "¿Cómo leo el puntaje de riesgo?",
+     "¿Qué son los votos de los árboles?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "gauge",
+    "titulo": "Puntaje de riesgo y veredicto",
+    "ejemplos": [
+     "cómo leo el puntaje de riesgo",
+     "qué significa el porcentaje de la tarjeta",
+     "qué es el umbral de decisión",
+     "riesgo alto o bajo",
+     "por qué 50 por ciento",
+     "es una probabilidad el puntaje",
+     "qué significa el veredicto",
+     "el puntaje de la tarjeta",
+     "qué son las señales del resultado",
+     "a partir de qué puntaje es riesgo alto",
+     "cuándo se considera riesgo alto",
+     "por qué la tarjeta está rota",
+     "qué significa la grieta de la tarjeta",
+     "por qué se parte la tarjeta",
+     "la tarjeta de crédito del resultado"
+    ],
+    "texto": "La **tarjeta de crédito** del resultado muestra el puntaje de 0 a 100 %. Desde el **umbral de 50%** el veredicto es «riesgo alto: probable incumplimiento» (dorado); por debajo, «riesgo bajo» (azul).\n\nAdemás se rompe según el riesgo: está intacta con riesgo bajo; **desde 30 %** aparece una fractura por la mitad que crece hasta cruzarla, y **desde el umbral (50 %)** la tarjeta se abre por ahí, más cuanto más alto es el puntaje.\n\nDebajo aparecen **señales** en lenguaje simple: atrasos, qué parte de lo facturado pagó y cómo es su cupo frente a los demás.\n\nCon ese umbral el modelo detecta 60% de quienes incumplen y acierta en 48% de los que marca (datos de prueba). No es una probabilidad calibrada: sirve para **ordenar y clasificar** clientes.",
+    "tecnico": "El Random Forest se entrenó con class_weight='balanced', lo que desplaza las probabilidades hacia la clase positiva: sobrestima el riesgo frente a la tasa real (22.1%). Para usar el puntaje como probabilidad habría que calibrarlo (p. ej., regresión isotónica).",
+    "pagina": "/predecir",
+    "sug": [
+     "¿Qué son los votos de los árboles?",
+     "Explícame «¿Qué empuja su riesgo?»"
+    ],
+    "mood": "alert"
+   },
+   {
+    "id": "votos",
+    "titulo": "Votos de los árboles",
+    "ejemplos": [
+     "qué son los votos de los árboles",
+     "cuadritos del bosque",
+     "árboles votan incumple",
+     "waffle de árboles",
+     "por qué el puntaje no coincide con los votos",
+     "cuántos árboles tiene el modelo"
+    ],
+    "texto": "El modelo es un bosque de **291 árboles**. Cada uno opina si el cliente incumplirá; los **cuadros** muestran qué porcentaje del bosque vota «incumple» (cada cuadro = 1 %). El puntaje promedia las *probabilidades* de todos los árboles, no solo sus votos, por eso puede diferir un poco.",
+    "tecnico": null,
+    "pagina": "/predecir",
+    "sug": [
+     "¿Cómo leo el puntaje de riesgo?",
+     "¿Qué es Random Forest?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "historial",
+    "titulo": "Historial del cliente",
+    "ejemplos": [
+     "explícame el historial del cliente",
+     "facturado vs pagado",
+     "barras azules y doradas del historial",
+     "línea de estado de pago",
+     "gráfica del historial"
+    ],
+    "texto": "En **Historial del cliente** las barras comparan lo **facturado** (azul) con lo **pagado** (dorado) cada mes, y la línea dorada es el **estado de pago**. Si la línea sube por encima de 0 hay atraso; si las barras doradas son mucho más bajas que las azules, el cliente paga poco de su deuda.",
+    "tecnico": "El modelo no usa las seis facturas por separado: las resume en nivel medio (log con signo), tendencia mensual y número de meses con saldo a favor. Los PAY_x sí entran uno por uno.",
+    "pagina": "/predecir",
+    "sug": [
+     "Explícame «¿Qué empuja su riesgo?»",
+     "¿Qué es BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "drivers",
+    "titulo": "¿Qué empuja su riesgo?",
+    "ejemplos": [
+     "explícame «¿Qué empuja su riesgo?»",
+     "qué empuja su riesgo",
+     "aporte de cada grupo de variables",
+     "puntos de riesgo que suma o resta",
+     "por qué este cliente es riesgoso",
+     "qué aumenta el riesgo del cliente",
+     "por qué el puntaje de este cliente es alto",
+     "qué explica el riesgo de este cliente",
+     "qué lo hace riesgoso"
+    ],
+    "texto": "Cada barra responde: «si en este grupo de datos el cliente fuera como un **cliente típico**, ¿cuánto cambiaría su puntaje?». Los grupos son historial de pagos, montos pagados, facturación, cupo y perfil demográfico. Barras **doradas** suben el riesgo; **azules** lo bajan.",
+    "tecnico": "Explicación local por sustitución: se reemplaza cada grupo por la mediana/moda del cliente típico y se mide la diferencia en el puntaje. Es aproximada: no suma exactamente el total porque los grupos interactúan dentro del bosque (a diferencia de SHAP).",
+    "pagina": "/predecir",
+    "sug": [
+     "Explícame «¿Qué pasaría si…?»",
+     "¿Qué es SHAP?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "whatif",
+    "titulo": "¿Qué pasaría si…?",
+    "ejemplos": [
+     "explícame «¿Qué pasaría si…?»",
+     "qué pasaría si",
+     "simulador qué pasaría si",
+     "cambiar una sola variable",
+     "curva what if",
+     "qué es la estrella este cliente",
+     "qué pasa si se atrasa un mes más"
+    ],
+    "texto": "**¿Qué pasaría si…?** muestra el puntaje que tendría *este mismo* cliente si solo cambiara una variable: atraso en septiembre, cupo, pago de septiembre o edad. La **estrella** es su situación actual y la franja superior marca el riesgo alto. Por ejemplo, con «Atraso en septiembre» ves cuánto sube el riesgo con cada mes de atraso.",
+    "tecnico": "Es una curva ICE (dependencia individual): se fija el resto y se recorre una variable. En un bosque la curva tiene escalones porque cada árbol corta en umbrales; describe al modelo, no implica causalidad.",
+    "pagina": "/predecir",
+    "sug": [
+     "Explícame «¿Qué empuja su riesgo?»",
+     "¿Cómo leo el puntaje de riesgo?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "serializacion",
+    "titulo": "Cómo se serializó el modelo",
+    "ejemplos": [
+     "cómo se serializó el modelo",
+     "qué es serializar",
+     "qué es joblib",
+     "qué es el archivo pkl",
+     "modelo_credito.pkl",
+     "cómo se guardó el modelo",
+     "cómo se entrenó el modelo de predecir",
+     "hiperparámetros del modelo serializado",
+     "métricas de prueba del modelo",
+     "qué es saveRDS",
+     "qué es el archivo rds",
+     "modelo_credito.rds",
+     "qué es readRDS",
+     "what is saveRDS",
+     "what is the rds file",
+     "what is readRDS"
+    ],
+    "texto": "**Serializar** es guardar un modelo ya entrenado en un archivo para usarlo sin reentrenar:\n\n1. **Entrenar** (`modelo/entrenar_modelo.R`) → 2. **Guardar** con `saveRDS` en `modelo_credito.rds` → 3. **Cargar** con `readRDS` al arrancar el tablero → 4. **Predecir** con `predict()` en cada cambio.\n\nEl .rds guarda el pipeline completo: transformaciones del proyecto + one-hot + Random Forest (class_weight='balanced'). En prueba (20 %): F1 0.533, recall 0.595, precisión 0.483, ROC-AUC 0.774.",
+    "tecnico": "Búsqueda: RandomizedSearchCV, 25 combinaciones, F1, 3 folds. Hiperparámetros: max_depth = 14, max_features = log2, min_samples_leaf = 10, min_samples_split = 3, n_estimators = 291. Entrenado con 23,972 clientes. Debe cargarse con la misma versión de ranger (R) (1.9.1).",
+    "pagina": "/predecir",
+    "sug": [
+     "¿Qué son los votos de los árboles?",
+     "¿Qué es Random Forest?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_enlaces",
+    "titulo": "Enlaces",
+    "ejemplos": [
+     "explícame la página de enlaces",
+     "dónde está el repositorio",
+     "link del github",
+     "dónde está el notebook",
+     "jupyter book",
+     "libro del proyecto",
+     "dónde veo el código",
+     "cómo reproduzco el análisis",
+     "enlaces"
+    ],
+    "texto": "**Enlaces** reúne:\n\n- **Sobre el proyecto:** resumen del Jupyter Book.\n- **Tarjetas de enlaces:** Libro del proyecto, Notebook del EDA, Repositorio del proyecto, Repositorio del tablero, Datos originales (UCI).\n- **Pipeline completo:** los siete notebooks en orden.\n- **Reproducir el análisis:** clonar, instalar con `install.packages()` y correr `shiny::runApp()`.",
+    "tecnico": null,
+    "pagina": "/enlaces",
+    "sug": [
+     "¿Qué notebooks tiene el pipeline?",
+     "¿Quiénes hicieron el proyecto?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "notebooks",
+    "titulo": "Pipeline de notebooks",
+    "ejemplos": [
+     "qué notebooks tiene el pipeline",
+     "pipeline completo",
+     "lista de notebooks",
+     "qué hace cada notebook",
+     "notebook 00",
+     "notebook de interpretabilidad"
+    ],
+    "texto": "**Pipeline completo** (siete notebooks del libro):\n\n- **00 · EDA: Análisis Exploratorio de Datos:** Calidad de los datos, distribuciones y relaciones entre variables.\n- **01 · Modelo base: Regresión Logística:** Modelo de referencia contra el cual se comparan los demás.\n- **02 · Setup Check:** Verificación del entorno y de las dependencias.\n- **03 · Desarrollo y prueba del pipeline completo:** Construcción y prueba del flujo de datos y modelado.\n- **04 · Ejecutar experimentos:** Ejecución de los experimentos del diseño factorial.\n- **05 · Análisis de resultados:** Comparación de los resultados de los experimentos.\n- **06 · Interpretabilidad (SHAP y LIME):** Qué variables explican las predicciones del modelo.",
+    "tecnico": null,
+    "pagina": "/enlaces",
+    "sug": [
+     "Explícame la página de enlaces",
+     "¿Qué es SHAP?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_equipo",
+    "titulo": "Equipo",
+    "ejemplos": [
+     "quiénes hicieron el proyecto",
+     "autores",
+     "quién hizo este dashboard",
+     "equipo",
+     "quiénes son las autoras",
+     "contacto de las autoras",
+     "correo de las autoras",
+     "de qué universidad son",
+     "explícame la página de equipo"
+    ],
+    "texto": "Este tablero lo hicieron:\n\n- **Katherin Barrera López** — Estudiante de Ciencia de Datos · Universidad del Norte · lkatherin@uninorte.edu.co\n- **Valeria Florez Sarmiento** — Estudiante de Ciencia de Datos · Universidad del Norte · florezvaleria@uninorte.edu.co\n\nUniversidad del Norte · Ciencia de Datos. En la página **Equipo** cada tarjeta se voltea para ver la bio, GitHub, LinkedIn y un botón que copia el correo.",
+    "tecnico": null,
+    "pagina": "/equipo",
+    "sug": [
+     "¿De qué trata el proyecto?",
+     "Explícame la página de enlaces"
+    ],
+    "mood": "happy"
+   }
+  ],
+  "paginas": {
+   "/": "Inicio (portada)",
+   "/introduccion": "Introducción",
+   "/problema": "Problema y Objetivos",
+   "/marco": "Marco Teórico",
+   "/univariado": "EDA Univariado",
+   "/multivariado": "EDA Multivariado",
+   "/modelos": "Modelos",
+   "/predecir": "Predecir",
+   "/conclusiones": "Conclusiones",
+   "/enlaces": "Enlaces",
+   "/equipo": "Equipo"
+  },
+  "intencion_de_pagina": {
+   "/": "p_inicio",
+   "/introduccion": "p_intro",
+   "/problema": "p_problema",
+   "/marco": "p_marco",
+   "/univariado": "p_uni",
+   "/multivariado": "p_multi",
+   "/modelos": "p_modelos",
+   "/predecir": "p_predecir",
+   "/conclusiones": "p_conclusiones",
+   "/enlaces": "p_enlaces",
+   "/equipo": "p_equipo"
+  },
+  "sug_de_pagina": {
+   "/": [
+    "¿De qué trata el proyecto?",
+    "¿Cómo uso el tablero?",
+    "¿Cuál es el hallazgo principal?"
+   ],
+   "/introduccion": [
+    "Explícame el vistazo rápido",
+    "¿Cómo se limpiaron los datos?",
+    "¿De dónde salen los datos?"
+   ],
+   "/problema": [
+    "¿Cuáles son las hipótesis?",
+    "¿Cuál es la pregunta de investigación?",
+    "¿Qué es el límite expuesto?"
+   ],
+   "/marco": [
+    "¿Qué es la pérdida esperada?",
+    "¿Qué es Spearman?",
+    "¿Qué es la V de Cramér?",
+    "Muéstrame el diccionario de variables"
+   ],
+   "/univariado": [
+    "Explícame la variable objetivo",
+    "Explícame el explorador univariado",
+    "¿Qué es PAY_0?",
+    "Explícame las distribuciones cuantitativas"
+   ],
+   "/multivariado": [
+    "Explícame la matriz de correlación",
+    "Explícame las tasas por educación, estado civil y sexo",
+    "Explícame el boxplot del límite de crédito",
+    "Explícame la gráfica de edad y atrasos"
+   ],
+   "/modelos": [
+    "¿Cuál es el mejor modelo?",
+    "Explícame el carrusel de modelos",
+    "Explícame la matriz de confusión",
+    "Explícame la gráfica de F1 vs ROC-AUC"
+   ],
+   "/predecir": [
+    "¿Cómo lleno el formulario?",
+    "¿Cómo leo el puntaje de riesgo?",
+    "¿Qué son los votos de los árboles?",
+    "Explícame «¿Qué pasaría si…?»"
+   ],
+   "/conclusiones": [
+    "¿Se cumplieron las hipótesis?",
+    "¿Qué implicaciones tiene para el negocio?",
+    "¿Cuáles son los próximos pasos?"
+   ],
+   "/enlaces": [
+    "¿Qué notebooks tiene el pipeline?",
+    "¿Cómo reproduzco el análisis?",
+    "¿Quiénes hicieron el proyecto?"
+   ],
+   "/equipo": [
+    "¿Quiénes hicieron el proyecto?",
+    "¿De qué trata el proyecto?"
+   ]
+  },
+  "textos": {
+   "tecnica": "Dame la explicación técnica",
+   "esta": "Explícame esta página",
+   "pagina": "esta página",
+   "primero": "Primero pregúntame por alguna parte del tablero y luego te doy su explicación técnica.",
+   "sin_tecnica": "**{t}** no tiene una versión más técnica que la que te di. Puedes preguntarme por otra parte del tablero.",
+   "version": "**Versión técnica · {t}**\n\n{x}",
+   "no_se": "No tengo eso en lo que aprendí del tablero, así que prefiero no inventar. Puedo explicarte cualquier página, gráfica o concepto del dash. Por ejemplo, de **{n}**:",
+   "hola": "¡Hola! Soy **Kyo**, el asistente de este tablero. Me entrenaron con su contenido para explicarte cada parte. Estás en **{n}**: pregúntame lo que quieras o toca una sugerencia."
+  }
+ },
+ "en": {
+  "intenciones": [
+   {
+    "id": "saludo",
+    "titulo": "Greeting",
+    "ejemplos": [
+     "hello",
+     "hi",
+     "hey",
+     "good morning",
+     "good afternoon",
+     "hey kyo",
+     "hi kyo",
+     "how are you",
+     "hello there",
+     "good evening"
+    ],
+    "texto": "Hi! I'm **Kyo**. I can explain any page, chart, variable or model of this dashboard. If you like, I'll start with the page you're on.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "Explain this page",
+     "What can I ask you?",
+     "What is the main finding?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "quien_eres",
+    "titulo": "Who Kyo is",
+    "ejemplos": [
+     "who are you",
+     "what are you",
+     "hi who are you",
+     "hey who are you",
+     "and you who are you",
+     "how do you work",
+     "how were you trained",
+     "are you an artificial intelligence",
+     "how did you learn",
+     "what were you trained on",
+     "what model do you use to answer",
+     "are you a bot",
+     "how do you know the answers",
+     "where do you get your information"
+    ],
+    "texto": "I'm **Kyo**, a bot trained on the content of this dashboard:\n\n- Each page, chart, variable and model is an *intent* with several example questions.\n- Questions are turned into **TF-IDF** vectors (words and character fragments, so I tolerate typos) and a ranger (R) **logistic regression** is trained on them.\n- When you ask, I compute the most likely intent. If your question doesn't look like anything I learned, I tell you instead of making things up.\n- The figures come from the same functions that draw the dashboard, so they match what you see.\n\nI don't connect to external services: everything runs inside the app. I understand Spanish and English.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "What can I ask you?",
+     "Explain this page"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "ayuda",
+    "titulo": "What I can ask",
+    "ejemplos": [
+     "what can I ask you",
+     "help",
+     "what can you help me with",
+     "what can you do",
+     "what do you know",
+     "give me question ideas",
+     "what topics do you know",
+     "I don't know what to ask",
+     "options"
+    ],
+    "texto": "I can explain:\n\n- **Any page**: type “explain this page” or the name of the section.\n- **Each chart**: the correlation matrix, the rates by profile, the limit boxplot, age, the variable cross, the model carousel, the confusion matrix, the risk score…\n- **Variables**: PAY_0, LIMIT_BAL, BILL_AMT, PAY_AMT, EDUCATION…\n- **Concepts**: Spearman, Cramér's V, F1, recall, SMOTE, SHAP, cross-validation…\n\nAfter each answer you can ask for **the technical explanation**.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "Explain this page",
+     "What is PAY_0?",
+     "Which is the best model?",
+     "What is F1?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "gracias",
+    "titulo": "Thanks",
+    "ejemplos": [
+     "thanks",
+     "thank you",
+     "thank you very much",
+     "great",
+     "perfect thanks",
+     "ok thanks",
+     "awesome",
+     "got it",
+     "understood",
+     "bye",
+     "goodbye",
+     "see you"
+    ],
+    "texto": "You're welcome! Tap me again whenever you like: I'm in the bottom-right corner of the screen.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "Explain this page",
+     "What is the main finding?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "esta_pagina",
+    "titulo": "This page",
+    "ejemplos": [
+     "explain this page",
+     "what is on this page",
+     "what am I looking at",
+     "what is this section about",
+     "explain this",
+     "what is this",
+     "what does this page show",
+     "summarize this page",
+     "where am I",
+     "explain what is here",
+     "what is here",
+     "explain the current page",
+     "explain this part",
+     "I don't understand this page",
+     "help me understand this section"
+    ],
+    "texto": "",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [],
+    "mood": "explaining"
+   },
+   {
+    "id": "mas_tecnico",
+    "titulo": "Technical version",
+    "ejemplos": [
+     "give me the technical explanation",
+     "technical explanation",
+     "more technical",
+     "explain it technically",
+     "give me more detail",
+     "with statistics",
+     "technical version",
+     "I want more technical detail",
+     "go deeper",
+     "technical details",
+     "technical interpretation"
+    ],
+    "texto": "",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [],
+    "mood": "explaining"
+   },
+   {
+    "id": "navegacion",
+    "titulo": "How to use the dashboard",
+    "ejemplos": [
+     "how do I use the dashboard",
+     "how do I navigate",
+     "how do I switch to dark mode",
+     "how do I hide the menu",
+     "what is the sun and moon button for",
+     "how do I go to the next page",
+     "where is the menu",
+     "dark mode",
+     "previous and next buttons",
+     "change the theme",
+     "light mode",
+     "how do I change the language",
+     "switch to spanish",
+     "ES EN button",
+     "change language"
+    ],
+    "texto": "This is how you move around the dashboard:\n\n- **Side menu** (left): the ten sections in order. The panel button in the top bar hides or shows it.\n- **ES | EN**: changes the language of the whole dashboard (and mine).\n- **Sun and moon**: switches between light and dark mode (remembered in your browser).\n- **Previous / Next**: at the end of each page they take you through the dashboard in order.\n- **Interpretations**: under each chart, the **Show interpretation** button reveals the basic and technical explanation.\n- **Me**: I'm in the bottom-right corner; tap me to open this panel and the **X** to close it.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "Explain this page",
+     "What can I ask you?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "resumen",
+    "titulo": "Project summary",
+    "ejemplos": [
+     "what is the project about",
+     "dashboard summary",
+     "summarize the whole dashboard",
+     "what is the main finding",
+     "conclusions",
+     "what did they find",
+     "what are the conclusions of the analysis",
+     "in a nutshell what does the dashboard say",
+     "main findings",
+     "what is the most important result"
+    ],
+    "texto": "The dashboard studies **29,965 credit card clients** of a Taiwanese bank (April–September 2005) to understand who stops paying the following month (22.1% did). The key points:\n\n1. **Payment history dominates.** PAY_0 is the variable most associated with default (Spearman ρ = +0.29). Clients with ≥1 month of delay in PAY_0 default in 50.4% of cases, versus 13.8% of those who are up to date.\n2. **Lower limit, higher risk.** Median LIMIT_BAL: NT$90,000 (default) vs. NT$150,000 (no default). A lower limit is associated with higher risk.\n3. **Demographics matter little.** Rates by education range from 7.1% to 25.2%: significant differences but with a small effect size. Age alone does not separate either.\n4. **Bills are redundant.** The six BILL_AMT correlate (Spearman) between 0.73 and 0.91. For linear models it is better to summarize them (average + trend) or use PCA.\n5. **Models:** the best is Random Forest with class weights (F1 0.546 vs. 0.378 for the baseline); balancing the classes helps the most.",
+    "tecnico": null,
+    "pagina": null,
+    "sug": [
+     "What is PAY_0?",
+     "Which is the best model?",
+     "Explain the correlation matrix"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "p_inicio",
+    "titulo": "Home (cover)",
+    "ejemplos": [
+     "cover page",
+     "home page",
+     "home",
+     "what is the card on the cover",
+     "why is there a credit card",
+     "the card that flips",
+     "what does the card say",
+     "main screen"
+    ],
+    "texto": "The **cover** presents the project with an interactive credit card:\n\n- **Front:** the cardholders (the authors) and the data period (April–September 2005).\n- **Back** (click to flip it): 29,965 clients, 22.1% default and the period.\n- **Start the tour** takes you to the Introduction; from there the side menu shows all sections.",
+    "tecnico": null,
+    "pagina": "/",
+    "sug": [
+     "What is the project about?",
+     "Explain the introduction",
+     "How do I use the dashboard?"
+    ],
+    "mood": "happy"
+   },
+   {
+    "id": "p_intro",
+    "titulo": "Introduction",
+    "ejemplos": [
+     "explain the introduction",
+     "what is in the introduction",
+     "introduction page",
+     "project context",
+     "what is this dashboard for",
+     "what is the context"
+    ],
+    "texto": "The **Introduction** gives the context:\n\n- **Quick look:** a chart showing that September's delay anticipates default.\n- **KPIs:** 29,965 clients, 24 variables (23 predictors + 1 target), 22.1% default and the April–September 2005 period.\n- **Introduction:** the credit card risk problem and the project's path: EDA, a comparison of 112 model combinations (the best, Random Forest with class weights, F1 0.546) and the Predict page.\n- **Sources:** the Yeh & Lien (2009) article and the UCI repository data; amounts in NT$.",
+    "tecnico": null,
+    "pagina": "/introduccion",
+    "sug": [
+     "Explain the quick look",
+     "How was the data cleaned?",
+     "Where does the data come from?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "intro_vistazo",
+    "titulo": "Quick look (PAY_0)",
+    "ejemplos": [
+     "explain the quick look",
+     "quick look chart",
+     "the bar chart in the introduction",
+     "September delay anticipates default",
+     "default rate by PAY_0",
+     "what does the first chart show",
+     "bars by September repayment status"
+    ],
+    "texto": "Each bar is the default rate for a value of **PAY_0** (September repayment status). Among those 2 or more months late, **70%** defaulted the following month; among those up to date or paying the minimum, **14%**. The dashed line is the overall rate (22.1%). Only values with at least 100 clients are shown.",
+    "tecnico": "Clients are grouped by PAY_0 and the mean of the target is computed in each group (groups with n ≥ 100). The rate jumps non-linearly from 0 (minimum payment) to 1–2 months late, so PAY_0 should be treated as ordinal or categorical (dummies) rather than linear. It is the variable with the highest Spearman ρ with default and the first in SHAP importance for the best model.",
+    "pagina": "/introduccion",
+    "sug": [
+     "What is PAY_0?",
+     "Which variables matter most in the model?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "intro_limpieza",
+    "titulo": "Data preparation",
+    "ejemplos": [
+     "how was the data cleaned",
+     "what cleaning was done",
+     "data preparation",
+     "duplicates",
+     "what happened to the undocumented codes",
+     "negative balances",
+     "why is there no PAY_1",
+     "data quality",
+     "how many duplicates were there",
+     "were rows removed",
+     "dataset cleaning",
+     "removed rows",
+     "deleted duplicated rows",
+     "repeated rows removed",
+     "were duplicated records dropped"
+    ],
+    "texto": "This is how the data was prepared:\n\n- **35** exact duplicate rows were removed (from 30,000 to 29,965).\n- **345** records with EDUCATION = 0, 5 or 6 (undocumented codes) were moved to “Others”.\n- **54** records with MARRIAGE = 0 were moved to “Others”.\n- **1,930** clients with a negative bill amount were kept: it is a credit balance and it is valid.\n- September's repayment status is called PAY_0: the dataset has no PAY_1.",
+    "tecnico": null,
+    "pagina": "/univariado",
+    "sug": [
+     "Where does the data come from?",
+     "What is EDUCATION?",
+     "What is BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "dataset",
+    "titulo": "Data source",
+    "ejemplos": [
+     "where does the data come from",
+     "which dataset did they use",
+     "data source",
+     "UCI",
+     "Yeh and Lien",
+     "how many clients are there",
+     "which bank is the data from",
+     "what year is the data from",
+     "what currency are the amounts in",
+     "how many variables does the dataset have",
+     "what period does the data cover"
+    ],
+    "texto": "The data is **Default of Credit Card Clients** (UCI Machine Learning Repository), published by Yeh & Lien (2009). It has 30,000 clients of a **Taiwanese** bank observed from **April to September 2005** (29,965 after removing duplicates), with 24 variables: limit, demographics, six months of repayment status, billed amounts and paid amounts, and whether they defaulted in October (target variable). Amounts are in **New Taiwan dollars (NT$)**.",
+    "tecnico": null,
+    "pagina": "/introduccion",
+    "sug": [
+     "What variables does it have?",
+     "What is the target variable?",
+     "How was the data cleaned?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_problema",
+    "titulo": "Problem and Objectives",
+    "ejemplos": [
+     "explain problem and objectives",
+     "what is the problem",
+     "problem statement",
+     "problem page",
+     "why is this analysis important",
+     "what problem do they solve",
+     "project rationale"
+    ],
+    "texto": "**Problem and Objectives** explains why the analysis matters:\n\n- **Statement:** the bank lends without knowing who will pay; if it gets it wrong it loses capital or, if it restricts too much, it loses income. Here 22.1% (6,630 clients) did not pay.\n- **KPIs:** clients in default, exposed limit (NT$862 M) and September billed balance of defaulters (NT$322 M).\n- **Research question**, **rationale**, **scope and limitations**.\n- **Five hypotheses** (H1–H5) and the general and specific **objectives**.",
+    "tecnico": "Errors are not symmetric: a false negative (missing someone who will default) usually costs more than a false positive. That is why F1 and default-class recall are later preferred over accuracy.",
+    "pagina": "/problema",
+    "sug": [
+     "What are the hypotheses?",
+     "What is the research question?",
+     "What are the objectives?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "pregunta",
+    "titulo": "Research question",
+    "ejemplos": [
+     "what is the research question",
+     "what question does the analysis answer",
+     "specific questions",
+     "what do they want to answer"
+    ],
+    "texto": "**Research question:** which characteristics of the client, their credit line and their recent payment history are associated with default the following month, and how strongly?\n\nSpecific questions: how the variables are distributed and what quality issues they have, how imbalanced the target is, which variables best separate defaulters and whether there is redundancy among predictors.",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "What are the hypotheses?",
+     "What are the objectives?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "hipotesis",
+    "titulo": "Hypotheses",
+    "ejemplos": [
+     "what are the hypotheses",
+     "exploratory hypotheses",
+     "H1",
+     "which hypotheses did they propose",
+     "were the hypotheses supported",
+     "hypotheses table",
+     "H2 H3 H4 H5"
+    ],
+    "texto": "The **five hypotheses** and what the dashboard shows:\n\n- **H1** Payment history (PAY_0…PAY_6) is the factor most associated with default → **supported**: PAY_0 has the highest correlation and dominates in SHAP.\n- **H2** Lower credit limit, more default → **supported**: median NT$90,000 (default) vs. NT$150,000.\n- **H3** Demographics are associated, but with a small effect → **supported**: Cramér's V < 0.1.\n- **H4** The BILL_AMT are highly correlated → **supported**: ρ between 0.73 and 0.91.\n- **H5** The default class is the minority → **supported**: 22.1% vs. 77.9%.",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "Explain the correlation matrix",
+     "What is Cramér's V?",
+     "What is class imbalance?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "objetivos",
+    "titulo": "Objectives",
+    "ejemplos": [
+     "what are the objectives",
+     "general objective",
+     "specific objectives",
+     "what is the goal of the analysis",
+     "goals of the analysis"
+    ],
+    "texto": "**General objective:** analyze the factors associated with payment default among credit card clients through a univariate and multivariate EDA.\n\n**Specific:** document data quality and cleaning (Introduction); characterize each variable and quantify the imbalance (Univariate); compare clients with and without default and detect multicollinearity (Multivariate); and define preprocessing guidelines for modeling (Key findings).",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "What are the hypotheses?",
+     "What are the key findings?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "limitaciones",
+    "titulo": "Scope and limitations",
+    "ejemplos": [
+     "limitations",
+     "scope of the analysis",
+     "what limitations does it have",
+     "can it be generalized",
+     "does correlation imply causation",
+     "is the analysis causal",
+     "causality",
+     "are the findings cause and effect",
+     "does it apply to other countries"
+    ],
+    "texto": "**Scope and limitations:**\n\n- Data from a single Taiwanese bank and a short period (April–September 2005): it should not be generalized without caution.\n- The analysis is **associative**: correlation does not imply causation.\n- The EDA does not build models; the models were trained in the project repository and are summarized in the Models section.\n- Codes −2 and 0 of PAY_x are not precisely documented; they are kept without recoding.",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "What is PAY_0?",
+     "Where does the data come from?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "kpis_problema",
+    "titulo": "Exposed limit and billed balance",
+    "ejemplos": [
+     "what is the exposed limit",
+     "September billed balance",
+     "problem KPIs",
+     "how much money is at risk",
+     "sum of the limits of defaulters"
+    ],
+    "texto": "Problem and Objectives shows three business figures:\n\n- **Clients in default:** 6,630 (22.1%).\n- **Exposed limit:** NT$862 million, the sum of the limits (LIMIT_BAL) of defaulters.\n- **Billed balance (Sep):** NT$322 million, the sum of positive BILL_AMT1 of defaulters.\n\nThey give an idea of the size of the problem for the bank.",
+    "tecnico": null,
+    "pagina": "/problema",
+    "sug": [
+     "What is LIMIT_BAL?",
+     "What is expected loss?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_marco",
+    "titulo": "Theoretical Framework",
+    "ejemplos": [
+     "explain the theoretical framework",
+     "what is in the theoretical framework",
+     "theoretical framework page",
+     "what concepts do they use",
+     "theoretical foundations",
+     "theory of the project"
+    ],
+    "texto": "The **Theoretical Framework** gathers the concepts behind the analysis, in eight cards:\n\n1. Credit risk and default (EL = PD × LGD × EAD)\n2. Credit scoring\n3. EDA (Tukey)\n4. Descriptive statistics and outliers\n5. Class imbalance\n6. Spearman and multicollinearity (VIF)\n7. χ² and Cramér's V\n8. Mann-Whitney, Kruskal-Wallis and Welch's t\n\nPlus: background (Yeh & Lien, 2009), the **variable dictionary** and the references (collapsible).",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "What is expected loss?",
+     "What is Spearman?",
+     "Show me the variable dictionary"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "perdida_esperada",
+    "titulo": "Credit risk and expected loss",
+    "ejemplos": [
+     "what is expected loss",
+     "EL = PD x LGD x EAD",
+     "what is PD",
+     "what is LGD",
+     "what is EAD",
+     "what is credit risk",
+     "what is default",
+     "what does default mean",
+     "Basel"
+    ],
+    "texto": "**Credit risk** is the possibility of losing money because a debtor does not pay. In Basel II expected loss is:\n\n$$\\mathrm{EL} = \\mathrm{PD} \\times \\mathrm{LGD} \\times \\mathrm{EAD}$$\n\n- **PD:** probability of default (what this data studies).\n- **LGD:** percentage lost if there is a default.\n- **EAD:** amount exposed at that moment.\n\nHere **default** is the binary variable indicating whether the client did not pay the following month.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "What is credit scoring?",
+     "What is the target variable?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "scoring",
+    "titulo": "Credit scoring",
+    "ejemplos": [
+     "what is credit scoring",
+     "what is a scoring model",
+     "what is scoring for",
+     "credit score",
+     "what is a risk score used for"
+    ],
+    "texto": "A **scoring model** estimates the probability of default (PD) from client data: payment behavior, limit, debt and profile. It is used to approve or reject applications, set limits and prioritize collections. Before modeling, the EDA reveals data quality, the most informative variables and the issues (collinearity, imbalance, outliers). The **Predict** section is an example of scoring with the best model.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explain the Predict page",
+     "What is EDA?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "eda_concepto",
+    "titulo": "What EDA is",
+    "ejemplos": [
+     "what is EDA",
+     "what is exploratory data analysis",
+     "what does EDA mean",
+     "Tukey",
+     "difference between univariate and multivariate",
+     "what is univariate",
+     "what is multivariate"
+    ],
+    "texto": "**Exploratory data analysis (EDA)**, proposed by John W. Tukey (1977), explores the data with summaries and charts before fitting models, to discover patterns, anomalies and assumptions.\n\n- **Univariate:** one variable at a time (frequencies, histogram, boxplot) → Univariate EDA page.\n- **Multivariate:** relationships between variables (correlations, crosses, group comparisons) → Multivariate EDA page.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explain the univariate EDA",
+     "Explain the multivariate EDA"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "atipicos",
+    "titulo": "Skewness, outliers and winsorization",
+    "ejemplos": [
+     "what is an outlier",
+     "what are outliers",
+     "Tukey rule",
+     "what is skewness",
+     "what is kurtosis",
+     "what is winsorizing",
+     "what is winsorization",
+     "what is the IQR",
+     "log transformation",
+     "what is the P99 trim",
+     "what is the 99th percentile"
+    ],
+    "texto": "- **Skewness:** which way the tail stretches; money amounts usually have a long right tail.\n- **Kurtosis:** how heavy the tails are.\n- **Tukey outlier:**\n\n$$\\begin{gathered} x < Q_1 - 1.5\\,\\mathrm{IQR} \\;\\;\\text{or} \\\\ x > Q_3 + 1.5\\,\\mathrm{IQR} \\\\ \\mathrm{IQR} = Q_3 - Q_1 \\end{gathered}$$\n\n- **Winsorizing:** capping the extremes at percentiles (e.g. P1–P99) without removing clients.\n- **Outliers in the charts:** boxplots show outliers as faint points and the axis is fitted to the whiskers (1.5·IQR), so a few huge amounts don't squash the chart; no client is removed.\n- **Signed log:** smooths long tails when there are zeros or negatives.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explain the univariate explorer",
+     "What is BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "desbalance",
+    "titulo": "Class imbalance",
+    "ejemplos": [
+     "what is class imbalance",
+     "why are the classes imbalanced",
+     "imbalanced classes",
+     "why not use accuracy",
+     "how imbalanced is the target variable",
+     "minority class"
+    ],
+    "texto": "There is **class imbalance** when one class is much less frequent. Here only 22.1% default (ratio ≈ 3.5:1), so a model that says “everyone pays” would be right 77.9% of the time while being useless. That is why:\n\n- classes are weighted (**class_weight**) or the minority is oversampled (**SMOTE**, **ADASYN**);\n- the decision threshold is adjusted;\n- evaluation uses **F1, recall and AUC** instead of accuracy.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Which balancing techniques were used?",
+     "What is F1?",
+     "Explain the target variable"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "spearman",
+    "titulo": "Spearman correlation and VIF",
+    "ejemplos": [
+     "what is Spearman",
+     "what is Spearman correlation",
+     "why Spearman and not Pearson",
+     "what is rho",
+     "what is VIF",
+     "what is multicollinearity",
+     "variance inflation factor",
+     "what is ρ"
+    ],
+    "texto": "**Spearman** (ρ) is the Pearson correlation computed on the *ranks* of the data. It measures monotonic association, requires neither linearity nor normality and is robust to extreme values. It was chosen over Pearson because the amounts are highly skewed, PAY_x is ordinal and the target is binary.\n\n**Multicollinearity:** nearly redundant predictors that inflate the variance of the coefficients. It is measured with the **VIF**:\n\n$$\\mathrm{VIF}_j = \\frac{1}{1 - R_j^2}$$\n\nA VIF > 10 (or > 5) is a warning. In this dataset the BILL_AMT exceed 20.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explain the correlation matrix",
+     "What is BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "cramer",
+    "titulo": "χ² and Cramér's V",
+    "ejemplos": [
+     "what is Cramér's V",
+     "what is Cramer's V",
+     "what is chi square",
+     "chi square test",
+     "what is χ²",
+     "categorical effect size",
+     "association between categorical variables",
+     "chi2"
+    ],
+    "texto": "The **χ² test of independence** checks whether two categorical variables are associated. Its effect size is **Cramér's V**, from 0 to 1:\n\n$$V = \\sqrt{\\frac{\\chi^2}{n \\cdot \\min(r - 1,\\; c - 1)}}$$\n\nV < 0.1 is small and V ≈ 0.3 moderate. In the dashboard, education, marital status and sex give V < 0.1: there are differences, but they are small.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explain the rates by education, marital status and sex",
+     "What is the p-value?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "pruebas_grupos",
+    "titulo": "Mann-Whitney, Kruskal-Wallis and Welch's t",
+    "ejemplos": [
+     "what is Mann-Whitney",
+     "what is Kruskal-Wallis",
+     "what is Welch's t",
+     "non-parametric tests",
+     "group comparison",
+     "what is the p-value",
+     "what does p<0.001 mean",
+     "what is statistical significance",
+     "effect size"
+    ],
+    "texto": "- **Mann-Whitney U:** compares two groups without assuming normality (uses ranks).\n- **Kruskal-Wallis H:** the same for three or more groups.\n- **Welch's t:** compares means with unequal variances.\n\nCareful with the **p-value**: with n ≈ 29,965 almost any difference is “significant” (p < 0.05). That is why the dashboard also reports the **effect size** and practical relevance.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explain the credit limit boxplot",
+     "What is Cramér's V?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "antecedentes",
+    "titulo": "Background and references",
+    "ejemplos": [
+     "background",
+     "references",
+     "bibliography",
+     "what did Yeh and Lien do",
+     "previous studies",
+     "sorting smoothing method"
+    ],
+    "texto": "**Background:** Yeh and Lien (2009) compared six techniques (logistic regression, discriminant analysis, k-nearest neighbors, Naive Bayes, neural networks and trees) on this same data and proposed the *Sorting Smoothing Method* to estimate the real probability of default. The **Models** section revisits that comparison with 7 classifiers, 4 balancing techniques and 4 optimization methods.\n\nThe **references** (collapsible at the end of the Theoretical Framework, IEEE format) include Yeh & Lien, the UCI repository, SHAP (Lundberg and Lee), explainable ML in credit risk (Bussmann et al.), class imbalance (Branco et al.), SMOTE (Fernández et al.), ISLR (James et al.), AUROC vs. AUPRC (McDermott et al.) and XGBoost (Chen and Guestrin).",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "Explain the models page",
+     "What is SMOTE?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "diccionario",
+    "titulo": "Variable dictionary",
+    "ejemplos": [
+     "show me the variable dictionary",
+     "what variables does it have",
+     "list of variables",
+     "data dictionary",
+     "what does each variable mean",
+     "what columns are there",
+     "dataset variables"
+    ],
+    "texto": "**Variable dictionary** (Theoretical Framework):\n\n- **LIMIT_BAL:** credit limit in NT$.\n- **SEX:** 1 male, 2 female.\n- **EDUCATION:** 1 graduate school, 2 university, 3 high school, 4 others.\n- **MARRIAGE:** 1 married, 2 single, 3 others.\n- **AGE:** age in years.\n- **PAY_0, PAY_2…PAY_6:** repayment status from September to April (−2/−1/0 no delay; 1…8 months late).\n- **BILL_AMT1–6:** bill amount from September (1) to April (6).\n- **PAY_AMT1–6:** amount paid from September (1) to April (6).\n- **default_payment_next_month:** 1 if the client defaults in October 2005.",
+    "tecnico": null,
+    "pagina": "/marco",
+    "sug": [
+     "What is PAY_0?",
+     "What is LIMIT_BAL?",
+     "What is the target variable?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_limit",
+    "titulo": "LIMIT_BAL (credit limit)",
+    "ejemplos": [
+     "what is LIMIT_BAL",
+     "limit_bal",
+     "credit limit",
+     "what is the limit",
+     "how much credit do clients have",
+     "credit limit distribution"
+    ],
+    "texto": "**LIMIT_BAL** is the credit limit (individual + family) in NT$. Half of the clients have NT$140,000 or less; the distribution leans slightly toward high values (mean NT$167,442).",
+    "tecnico": "n = 29,965; mean = NT$167,442; median = NT$140,000; σ = NT$129,760; IQR = NT$190,000; skewness = 0.99; kurtosis = 0.54; Tukey outliers = 0.6%. Its shape does not require drastic transformations.",
+    "pagina": "/univariado",
+    "sug": [
+     "Explain the credit limit boxplot",
+     "What is PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_age",
+    "titulo": "AGE (age)",
+    "ejemplos": [
+     "what is AGE",
+     "age of the clients",
+     "how old are the clients",
+     "age distribution",
+     "average age"
+    ],
+    "texto": "**AGE** is the age in years. Half of the clients have 34.0 or less; the distribution leans slightly toward high values (mean 35.5).",
+    "tecnico": "n = 29,965; mean = 35.5; median = 34.0; σ = 9.2; IQR = 13.0; skewness = 0.73; kurtosis = 0.04; Tukey outliers = 0.9%. Its shape does not require drastic transformations.",
+    "pagina": "/univariado",
+    "sug": [
+     "Explain the age and delays chart",
+     "Does age affect default?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_sex",
+    "titulo": "SEX (sex)",
+    "ejemplos": [
+     "what is SEX",
+     "sex variable",
+     "men and women",
+     "gender",
+     "do men or women default more",
+     "difference by sex"
+    ],
+    "texto": "**SEX** is the recorded sex: 1 = male, 2 = female (the dataset only has those two categories). The most frequent category is “Female” with 60% of clients. Full distribution: Male 39.6%, Female 60.4%. In the default rate: Men default slightly more (24.2%) than women (20.8%).",
+    "tecnico": "Nominal categorical variable with 2 levels; mode “Female” (60.4%). Frequencies: Male 39.6%, Female 60.4%. Undocumented categories in the original file were grouped into “Others” (EDUCATION 0/5/6 → 4; MARRIAGE 0 → 3).",
+    "pagina": "/univariado",
+    "sug": [
+     "Explain the rates by education, marital status and sex",
+     "What is Cramér's V?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_edu",
+    "titulo": "EDUCATION (education)",
+    "ejemplos": [
+     "what is EDUCATION",
+     "education level",
+     "clients' education",
+     "education variable",
+     "does education matter",
+     "others category in education"
+    ],
+    "texto": "**EDUCATION**: 1 = graduate school, 2 = university, 3 = high school, 4 = others (undocumented codes 0, 5 and 6 were grouped into “Others”). The most frequent category is “University” with 47% of clients. Full distribution: Graduate school 35.3%, University 46.8%, High school 16.4%, Others 1.6%.",
+    "tecnico": "Nominal categorical variable with 4 levels; mode “University” (46.8%). Frequencies: Graduate school 35.3%, University 46.8%, High school 16.4%, Others 1.6%. Undocumented categories in the original file were grouped into “Others” (EDUCATION 0/5/6 → 4; MARRIAGE 0 → 3).",
+    "pagina": "/univariado",
+    "sug": [
+     "Explain the rates by education, marital status and sex",
+     "How was the data cleaned?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_mar",
+    "titulo": "MARRIAGE (marital status)",
+    "ejemplos": [
+     "what is MARRIAGE",
+     "marital status",
+     "married and single",
+     "marital status variable"
+    ],
+    "texto": "**MARRIAGE**: 1 = married, 2 = single, 3 = others (code 0 was moved to “Others”). The most frequent category is “Single” with 53% of clients. Full distribution: Married 45.5%, Single 53.2%, Others 1.3%.",
+    "tecnico": "Nominal categorical variable with 3 levels; mode “Single” (53.2%). Frequencies: Married 45.5%, Single 53.2%, Others 1.3%. Undocumented categories in the original file were grouped into “Others” (EDUCATION 0/5/6 → 4; MARRIAGE 0 → 3).",
+    "pagina": "/univariado",
+    "sug": [
+     "Explain the rates by education, marital status and sex"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_pay",
+    "titulo": "PAY_0 … PAY_6 (repayment status)",
+    "ejemplos": [
+     "what is PAY_0",
+     "pay_0",
+     "what does PAY mean",
+     "repayment status",
+     "what do -2 -1 0 mean in PAY",
+     "payment history",
+     "PAY_2",
+     "PAY_6",
+     "months late",
+     "what is the delay",
+     "why is there no PAY_1",
+     "what does minimum payment mean in PAY"
+    ],
+    "texto": "**PAY_0, PAY_2 … PAY_6** are the monthly repayment status: PAY_0 is September and PAY_6 April.\n\n- **−2:** no use · **−1:** paid in full · **0:** minimum payment (revolving credit)\n- **1 to 8:** months late\n\nIn Sep, 77% of clients were up to date (values of 0 or less) and 23% were at least one month late. The most common value is 0 (49%). It is **the most important variable** in the analysis: PAY_0 is the variable most associated with default (Spearman ρ = +0.29). Clients with ≥1 month of delay in PAY_0 default in 50.4% of cases, versus 13.8% of those who are up to date.",
+    "tecnico": "Ordinal variable with 11 levels; mode = 0 (49.2%). Values −2, −1 and 0 account for 77.3% of cases; delay ≥1 month: 22.7%. The exact definition of −2/−1/0 is not standardized in the source: they are kept without recoding and the boundary between them is not over-interpreted. Treating it as ordinal/categorical (dummies) is recommended, since going from 'up to date' to 1 month late is not a linear effect.",
+    "pagina": "/univariado",
+    "sug": [
+     "Explain the quick look",
+     "Which variables matter most in the model?",
+     "What is BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_bill",
+    "titulo": "BILL_AMT1–6 (billing)",
+    "ejemplos": [
+     "what is BILL_AMT",
+     "bill_amt",
+     "bill amount",
+     "monthly bills",
+     "what is billing",
+     "why are there negative bills",
+     "credit balance",
+     "BILL_AMT1"
+    ],
+    "texto": "**BILL_AMT1–6** is the amount on the bill statement, from September (1) to April (6), in NT$. The six billing months look very much alike: the median is around NT$17,124–NT$22,438 and almost every month has a few clients with very high balances. Also, 6.4% of clients had a credit (negative) balance in some month.",
+    "tecnico": "Skewness between 2.66 and 3.09; Tukey outliers between 8.0% and 9.1%. Nearly identical distributions month after month (high autocorrelation of the balance). Negative amounts are economically valid (overpayment) and are kept. This redundancy anticipates severe multicollinearity (see VIF in the notebook / Multivariate page).",
+    "pagina": "/univariado",
+    "sug": [
+     "What is PAY_AMT?",
+     "What is multicollinearity?",
+     "Explain the correlation matrix"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_payamt",
+    "titulo": "PAY_AMT1–6 (amounts paid)",
+    "ejemplos": [
+     "what is PAY_AMT",
+     "pay_amt",
+     "amounts paid",
+     "how much do clients pay",
+     "monthly payments",
+     "difference between PAY and PAY_AMT",
+     "PAY_AMT1"
+    ],
+    "texto": "**PAY_AMT1–6** is what the client paid, from September (1) to April (6), in NT$. Not to be confused with PAY_x, which is the repayment *status*. Payments are small compared with bills: the monthly median ranges from NT$1,500 to NT$2,102. Between 17% and 24% of clients paid nothing in each month; a few make huge payments.",
+    "tecnico": "Skewness between 10.6 and 30.4 (up to ≈ 30), very high kurtosis and an extreme right tail (max. NT$1,684,259). The mass at zero (no payment) and the extreme values justify a signed log transformation and robust methods (medians, Mann-Whitney) before comparing groups.",
+    "pagina": "/univariado",
+    "sug": [
+     "What is BILL_AMT?",
+     "What is PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "v_target",
+    "titulo": "Target variable (default)",
+    "ejemplos": [
+     "what is the target variable",
+     "default_payment_next_month",
+     "explain the target variable",
+     "how many clients default",
+     "default rate",
+     "what percentage does not pay",
+     "default vs no default chart",
+     "what is the target",
+     "what is the overall default rate"
+    ],
+    "texto": "The **target variable** (default_payment_next_month) is 1 if the client did not pay in October 2005. About 22 out of every 100 clients (6,630 people) did not pay their card the following month. The rest (77.9%) did pay. There are many more paying clients than defaulting ones, which must be taken into account when building models.",
+    "tecnico": "Class imbalance: 77.9% (class 0) vs. 22.1% (class 1), ratio ≈ 3.5:1. An unadjusted classifier will tend to favor the majority class; class_weight='balanced', resampling (SMOTE/ADASYN) or adjusted thresholds are recommended, and evaluation should use ROC-AUC, F1 and class-1 recall instead of accuracy.",
+    "pagina": "/univariado",
+    "sug": [
+     "What is class imbalance?",
+     "Which balancing techniques were used?"
+    ],
+    "mood": "alert"
+   },
+   {
+    "id": "p_uni",
+    "titulo": "Univariate EDA",
+    "ejemplos": [
+     "explain the univariate EDA",
+     "what is in the univariate EDA",
+     "univariate page",
+     "univariate analysis",
+     "what does the univariate page show"
+    ],
+    "texto": "The **Univariate EDA** looks at each variable separately:\n\n- **KPIs:** 29,965 records, default rate 22.1%, average limit NT$167,442 and average age 35.5 years.\n- **Target variable:** bars with how many pay and how many don't (imbalance).\n- **Univariate explorer:** you choose a variable and see its histogram + boxplot or its bars.\n- **Quantitative distributions:** LIMIT_BAL, AGE and the six months of BILL_AMT and PAY_AMT as a histogram, boxplot or density.",
+    "tecnico": null,
+    "pagina": "/univariado",
+    "sug": [
+     "Explain the target variable",
+     "Explain the univariate explorer",
+     "Explain the quantitative distributions"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "uni_explorador",
+    "titulo": "Univariate explorer",
+    "ejemplos": [
+     "explain the univariate explorer",
+     "how do I use the univariate explorer",
+     "histogram with boxplot",
+     "what does the median line mean",
+     "how are outliers shown",
+     "the variable selector",
+     "what are the loose points in the boxplot"
+    ],
+    "texto": "In the **Univariate explorer** you choose any variable:\n\n- **Numeric:** histogram on top and boxplot below; the dashed gold line is the **median** and in the boxplot the dashed line is the mean.\n- **Categorical** (SEX, EDUCATION, PAY_x…): bars with the percentage of each category.\n- **Outliers:** the boxplot marks them as faint points and the axis is fitted so a few huge values don't squash the shape of the distribution; the title says how many fall outside the view.\n\nIn **Show interpretation**, the explanation updates automatically with the variable you choose.",
+    "tecnico": "The technical interpretation reports n, mean, median, σ, IQR, skewness, kurtosis and % of Tukey outliers. If |skewness| > 2 it suggests a signed log transformation. For PAY_x it reports the mode and the % with a delay ≥ 1 month, and recommends treating it as ordinal/categorical.",
+    "pagina": "/univariado",
+    "sug": [
+     "What is an outlier?",
+     "What is LIMIT_BAL?",
+     "What is PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "uni_cuant",
+    "titulo": "Distributions of quantitative variables",
+    "ejemplos": [
+     "explain the quantitative distributions",
+     "histogram boxplot density",
+     "what is density",
+     "what is a boxplot",
+     "what is a histogram",
+     "compare the six months of BILL_AMT",
+     "variable family",
+     "density chart"
+    ],
+    "texto": "The **Distributions of quantitative variables** card compares LIMIT_BAL, AGE and the BILL_AMT and PAY_AMT families (one color per month). You can view it as:\n\n- **Histogram:** how many clients fall in each range.\n- **Boxplot:** the box goes from 25% to 75% of the data, the line is the median and the whiskers the typical values.\n- **Density:** a smoothed curve of the shape of the distribution.\n\nThe view is limited to the P1–P99 range. For example, for BILL_AMT: The six billing months look very much alike: the median is around NT$17,124–NT$22,438 and almost every month has a few clients with very high balances. Also, 6.4% of clients had a credit (negative) balance in some month.",
+    "tecnico": "Skewness between 2.66 and 3.09; Tukey outliers between 8.0% and 9.1%. Nearly identical distributions month after month (high autocorrelation of the balance). Negative amounts are economically valid (overpayment) and are kept. This redundancy anticipates severe multicollinearity (see VIF in the notebook / Multivariate page).",
+    "pagina": "/univariado",
+    "sug": [
+     "What is PAY_AMT?",
+     "What is an outlier?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_multi",
+    "titulo": "Multivariate EDA",
+    "ejemplos": [
+     "explain the multivariate EDA",
+     "what is in the multivariate page",
+     "multivariate page",
+     "multivariate analysis",
+     "what does the multivariate page show"
+    ],
+    "texto": "The **Multivariate EDA** studies relationships between variables and with default:\n\n1. **Spearman correlation matrix**\n2. **Default by education, marital status and sex**\n3. **Credit limit by default** (boxplots)\n4. **Age and delay patterns** (three views)\n5. **Interactive variable cross module**\n6. **Scatter matrix**\n7. **Key multivariate findings**",
+    "tecnico": null,
+    "pagina": "/multivariado",
+    "sug": [
+     "Explain the correlation matrix",
+     "Explain the rates by education, marital status and sex",
+     "What are the key findings?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "corr",
+    "titulo": "Spearman correlation matrix",
+    "ejemplos": [
+     "explain the correlation matrix",
+     "correlation heatmap",
+     "what do the colors of the matrix mean",
+     "correlations between variables",
+     "which variable is most related to default",
+     "gold block in the matrix",
+     "Spearman matrix"
+    ],
+    "texto": "Each cell is the Spearman correlation between two variables: **gold** = direct relationship, **blue** = inverse, cream = almost none. The six monthly bills (BILL_AMT) move almost identically: whoever owes a lot one month usually owes a lot the next, which is why a large gold block appears. The repayment statuses (PAY) are also similar to each other. In contrast, what was actually paid (PAY_AMT) is barely related to anything. The variable most linked to default is PAY_0.",
+    "tecnico": "Spearman (ρ): correlation among BILL_AMT1–6 from 0.73 to 0.91 (severe multicollinearity; the notebook's VIF exceeds 20 for BILL_AMT2–5); among PAY_x from 0.47 to 0.82; among PAY_AMT from 0.45 to 0.55. Strongest association with default (|ρ|): PAY_0 (+0.29), PAY_2 (+0.22), PAY_3 (+0.19), PAY_4 (+0.17). Spearman is used instead of Pearson because the monetary variables are highly skewed with extreme tails, PAY_x is ordinal and the target is binary; ranks require neither linearity nor normality. Recommendation: do not use the six BILL_AMT separately in linear models (use average level + trend, only the most recent one, or PCA).",
+    "pagina": "/multivariado",
+    "sug": [
+     "What is Spearman?",
+     "What is multicollinearity?",
+     "What is PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "rates",
+    "titulo": "Default by education, marital status and sex",
+    "ejemplos": [
+     "explain the rates by education, marital status and sex",
+     "default rate by demographic profile",
+     "gold and blue bars",
+     "default by education",
+     "default by marital status",
+     "who defaults more",
+     "demographic profile",
+     "does sex affect default"
+    ],
+    "texto": "Each bar is the default rate of a group; the dashed line is the overall rate (22.1%). **Gold** bars are above average and **blue** ones below. Men default slightly more (24.2%) than women (20.8%). By education, the group with the most defaults is “High school” (25.2%) and the lowest is “Others” (7.1%). The differences exist but are moderate: the demographic profile explains little compared with payment history.",
+    "tecnico": "χ² EDUCATION = 160.5 (p<0.001, Cramér's V = 0.073); MARRIAGE = 27.5 (p<0.001, V = 0.030); SEX = 47.1 (p<0.001, V = 0.040). With n ≈ 29,965 almost any difference is significant; the effect sizes (V < 0.1) are small, so what matters is the magnitude, not the p-value. Rates by MARRIAGE: Married 23.5%, Single 20.9%, Others 23.6%.",
+    "pagina": "/multivariado",
+    "sug": [
+     "What is Cramér's V?",
+     "What is EDUCATION?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "limit_box",
+    "titulo": "Credit limit by default",
+    "ejemplos": [
+     "explain the credit limit boxplot",
+     "credit limit by default",
+     "LIMIT_BAL by default",
+     "do defaulters have a lower limit",
+     "log scale of the boxplot",
+     "LIMIT_BAL boxplot",
+     "how do I read the boxplot",
+     "limit of those who don't pay vs those who pay",
+     "median limit by default"
+    ],
+    "texto": "There are two boxes: **blue** = clients who paid, **gold** = those who defaulted. The line inside the box is the median. Half of the clients who defaulted had a limit of NT$90,000 or less, compared with NT$150,000 for those who paid. In other words, defaulters tend to have lower credit lines. You can switch to a **logarithmic** scale to see low values better.",
+    "tecnico": "Mean: NT$178,085 (no default) vs. NT$129,985 (default); median NT$150,000 vs. NT$90,000. Mann-Whitney U = 95,604,368 (p<0.001); Welch's t = 29.02 (p<0.001). A significant and business-relevant difference: a high limit acts as a proxy for a good prior credit rating. The distribution is strongly right-skewed, so non-parametric tests are preferred (toggle the log scale).",
+    "pagina": "/multivariado",
+    "sug": [
+     "What is Mann-Whitney?",
+     "What is LIMIT_BAL?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "age",
+    "titulo": "Age and delay patterns",
+    "ejemplos": [
+     "explain the age and delays chart",
+     "does age affect default",
+     "age and delay patterns",
+     "average delay by month and age group",
+     "percentage late by age",
+     "default rate by age",
+     "do young people default more",
+     "age heatmap",
+     "do older clients fall behind on payments",
+     "falling behind by age group",
+     "late payments by age"
+    ],
+    "texto": "The **Age and delay patterns** card has three views:\n\n- **Average delay by month:** All ages follow a similar shape: the average delay rises toward the last months (September). The group with the highest delay in the most recent month is 21–25 years (0.23) and the lowest is 31–35 (-0.11).\n- **% with delay ≥ 1 month:** Each cell shows what percentage of that age group was at least one month late. The highest value is at 61+ years, in Sep (28.3%). Differences between ages are small compared with differences between months.\n- **Default rate by age:** Risk is highest in the 61+ age group (26.8%) and lowest in the 31–35 group (19.4%). The relationship with age is mild and not as strong as that of payment history.",
+    "tecnico": "Spearman correlation AGE–PAY_0: ρ = -0.064 (p<0.001), a very weak relationship. PAY averages mix the codes −2/−1/0 (no delay) with delays ≥1, so they are complemented by the % late view. Share with PAY ≥ 1 between 8.4% and 28.3%. Spearman AGE–PAY_0: ρ = -0.064 (p<0.001). Age adds marginal information; the repayment status of previous months is the dominant predictor (see SHAP in the notebook). Default rate by group between 19.4% and 26.8% (overall 22.1%). Possibly non-linear pattern (a mild U shape); the extreme age groups have fewer observations and therefore less stable estimates. AGE should be considered with non-linear terms or binned in parametric models.",
+    "pagina": "/multivariado",
+    "sug": [
+     "What is AGE?",
+     "What is PAY_0?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "cross",
+    "titulo": "Interactive variable cross module",
+    "ejemplos": [
+     "explain the variable cross",
+     "interactive module",
+     "how do I use the variable cross",
+     "X variable Y variable color",
+     "which chart appears in the cross",
+     "how are outliers handled in the cross",
+     "cross two variables"
+    ],
+    "texto": "In the **variable cross** you choose **X**, **Y** and, optionally, a third one as **color/group**. The chart type adjusts automatically:\n\n- numeric × numeric → **scatter** with a trend line;\n- categorical × numeric → **boxplots** by group;\n- categorical × default → **rate bars**;\n- categorical × categorical → **heatmap**.\n\nIn the boxplots the whiskers reach 1.5·IQR and outliers show as faint points; the axis is fitted to the whiskers so a few huge amounts don't distort the scale. The interpretation (**Show interpretation** button) changes with your choice.",
+    "tecnico": "Depending on the type of pair, Spearman, Mann-Whitney / Kruskal-Wallis or χ² with Cramér's V are reported. With n ≈ 30,000 the p-value is almost always significant, so the effect size matters.",
+    "pagina": "/multivariado",
+    "sug": [
+     "What is Kruskal-Wallis?",
+     "What is Cramér's V?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "splom",
+    "titulo": "Scatter matrix",
+    "ejemplos": [
+     "explain the scatter matrix",
+     "scatter matrix",
+     "splom",
+     "blue and gold points",
+     "cross several variables at once",
+     "scatter matrix of 2 to 6 variables"
+    ],
+    "texto": "The **scatter matrix** crosses 2 to 6 numeric variables at once on a sample of 1,500 clients. Each point is a client: **blue** = paid, **gold** = defaulted. If the gold points cluster in one area, that combination separates risky clients. The interpretation shows which pair of variables is most similar.",
+    "tecnico": "The pairs with the highest Spearman |ρ| are reported; useful to detect collinearity between predictors and regions where class 1 concentrates.",
+    "pagina": "/multivariado",
+    "sug": [
+     "Explain the correlation matrix",
+     "Explain the variable cross"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "hallazgos",
+    "titulo": "Key multivariate findings",
+    "ejemplos": [
+     "what are the key findings",
+     "multivariate findings",
+     "findings cards",
+     "what does the multivariate conclude",
+     "multivariate summary",
+     "conclusions of the multivariate EDA",
+     "findings on relationships between variables"
+    ],
+    "texto": "**Key multivariate findings:**\n\n- **Payment history dominates.** PAY_0 is the variable most associated with default (Spearman ρ = +0.29). Clients with ≥1 month of delay in PAY_0 default in 50.4% of cases, versus 13.8% of those who are up to date.\n- **Multicollinearity in billing.** The six BILL_AMT correlate (Spearman) between 0.73 and 0.91. For linear models it is better to summarize them (average + trend) or use PCA.\n- **Lower credit limit among defaulters.** Median LIMIT_BAL: NT$90,000 (default) vs. NT$150,000 (no default). A lower limit is associated with higher risk.\n- **The demographic profile matters little.** Rates by education range from 7.1% to 25.2%: significant differences but with a small effect size. Age alone does not separate either.",
+    "tecnico": null,
+    "pagina": "/multivariado",
+    "sug": [
+     "Which is the best model?",
+     "What is PAY_0?"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "p_modelos",
+    "titulo": "Models",
+    "ejemplos": [
+     "explain the models page",
+     "what is in models",
+     "models section",
+     "which models did they use",
+     "how many models did they compare",
+     "which classifiers did they try",
+     "112 combinations"
+    ],
+    "texto": "**Models** summarizes 112 combinations: **7 classifiers × 4 balancing techniques × 4 optimization methods**, with nested cross-validation.\n\n- **KPIs:** best F1 0.546 (Random Forest), +0.168 over the baseline and 60% of defaults detected.\n- **Carousel:** the best combination of each model.\n- **F1 by model and technique** (heatmap) and **F1 vs. ROC-AUC** (scatter).\n- **Confusion matrix** of the best model and **SHAP summary**.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "Explain the model carousel",
+     "Which balancing techniques were used?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "mejor_modelo",
+    "titulo": "Best model",
+    "ejemplos": [
+     "which is the best model",
+     "what is the best model",
+     "top model in the ranking",
+     "champion model",
+     "what was the best F1",
+     "which model was chosen",
+     "how much did it improve over the baseline",
+     "how good is the model",
+     "which model worked best",
+     "the winning model"
+    ],
+    "texto": "The best is **Random Forest** with **class weights** and **genetic (deap)** optimization:\n\n- **F1:** 0.546 ± 0.011 (baseline: 0.378, +0.168)\n- **Recall:** 60.4% · **Precision:** 49.8%\n- **ROC-AUC:** 0.781 · **PR-AUC:** 0.558\n\nNote: it is practically **tied** with XGBoost and SVM; the difference is smaller than the variation between folds.",
+    "tecnico": "Nested 3×3 cross-validation; the Nemenyi test does not separate Random Forest, XGBoost and SVM (p ≥ 0.88), although Random Forest does beat the decision tree (p = 0.018). 15 of the 112 combinations are within one standard deviation of the best F1.",
+    "pagina": "/modelos",
+    "sug": [
+     "Explain the confusion matrix",
+     "What is F1?",
+     "How did XGBoost do?"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "carrusel",
+    "titulo": "Model carousel",
+    "ejemplos": [
+     "explain the model carousel",
+     "how do I read the model cards",
+     "what do the carousel bars mean",
+     "sliding model cards",
+     "what is the gold border",
+     "model comparison",
+     "model ranking"
+    ],
+    "texto": "The **carousel** shows one card per model, with its **best combination**, ordered by F1:\n\n- rank, model family and F1 ± standard deviation;\n- the balancing technique and optimization method that achieved it;\n- precision, recall, ROC-AUC and PR-AUC bars;\n- its best F1 with each balancing technique;\n- a description and a note.\n\nThe **gold border** marks the best. Ranking: 1. Random Forest (0.546), 2. XGBoost (0.545), 3. SVM (0.538), 4. KNN (0.527), 5. Decision tree (0.519), 6. Logistic regression (0.517), 7. Naive Bayes (0.499).",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "What is F1?",
+     "What is PR-AUC?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "heat_modelos",
+    "titulo": "F1 by model and balancing technique",
+    "ejemplos": [
+     "explain the F1 heatmap",
+     "F1 by model and balancing technique",
+     "which balancing technique is best",
+     "does balancing help",
+     "no balancing vs class weights",
+     "models heatmap"
+    ],
+    "texto": "Each cell is a model's **best F1** with a balancing technique. Without balancing all of them perform worse because they barely detect defaulters; with **class weights**, Random Forest and XGBoost reach 0.55.",
+    "tecnico": "Friedman (28 model × method blocks): χ² = 59.8, p ≈ 7·10⁻¹³. Mean F1: 0.453 no balancing, 0.526 class weights, 0.519 SMOTE and 0.513 ADASYN. “No balancing” is worse than all three (Nemenyi p ≤ 10⁻⁴); class weights beat ADASYN (p = 0.020) and tie with SMOTE (p = 0.67). Naive Bayes barely changes.",
+    "pagina": "/modelos",
+    "sug": [
+     "Which balancing techniques were used?",
+     "Explain the F1 vs ROC-AUC chart"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "scatter_modelos",
+    "titulo": "F1 vs. ROC-AUC",
+    "ejemplos": [
+     "explain the F1 vs ROC-AUC chart",
+     "balancing moves the threshold",
+     "scatter of the 112 combinations",
+     "why are the grey points at the bottom",
+     "what is the gold dot in the models scatter",
+     "balancing moves the threshold not the ranking ability"
+    ],
+    "texto": "Each point is one of the 112 combinations (color = balancing technique; the **bright gold dot** is the best). Those without balancing (**grey**) sit at the bottom: they rarely get defaulters right. But they are **not** further left: they rank clients almost equally well. What changes is where the cut between “pays” and “defaults” is placed.",
+    "tecnico": "Mean ROC-AUC: 0.758 no balancing, 0.761 class weights, 0.754 SMOTE and 0.749 ADASYN. At a 0.5 threshold recall goes from 0.377 to 0.610 and precision drops from 0.618 to 0.460: the F1 gain (0.456 → 0.523) comes mostly from the threshold, not from a model that discriminates better.",
+    "pagina": "/modelos",
+    "sug": [
+     "What is ROC-AUC?",
+     "What is the decision threshold?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "cm",
+    "titulo": "Confusion matrix of the best model",
+    "ejemplos": [
+     "explain the confusion matrix",
+     "what is a confusion matrix",
+     "false alarms",
+     "missed defaulters",
+     "how many false negatives",
+     "how many defaulters are missed",
+     "false positives and false negatives",
+     "how many defaulters does the model detect",
+     "true positives"
+    ],
+    "texto": "The **confusion matrix** crosses reality with what Random Forest predicted (threshold 0.5) on 29,965 clients:\n\n- **Detected:** 4,006 of 6,630 who defaulted (60%).\n- **Missed** (false negatives): 2,624.\n- **False alarms** (false positives): 4,040.\n- **Correctly classified payers:** 19,295.\n\nOf the 8,046 it flags as risky, 50% actually default.",
+    "tecnico": "Out-of-fold predictions from the three outer-fold models (pooled AUC 0.781). The probabilities are not calibrated (ECE = 0.196) because balancing inflates the positive class; isotonic recalibration lowers it to 0.017 on one fold. Tuning the threshold to the cost of each error is the next step.",
+    "pagina": "/modelos",
+    "sug": [
+     "What is recall?",
+     "What is the decision threshold?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "shap",
+    "titulo": "SHAP: most important variables",
+    "ejemplos": [
+     "which variables matter most in the model",
+     "what is SHAP",
+     "feature importance",
+     "interpretability",
+     "which variable is most important for the model",
+     "explain the SHAP summary",
+     "LIME"
+    ],
+    "texto": "**SHAP** splits a model's prediction among the variables to see how much each one contributes. In the best model:\n\n- **PAY_0 dominates:** more months late in September push toward default.\n- **PAY_2 and PAY_3** follow, then PAY_4 to PAY_6.\n- **Higher LIMIT_BAL, lower risk.**\n- **Paid and billed amounts:** small effect.\n\nIt matches the EDA: payment history is the strongest signal and demographics matter little.",
+    "tecnico": "Random Forest SHAP on 100 clients from one fold (notebook 06_interpretability). With correlated variables SHAP splits importance among them, so the exact order among PAY_2…PAY_6 is approximate.",
+    "pagina": "/modelos",
+    "sug": [
+     "What is PAY_0?",
+     "Explain “What drives their risk?”"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "como_leer",
+    "titulo": "How different the models are",
+    "ejemplos": [
+     "how to read the model results",
+     "are the models tied",
+     "what is Nemenyi",
+     "what is the Friedman test",
+     "does the optimization method matter",
+     "are the SVM results comparable",
+     "significant difference between models"
+    ],
+    "texto": "**How different the models are:**\n\n- The top places are **practically tied**: 15 of 112 combinations are within one deviation of the best F1 and Nemenyi separates no pair.\n- What does matter is **balancing**. The optimization method barely changes F1 (0.5022 to 0.5032): it should be chosen by its cost.\n- SVM was run on Colab with a GPU and is not strictly comparable; KNN and Naive Bayes with class weights use project-specific adjustments.\n- Nested 3×3 cross-validation: with 3 folds the tests have low power.",
+    "tecnico": "Friedman + Nemenyi: critical difference 115.4 versus a maximum rank difference of 107.7. The F1 deviation uses ddof = 1.",
+    "pagina": "/modelos",
+    "sug": [
+     "What is nested cross-validation?",
+     "Which optimization methods were used?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "metricas",
+    "titulo": "Metrics: F1, precision, recall, ROC-AUC, PR-AUC",
+    "ejemplos": [
+     "what is F1",
+     "what is the F1 score",
+     "what is recall",
+     "what is precision",
+     "what is ROC-AUC",
+     "what is PR-AUC",
+     "which metrics did they use",
+     "difference between precision and recall",
+     "what is AUC",
+     "what is sensitivity",
+     "why use F1"
+    ],
+    "texto": "Metrics for the **default** class:\n\n- **Recall:** of those who default, what share the model detects.\n- **Precision:** of those it flags as risky, what share actually defaults.\n- **F1:** balance between both (harmonic mean). It is the main metric.\n- **ROC-AUC:** how well it *ranks* clients from most to least risky (0.5 = chance, 1 = perfect).\n- **PR-AUC:** like AUC but focused on the minority class.\n\nAccuracy is not used because, with 78% of clients paying, it is misleading.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "What is class imbalance?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "balanceo",
+    "titulo": "Balancing techniques",
+    "ejemplos": [
+     "which balancing techniques were used",
+     "what is SMOTE",
+     "what is ADASYN",
+     "what is class weight",
+     "what are class weights",
+     "class_weight balanced",
+     "oversampling",
+     "how were the classes balanced"
+    ],
+    "texto": "The 4 **balancing** options compared:\n\n- **No balancing:** the data as is (baseline).\n- **Class weights** (class_weight): getting a defaulter wrong “costs” more during training. It was the best.\n- **SMOTE:** creates synthetic minority-class clients by interpolating between neighbors.\n- **ADASYN:** like SMOTE, but generates more examples where the class is harder to learn.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Explain the F1 heatmap",
+     "Which optimization methods were used?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "optimizacion",
+    "titulo": "Optimization methods",
+    "ejemplos": [
+     "which optimization methods were used",
+     "what is grid search",
+     "what is random search",
+     "bayesian optimization",
+     "what is Optuna",
+     "genetic algorithm",
+     "what is DEAP",
+     "hyperparameters",
+     "how were the hyperparameters tuned"
+    ],
+    "texto": "The **4 hyperparameter optimization methods**:\n\n- **Grid search:** tries every combination in a grid.\n- **Random search:** tries random combinations.\n- **Bayesian (Optuna):** uses previous results to choose the next trial.\n- **Genetic (DEAP):** “evolves” a population of configurations.\n\nThey barely change F1 (0.5022 to 0.5032 on average), so it is best to choose by computational cost.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "What is nested cross-validation?",
+     "Which balancing techniques were used?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "validacion",
+    "titulo": "Nested cross-validation",
+    "ejemplos": [
+     "what is nested cross-validation",
+     "cross-validation",
+     "folds",
+     "how were the models validated",
+     "what are the outer and inner folds",
+     "cross validation",
+     "nested cv"
+    ],
+    "texto": "In **nested cross-validation** there are two levels: the **3 inner folds** choose the hyperparameters and the **3 outer folds** measure performance on data the tuning never saw. That way the reported F1 is not inflated by the hyperparameter search. The “±” of F1 is the deviation across the outer folds.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Are the models tied?",
+     "What is F1?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_random_forest",
+    "titulo": "Random Forest",
+    "ejemplos": [
+     "what is random forest",
+     "how did random forest do",
+     "random forest results",
+     "explain random forest",
+     "what rank did random forest get",
+     "F1 of random forest"
+    ],
+    "texto": "**Random Forest** · Tree ensemble (bagging) · rank **#1** of 7.\n\nAverages many trees trained on different samples of clients; captures non-linear relationships between payment history and risk.\n\nBest combination: class weights + genetic (deap) → **F1 0.546** ± 0.011, recall 0.604, precision 0.498, ROC-AUC 0.781.\n\nHighest mean F1 of the 112 combinations. It leads the top group together with XGBoost and SVM, with no significant difference among the three (Nemenyi, p ≥ 0.88).",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "Explain the model carousel"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "m_xgboost",
+    "titulo": "XGBoost",
+    "ejemplos": [
+     "what is xgboost",
+     "how did xgboost do",
+     "xgboost results",
+     "explain xgboost",
+     "what is xgb",
+     "how did xgb do",
+     "xgb results",
+     "explain xgb",
+     "what is gradient boosting",
+     "how did gradient boosting do",
+     "gradient boosting results",
+     "explain gradient boosting",
+     "what rank did xgboost get",
+     "F1 of xgboost"
+    ],
+    "texto": "**XGBoost** · Tree ensemble (boosting) · rank **#2** of 7.\n\nBuilds trees in sequence: each one corrects the errors of the previous one.\n\nBest combination: class weights + bayesian (optuna) → **F1 0.545** ± 0.012, recall 0.615, precision 0.490, ROC-AUC 0.782.\n\nLess than a thousandth behind first place: the difference is much smaller than the variation between folds, so in practice it ties with Random Forest.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "Explain the model carousel"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_svm",
+    "titulo": "SVM",
+    "ejemplos": [
+     "what is svm",
+     "how did svm do",
+     "svm results",
+     "explain svm",
+     "what is support vector machine",
+     "how did support vector machine do",
+     "support vector machine results",
+     "explain support vector machine",
+     "what rank did svm get",
+     "F1 of svm"
+    ],
+    "texto": "**SVM** · Support vector machine (RBF kernel) · rank **#3** of 7.\n\nLooks for the boundary that best separates payers from defaulters, with maximum margin.\n\nBest combination: class weights + genetic (deap) → **F1 0.538** ± 0.006, recall 0.621, precision 0.475, ROC-AUC 0.763.\n\nRun on Colab with a GPU (cuML): not strictly comparable with the other models and without a computed PR-AUC.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "Explain the model carousel"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_knn",
+    "titulo": "KNN",
+    "ejemplos": [
+     "what is knn",
+     "how did knn do",
+     "knn results",
+     "explain knn",
+     "what is k nearest neighbors",
+     "how did k nearest neighbors do",
+     "k nearest neighbors results",
+     "explain k nearest neighbors",
+     "what is nearest neighbors",
+     "how did nearest neighbors do",
+     "nearest neighbors results",
+     "explain nearest neighbors",
+     "what rank did knn get",
+     "F1 of knn"
+    ],
+    "texto": "**KNN** · Nearest neighbors · rank **#4** of 7.\n\nClassifies each client according to what the most similar clients did.\n\nBest combination: class weights + bayesian (optuna) → **F1 0.527** ± 0.006, recall 0.617, precision 0.459, ROC-AUC 0.762.\n\nWith class weights it uses a project-specific adjustment (each neighbor's vote is weighted by the rarity of its class), not a standard ranger (R) mechanism.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "Explain the model carousel"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_decision_tree",
+    "titulo": "Decision tree",
+    "ejemplos": [
+     "what is decision tree",
+     "how did decision tree do",
+     "decision tree results",
+     "explain decision tree",
+     "what is tree",
+     "how did tree do",
+     "tree results",
+     "explain tree",
+     "what rank did decision tree get",
+     "F1 of decision tree"
+    ],
+    "texto": "**Decision tree** · Classification tree · rank **#5** of 7.\n\nA sequence of yes/no questions about the variables; easy to read, but unstable.\n\nBest combination: class weights + genetic (deap) → **F1 0.519** ± 0.008, recall 0.622, precision 0.446, ROC-AUC 0.753.\n\nIt falls below the top group: Random Forest beats it significantly (p = 0.018).",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "Explain the model carousel"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_logistic_regression",
+    "titulo": "Logistic regression",
+    "ejemplos": [
+     "what is logistic regression",
+     "how did logistic regression do",
+     "logistic regression results",
+     "explain logistic regression",
+     "what is baseline",
+     "how did baseline do",
+     "baseline results",
+     "explain baseline",
+     "what rank did logistic regression get",
+     "F1 of logistic regression"
+    ],
+    "texto": "**Logistic regression** · Linear model · baseline · rank **#6** of 7.\n\nReference model: combines the variables linearly to estimate the probability of default.\n\nBest combination: smote + genetic (deap) → **F1 0.517** ± 0.013, recall 0.619, precision 0.444, ROC-AUC 0.747.\n\nWithout balancing it is the combination with the lowest F1 (0.378): it detects only 26% of defaulters. With SMOTE or class weights it rises to 0.515, with almost the same ROC-AUC.",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "Explain the model carousel"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "m_naive_bayes",
+    "titulo": "Naive Bayes",
+    "ejemplos": [
+     "what is naive bayes",
+     "how did naive bayes do",
+     "naive bayes results",
+     "explain naive bayes",
+     "what rank did naive bayes get",
+     "F1 of naive bayes"
+    ],
+    "texto": "**Naive Bayes** · Probabilistic (Gaussian) · rank **#7** of 7.\n\nApplies Bayes' theorem assuming the variables are independent of each other.\n\nBest combination: smote + genetic (deap) → **F1 0.499** ± 0.005, recall 0.627, precision 0.415, ROC-AUC 0.745.\n\nThat assumption does not hold for payment history, which is highly correlated month to month; that is why balancing barely changes it (F1 between 0.494 and 0.499).",
+    "tecnico": null,
+    "pagina": "/modelos",
+    "sug": [
+     "Which is the best model?",
+     "Explain the model carousel"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_conclusiones",
+    "titulo": "Conclusions",
+    "ejemplos": [
+     "explain the conclusions page",
+     "what is in conclusions",
+     "conclusions page",
+     "what actions should the lender take",
+     "business implications",
+     "final recommendations of the project",
+     "limitations and next steps",
+     "what are the next steps",
+     "answer to the research question",
+     "hypothesis verdicts"
+    ],
+    "texto": "**Conclusions** closes the project in four blocks:\n\n1. **Answer to the research question:** recent delay (especially PAY_0) best anticipates default; the credit limit follows; demographics add little.\n2. **Hypothesis verdicts:** all five (H1–H5) are supported, each with its evidence.\n3. **What it means for the bank:** use delay as an early warning, review low limits and use the model (Random Forest, F1 0.546) as a filter for an analyst, not as the final decision.\n4. **Limitations and next steps:** data from 2005 and a single bank, associative analysis, a threshold fixed at 0.5 that should be tuned to the cost of each error.",
+    "tecnico": null,
+    "pagina": "/conclusiones",
+    "sug": [
+     "Were the hypotheses supported?",
+     "Which is the best model?",
+     "What is the decision threshold?"
+    ],
+    "mood": "proud"
+   },
+   {
+    "id": "p_predecir",
+    "titulo": "Predict",
+    "ejemplos": [
+     "explain the Predict page",
+     "how does Predict work",
+     "how do I predict a client's risk",
+     "what does the predict section do",
+     "risk simulator",
+     "how do I evaluate a client",
+     "calculate a client's risk",
+     "predict whether a new client will pay",
+     "test the model with a client"
+    ],
+    "texto": "In **Predict** you fill in a client's data and the serialized model computes their risk **live**:\n\n1. **Flow:** data → transformations → 291 trees give their opinion → score and decision.\n2. **Form:** profile (limit, age, sex, education, marital status), repayment status by month and amounts.\n3. **Result:** a credit card with the score and the verdict, signals and the trees' votes.\n4. **Client history**, **What drives their risk?** and **What if…?**\n5. **How the model was serialized** (saveRDS/readRDS).",
+    "tecnico": null,
+    "pagina": "/predecir",
+    "sug": [
+     "How do I fill in the form?",
+     "How do I read the risk score?",
+     "Explain “What if…?”"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "formulario",
+    "titulo": "Client form",
+    "ejemplos": [
+     "how do I fill in the form",
+     "what are the example profiles",
+     "typical client",
+     "recent delays",
+     "up to date high limit",
+     "repayment status sliders",
+     "what do I put in billed and paid",
+     "what does Other mean in sex",
+     "try an example buttons"
+    ],
+    "texto": "The **form** has three blocks:\n\n- **Profile:** limit and age with sliders; sex, education and marital status with cards.\n- **Repayment status by month** (April → September): −2 no use, −1 paid in full, 0 minimum payment, 1–8 months late.\n- **Amounts by month:** what was billed and what was paid in NT$.\n\nThe **Try an example** buttons load three profiles: *typical client* (median and mode), *up to date, high limit* and *recent delays*. With sex “Other” the model averages the predictions as male and female, because the dataset only records those two.",
+    "tecnico": null,
+    "pagina": "/predecir",
+    "sug": [
+     "How do I read the risk score?",
+     "What are the trees' votes?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "gauge",
+    "titulo": "Risk score and verdict",
+    "ejemplos": [
+     "how do I read the risk score",
+     "what does the card percentage mean",
+     "what is the decision threshold",
+     "high or low risk",
+     "why 50 percent",
+     "is the score a probability",
+     "what does the verdict mean",
+     "the score on the card",
+     "what are the result signals",
+     "from what score is it high risk",
+     "why is the card broken",
+     "what does the crack in the card mean",
+     "why does the card split",
+     "the credit card in the result",
+     "what score counts as high risk",
+     "high risk threshold",
+     "cracked credit card",
+     "the card is broken in the result",
+     "split card in predict",
+     "when is a client considered high risk",
+     "which score means high risk"
+    ],
+    "texto": "The result's **credit card** shows the score from 0 to 100%. From the **50% threshold** the verdict is “high risk: likely default” (gold); below it, “low risk” (blue).\n\nIt also breaks according to the risk: it is intact with low risk; **from 30%** a crack appears in the middle and grows until it crosses the card, and **from the threshold (50%)** the card splits open there, more the higher the score.\n\nBelow it there are **signals** in plain language: delays, what share of the bill was paid and how their limit compares with others.\n\nWith that threshold the model detects 60% of defaulters and is right about 48% of those it flags (test data). It is not a calibrated probability: it is useful to **rank and classify** clients.",
+    "tecnico": "The Random Forest was trained with class_weight='balanced', which shifts probabilities toward the positive class: it overestimates risk compared with the real rate (22.1%). To use the score as a probability it would have to be calibrated (e.g. isotonic regression).",
+    "pagina": "/predecir",
+    "sug": [
+     "What are the trees' votes?",
+     "Explain “What drives their risk?”"
+    ],
+    "mood": "alert"
+   },
+   {
+    "id": "votos",
+    "titulo": "Trees' votes",
+    "ejemplos": [
+     "what are the trees' votes",
+     "forest squares",
+     "trees vote default",
+     "trees waffle",
+     "why doesn't the score match the votes",
+     "how many trees does the model have"
+    ],
+    "texto": "The model is a forest of **291 trees**. Each one gives its opinion on whether the client will default; the **squares** show what percentage of the forest votes “default” (each square = 1%). The score averages the *probabilities* of all trees, not just their votes, so it may differ slightly.",
+    "tecnico": null,
+    "pagina": "/predecir",
+    "sug": [
+     "How do I read the risk score?",
+     "What is random forest?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "historial",
+    "titulo": "Client history",
+    "ejemplos": [
+     "explain the client history",
+     "billed vs paid",
+     "blue and gold bars in the history",
+     "repayment status line",
+     "history chart"
+    ],
+    "texto": "In **Client history** the bars compare what was **billed** (blue) with what was **paid** (gold) each month, and the gold line is the **repayment status**. If the line rises above 0 there is a delay; if the gold bars are much lower than the blue ones, the client pays little of their debt.",
+    "tecnico": "The model does not use the six bills separately: it summarizes them as average level (signed log), monthly trend and number of months with a credit balance. The PAY_x do enter one by one.",
+    "pagina": "/predecir",
+    "sug": [
+     "Explain “What drives their risk?”",
+     "What is BILL_AMT?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "drivers",
+    "titulo": "What drives their risk?",
+    "ejemplos": [
+     "explain “What drives their risk?”",
+     "what drives their risk",
+     "contribution of each variable group",
+     "risk points added or removed",
+     "why is this client risky",
+     "what increases the client's risk",
+     "why is this client's score high",
+     "what explains this client's risk",
+     "what makes them risky"
+    ],
+    "texto": "Each bar answers: “if, in this group of data, the client were like a **typical client**, how much would their score change?”. The groups are payment history, amounts paid, billing, limit and demographic profile. **Gold** bars raise the risk; **blue** ones lower it.",
+    "tecnico": "Local explanation by substitution: each group is replaced by the typical client's median/mode and the difference in the score is measured. It is approximate: it does not add up exactly to the total because the groups interact inside the forest (unlike SHAP).",
+    "pagina": "/predecir",
+    "sug": [
+     "Explain “What if…?”",
+     "What is SHAP?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "whatif",
+    "titulo": "What if…?",
+    "ejemplos": [
+     "explain “What if…?”",
+     "what if",
+     "what if simulator",
+     "change a single variable",
+     "what if curve",
+     "what is the this client star",
+     "what happens if they are one more month late"
+    ],
+    "texto": "**What if…?** shows the score *this same* client would have if only one variable changed: September delay, limit, September payment or age. The **star** is their current situation and the upper band marks high risk. For example, with “September delay” you see how much the risk rises with each month of delay.",
+    "tecnico": "It is an ICE curve (individual conditional expectation): the rest is fixed and one variable is varied. In a forest the curve has steps because each tree splits at thresholds; it describes the model and does not imply causality.",
+    "pagina": "/predecir",
+    "sug": [
+     "Explain “What drives their risk?”",
+     "How do I read the risk score?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "serializacion",
+    "titulo": "How the model was serialized",
+    "ejemplos": [
+     "how was the model serialized",
+     "what is serializing",
+     "what is joblib",
+     "what is the pkl file",
+     "modelo_credito.pkl",
+     "how was the model saved",
+     "how was the predict model trained",
+     "hyperparameters of the serialized model",
+     "test metrics of the model",
+     "qué es saveRDS",
+     "qué es el archivo rds",
+     "modelo_credito.rds",
+     "qué es readRDS",
+     "what is saveRDS",
+     "what is the rds file",
+     "what is readRDS"
+    ],
+    "texto": "**Serializing** means saving an already trained model to a file to use it without retraining:\n\n1. **Train** (`modelo/entrenar_modelo.R`) → 2. **Save** with `saveRDS` to `modelo_credito.rds` → 3. **Load** with `readRDS` when the dashboard starts → 4. **Predict** with `predict()` on each change.\n\nThe .rds stores the whole pipeline: project transformations + one-hot + Random Forest (class_weight='balanced'). On the test set (20%): F1 0.533, recall 0.595, precision 0.483, ROC-AUC 0.774.",
+    "tecnico": "Search: RandomizedSearchCV, 25 combinaciones, F1, 3 folds. Hyperparameters: max_depth = 14, max_features = log2, min_samples_leaf = 10, min_samples_split = 3, n_estimators = 291. Trained on 23,972 clients. It must be loaded with the same ranger (R) version (1.9.1).",
+    "pagina": "/predecir",
+    "sug": [
+     "What are the trees' votes?",
+     "What is random forest?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_enlaces",
+    "titulo": "Links",
+    "ejemplos": [
+     "explain the links page",
+     "where is the repository",
+     "github link",
+     "where is the notebook",
+     "jupyter book",
+     "project book",
+     "where can I see the code",
+     "how do I reproduce the analysis",
+     "links"
+    ],
+    "texto": "**Links** gathers:\n\n- **About the project:** summary of the Jupyter Book.\n- **Link cards:** Project book, EDA notebook, Project repository, Dashboard repository, Original data (UCI).\n- **Full pipeline:** the seven notebooks in order.\n- **Reproduce the analysis:** clone, install with `install.packages()` and run `shiny::runApp()`.",
+    "tecnico": null,
+    "pagina": "/enlaces",
+    "sug": [
+     "Which notebooks are in the pipeline?",
+     "Who made the project?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "notebooks",
+    "titulo": "Notebook pipeline",
+    "ejemplos": [
+     "which notebooks are in the pipeline",
+     "full pipeline",
+     "list of notebooks",
+     "what does each notebook do",
+     "notebook 00",
+     "interpretability notebook"
+    ],
+    "texto": "**Full pipeline** (the book's seven notebooks):\n\n- **00 · EDA: Exploratory Data Analysis:** Data quality, distributions and relationships between variables.\n- **01 · Baseline model: Logistic Regression:** Reference model against which the others are compared.\n- **02 · Setup Check:** Check of the environment and dependencies.\n- **03 · Development and testing of the full pipeline:** Building and testing the data and modeling flow.\n- **04 · Running the experiments:** Execution of the factorial-design experiments.\n- **05 · Results analysis:** Comparison of the experiment results.\n- **06 · Interpretability (SHAP and LIME):** Which variables explain the model's predictions.",
+    "tecnico": null,
+    "pagina": "/enlaces",
+    "sug": [
+     "Explain the links page",
+     "What is SHAP?"
+    ],
+    "mood": "explaining"
+   },
+   {
+    "id": "p_equipo",
+    "titulo": "Team",
+    "ejemplos": [
+     "who made the project",
+     "authors",
+     "who made this dashboard",
+     "team",
+     "who are the authors",
+     "contact the authors",
+     "authors' email",
+     "which university are they from",
+     "explain the team page"
+    ],
+    "texto": "This dashboard was made by:\n\n- **Katherin Barrera López** — Data Science student · Universidad del Norte · lkatherin@uninorte.edu.co\n- **Valeria Florez Sarmiento** — Data Science student · Universidad del Norte · florezvaleria@uninorte.edu.co\n\nUniversidad del Norte · Data Science. On the **Team** page each card flips to show the bio, GitHub, LinkedIn and a button that copies the email.",
+    "tecnico": null,
+    "pagina": "/equipo",
+    "sug": [
+     "What is the project about?",
+     "Explain the links page"
+    ],
+    "mood": "happy"
+   }
+  ],
+  "paginas": {
+   "/": "Home (cover)",
+   "/introduccion": "Introduction",
+   "/problema": "Problem and Objectives",
+   "/marco": "Theoretical Framework",
+   "/univariado": "Univariate EDA",
+   "/multivariado": "Multivariate EDA",
+   "/modelos": "Models",
+   "/predecir": "Predict",
+   "/conclusiones": "Conclusions",
+   "/enlaces": "Links",
+   "/equipo": "Team"
+  },
+  "intencion_de_pagina": {
+   "/": "p_inicio",
+   "/introduccion": "p_intro",
+   "/problema": "p_problema",
+   "/marco": "p_marco",
+   "/univariado": "p_uni",
+   "/multivariado": "p_multi",
+   "/modelos": "p_modelos",
+   "/predecir": "p_predecir",
+   "/conclusiones": "p_conclusiones",
+   "/enlaces": "p_enlaces",
+   "/equipo": "p_equipo"
+  },
+  "sug_de_pagina": {
+   "/": [
+    "What is the project about?",
+    "How do I use the dashboard?",
+    "What is the main finding?"
+   ],
+   "/introduccion": [
+    "Explain the quick look",
+    "How was the data cleaned?",
+    "Where does the data come from?"
+   ],
+   "/problema": [
+    "What are the hypotheses?",
+    "What is the research question?",
+    "What is the exposed limit?"
+   ],
+   "/marco": [
+    "What is expected loss?",
+    "What is Spearman?",
+    "What is Cramér's V?",
+    "Show me the variable dictionary"
+   ],
+   "/univariado": [
+    "Explain the target variable",
+    "Explain the univariate explorer",
+    "What is PAY_0?",
+    "Explain the quantitative distributions"
+   ],
+   "/multivariado": [
+    "Explain the correlation matrix",
+    "Explain the rates by education, marital status and sex",
+    "Explain the credit limit boxplot",
+    "Explain the age and delays chart"
+   ],
+   "/modelos": [
+    "Which is the best model?",
+    "Explain the model carousel",
+    "Explain the confusion matrix",
+    "Explain the F1 vs ROC-AUC chart"
+   ],
+   "/predecir": [
+    "How do I fill in the form?",
+    "How do I read the risk score?",
+    "What are the trees' votes?",
+    "Explain “What if…?”"
+   ],
+   "/conclusiones": [
+    "Were the hypotheses supported?",
+    "What are the business implications?",
+    "What are the next steps?"
+   ],
+   "/enlaces": [
+    "Which notebooks are in the pipeline?",
+    "How do I reproduce the analysis?",
+    "Who made the project?"
+   ],
+   "/equipo": [
+    "Who made the project?",
+    "What is the project about?"
+   ]
+  },
+  "textos": {
+   "tecnica": "Give me the technical explanation",
+   "esta": "Explain this page",
+   "pagina": "this page",
+   "primero": "First ask me about some part of the dashboard and then I'll give you its technical explanation.",
+   "sin_tecnica": "**{t}** has no more technical version than the one I gave you. You can ask me about another part of the dashboard.",
+   "version": "**Technical version · {t}**\n\n{x}",
+   "no_se": "That's not in what I learned from the dashboard, so I'd rather not make it up. I can explain any page, chart or concept of the dashboard. For example, from **{n}**:",
+   "hola": "Hi! I'm **Kyo**, this dashboard's assistant. I was trained on its content to explain every part of it. You're on **{n}**: ask me anything or tap a suggestion."
+  }
+ }
+}
