@@ -1379,6 +1379,36 @@ def _construir(A, EN):
     # Predecir
     # =====================================================================
     add(Intencion(
+        "p_conclusiones", t("Conclusiones", "Conclusions"),
+        t(["explícame la página de conclusiones", "qué hay en conclusiones", "página de conclusiones",
+           "qué acciones debe tomar la entidad", "implicaciones para el negocio", "recomendaciones finales del proyecto",
+           "limitaciones y próximos pasos", "cuáles son los próximos pasos", "respuesta a la pregunta de investigación",
+           "veredicto de las hipótesis"],
+          ["explain the conclusions page", "what is in conclusions", "conclusions page",
+           "what actions should the lender take", "business implications", "final recommendations of the project",
+           "limitations and next steps", "what are the next steps", "answer to the research question",
+           "hypothesis verdicts"]),
+        t("**Conclusiones** cierra el proyecto en cuatro bloques:\n\n"
+          "1. **Respuesta a la pregunta de investigación:** el atraso reciente (sobre todo PAY_0) es lo que más "
+          "anticipa el default; le sigue el límite de crédito; lo demográfico aporta poco.\n"
+          f"2. **Veredicto de las hipótesis:** las cinco (H1–H5) se cumplen, cada una con su evidencia.\n"
+          f"3. **Qué significa para el banco:** usar el atraso como alerta temprana, revisar los cupos bajos y usar el "
+          f"modelo ({best_lbl}, F1 {B['f1_mean']:.3f}) como filtro para un analista, no como decisión final.\n"
+          "4. **Limitaciones y próximos pasos:** datos de 2005 y de un solo banco, análisis asociativo, umbral "
+          "fijo en 0.5 que conviene ajustar según el costo de cada error.",
+          "**Conclusions** closes the project in four blocks:\n\n"
+          "1. **Answer to the research question:** recent delay (especially PAY_0) best anticipates default; the "
+          "credit limit follows; demographics add little.\n"
+          f"2. **Hypothesis verdicts:** all five (H1–H5) are supported, each with its evidence.\n"
+          f"3. **What it means for the bank:** use delay as an early warning, review low limits and use the model "
+          f"({best_lbl}, F1 {B['f1_mean']:.3f}) as a filter for an analyst, not as the final decision.\n"
+          "4. **Limitations and next steps:** data from 2005 and a single bank, associative analysis, a threshold "
+          "fixed at 0.5 that should be tuned to the cost of each error."),
+        pagina="/conclusiones",
+        sug=t(["¿Se cumplieron las hipótesis?", "¿Cuál es el mejor modelo?", "¿Qué es el umbral de decisión?"],
+              ["Were the hypotheses supported?", "Which is the best model?", "What is the decision threshold?"]),
+        mood="proud"))
+    add(Intencion(
         "p_predecir", t("Predecir", "Predict"),
         t(["explícame la página Predecir", "cómo funciona Predecir", "cómo predigo el riesgo de un cliente",
            "qué hace la sección predecir", "simulador de riesgo", "cómo evalúo un cliente",
@@ -1633,7 +1663,7 @@ def _construir(A, EN):
     paginas["/"] = t("Inicio (portada)", "Home (cover)")
     intencion_de_pagina = {"/": "p_inicio", "/introduccion": "p_intro", "/problema": "p_problema", "/marco": "p_marco",
                            "/univariado": "p_uni", "/multivariado": "p_multi", "/modelos": "p_modelos",
-                           "/predecir": "p_predecir", "/enlaces": "p_enlaces", "/equipo": "p_equipo"}
+                           "/predecir": "p_predecir", "/conclusiones": "p_conclusiones", "/enlaces": "p_enlaces", "/equipo": "p_equipo"}
     sug_de_pagina = t({
         "/": ["¿De qué trata el proyecto?", "¿Cómo uso el tablero?", "¿Cuál es el hallazgo principal?"],
         "/introduccion": ["Explícame el vistazo rápido", "¿Cómo se limpiaron los datos?", "¿De dónde salen los datos?"],
@@ -1648,6 +1678,7 @@ def _construir(A, EN):
                      "Explícame la gráfica de F1 vs ROC-AUC"],
         "/predecir": ["¿Cómo lleno el formulario?", "¿Cómo leo el puntaje de riesgo?", "¿Qué son los votos de los árboles?",
                       "Explícame «¿Qué pasaría si…?»"],
+        "/conclusiones": ["¿Se cumplieron las hipótesis?", "¿Qué implicaciones tiene para el negocio?", "¿Cuáles son los próximos pasos?"],
         "/enlaces": ["¿Qué notebooks tiene el pipeline?", "¿Cómo reproduzco el análisis?", "¿Quiénes hicieron el proyecto?"],
         "/equipo": ["¿Quiénes hicieron el proyecto?", "¿De qué trata el proyecto?"],
     }, {
@@ -1663,6 +1694,8 @@ def _construir(A, EN):
                      "Explain the F1 vs ROC-AUC chart"],
         "/predecir": ["How do I fill in the form?", "How do I read the risk score?", "What are the trees' votes?",
                       "Explain “What if…?”"],
+        "/conclusiones": ["Were the hypotheses supported?", "What are the business implications?",
+                          "What are the next steps?"],
         "/enlaces": ["Which notebooks are in the pipeline?", "How do I reproduce the analysis?", "Who made the project?"],
         "/equipo": ["Who made the project?", "What is the project about?"],
     })

@@ -88,6 +88,7 @@ PRUEBA = [
     ("¿por qué este cliente tiene riesgo alto?", "drivers", "/predecir"),
     ("¿qué pasa con el riesgo si cambio la edad?", "whatif", "/predecir"),
     ("¿para qué sirve joblib?", "serializacion", "/predecir"),
+    ("¿qué acciones debería tomar la entidad con estos resultados?", "p_conclusiones", "/conclusiones"),
     ("¿dónde encuentro el código en github?", "p_enlaces", "/enlaces"),
     ("¿qué hace cada notebook?", "notebooks", "/enlaces"),
     ("¿quiénes son las autoras del tablero?", "p_equipo", "/equipo"),
