@@ -1,0 +1,36 @@
+{
+  "modelo": "Random Forest",
+  "balanceo": "pesos de clase balanceados (case.weights)",
+  "busqueda": "hiperpar<c3><a1>metros elegidos por RandomizedSearchCV (25 combinaciones, F1, 3 folds) en el tablero Dash",
+  "hiperparametros": {
+    "num.trees": 291,
+    "max.depth": 14,
+    "mtry": 4,
+    "min.bucket": 10,
+    "min.node.size": 20
+  },
+  "umbral": 0.5,
+  "prueba": {
+    "n": 5993,
+    "f1": 0.5468,
+    "precision": 0.4954,
+    "recall": 0.6101,
+    "roc_auc": 0.7833,
+    "pr_auc": 0.5607,
+    "matriz_confusion": {
+      "tn": 3843,
+      "fp": 824,
+      "fn": 517,
+      "tp": 809
+    }
+  },
+  "n_entrenamiento": 23972,
+  "tasa_default_entrenamiento": 0.2213,
+  "entradas": ["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE", "PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6", "BILL_AMT1", "BILL_AMT2", "BILL_AMT3", "BILL_AMT4", "BILL_AMT5", "BILL_AMT6", "PAY_AMT1", "PAY_AMT2", "PAY_AMT3", "PAY_AMT4", "PAY_AMT5", "PAY_AMT6"],
+  "versiones": {
+    "R": "4.3.3",
+    "ranger": "0.16.0"
+  },
+  "fecha": "2026-10-29",
+  "segundos_entrenamiento": 4.7
+}

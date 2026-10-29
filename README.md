@@ -64,9 +64,13 @@ dash_credit_kv/
     │   └── evaluar.py                       # Evaluación con preguntas nuevas (python -m asistente.evaluar)
     ├── requirements.txt                     # Dependencias del proyecto
     └── default_of_credit_card_clients.xls   # Dataset
+└── shiny/                                   # La misma app en R + Shiny (ver shiny/README.md)
+    ├── app.R                                # Interfaz y servidor
+    ├── R/                                   # Datos, figuras, páginas, Predecir y Kyo
+    └── modelo/entrenar_modelo.R             # Random Forest (ranger) serializado con saveRDS
 ```
 
-La aplicación tiene estas secciones: Introducción, Problema y Objetivos, Marco Teórico, EDA Univariado, EDA Multivariado, Modelos, Predecir, Enlaces y Equipo, más el asistente Kyo disponible en todas.
+La aplicación tiene estas secciones: Introducción, Problema y Objetivos, Marco Teórico, EDA Univariado, EDA Multivariado, Modelos, Predecir, Conclusiones, Enlaces y Equipo, más el asistente Kyo disponible en todas.
 
 ### Modelo serializado (sección Predecir)
 
@@ -155,6 +159,10 @@ http://localhost:8050/
 ```
 
 ---
+
+## Versión Shiny (R)
+
+La carpeta [`shiny/`](shiny) tiene la misma aplicación escrita en **R + Shiny + Plotly**. Incluye las mismas páginas y el mismo diseño, ES/EN, modo oscuro, Predecir y Kyo. Para correrla, abre `shiny/` en RStudio y ejecuta `shiny::runApp()`. Los pasos para publicarla gratis en **shinyapps.io** están en [shiny/README.md](shiny/README.md#publicar-en-shinyappsio-gratis).
 
 ## Despliegue en Render (gratis)
 

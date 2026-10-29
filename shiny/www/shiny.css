@@ -1,0 +1,76 @@
+/* =============================================================================
+   Ajustes propios de Shiny: el resto del diseño es el mismo del Dash (estilos.css)
+   ============================================================================= */
+.content { flex:1; }
+.page-wrap { min-height:60vh; }
+.shiny-output-error-validation { color:var(--muted); }
+.recalculating { opacity:1 !important; }
+.recalculating .plotly { opacity:.55; transition:opacity .2s; }
+.html-widget.plotly { width:100% !important; }
+
+/* ---------- Selectores (selectize) ---------- */
+.control .form-group { margin:0; }
+.control .shiny-input-container { width:100% !important; max-width:100%; }
+.selectize-control { position:relative; }
+.selectize-input { min-height:38px; border:1px solid var(--line-strong) !important; border-radius:8px !important;
+  background:var(--surface) !important; color:var(--text) !important; box-shadow:none !important; padding:8px 30px 6px 10px !important;
+  font:inherit; font-size:14px; cursor:pointer; display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.selectize-input.focus { border-color:var(--accent-2) !important; box-shadow:0 0 0 3px rgba(184,143,61,.18) !important; }
+.selectize-input > input { color:var(--text) !important; font:inherit !important; background:transparent !important; border:0; outline:0; }
+.selectize-control.single .selectize-input:after { content:''; position:absolute; right:12px; top:50%; margin-top:-3px;
+  border:5px solid transparent; border-top-color:var(--muted); }
+.selectize-dropdown { position:absolute; z-index:40; background:var(--surface); color:var(--text); border:1px solid var(--line-strong);
+  border-radius:8px; box-shadow:0 14px 30px -14px rgba(10,15,30,.45); margin-top:4px; overflow:hidden; }
+.selectize-dropdown-content { max-height:300px; overflow-y:auto; }
+.selectize-dropdown .option { padding:7px 12px; font-size:14px; cursor:pointer; }
+.selectize-dropdown .option.active, .selectize-dropdown .option:hover { background:var(--tech-bg); color:var(--text); }
+.selectize-dropdown .selected { font-weight:700; color:var(--accent-2); }
+.selectize-control.multi .selectize-input > div { background:var(--note-bg); color:var(--text); border:1px solid var(--note-line);
+  border-radius:999px; padding:1px 9px; font-size:12.5px; font-weight:600; }
+.selectize-control.multi .selectize-input > div .remove { margin-left:6px; text-decoration:none; color:var(--muted); }
+.selectize-control.plugin-remove_button .item .remove { border:0; }
+
+/* ---------- Radios de las gráficas ---------- */
+.radio { display:flex; flex-wrap:wrap; gap:4px 0; }
+.radio label { padding:3px 0; }
+
+/* ---------- Sliders (ionRangeSlider) con la paleta ---------- */
+.irs { font-family:inherit !important; }
+.irs--shiny .irs-line { background:var(--line-strong); border:0; height:6px; top:27px; border-radius:6px; }
+.irs--shiny .irs-bar { background:var(--accent-2) !important; border:0 !important; height:6px; top:27px; }
+.irs--shiny .irs-line { background:var(--line-strong) !important; border:0 !important; }
+.pf-pay-slider .irs-bar { display:none !important; }
+.pf-field .irs--shiny .irs-min, .pf-field .irs--shiny .irs-max { display:none; }
+.pf-pay-row { margin-top:-6px; }
+.irs--shiny .irs-handle { border:3px solid var(--accent-2) !important; background:var(--surface) !important; box-shadow:0 2px 6px rgba(10,15,30,.25);
+  width:20px; height:20px; top:20px; cursor:grab; }
+.irs--shiny .irs-handle:hover, .irs--shiny .irs-handle.state_hover { background:var(--note-bg); }
+.irs--shiny .irs-single, .irs--shiny .irs-from, .irs--shiny .irs-to { background:var(--deep) !important; color:#fff !important; font-weight:700;
+  font-size:12px; padding:3px 8px; border-radius:6px; }
+[data-theme="dark"] .irs--shiny .irs-single { background:var(--pale) !important; color:var(--deep) !important; }
+.irs--shiny .irs-single:before { border-top-color:var(--deep); }
+[data-theme="dark"] .irs--shiny .irs-single:before { border-top-color:var(--pale); }
+.irs--shiny .irs-min, .irs--shiny .irs-max { background:transparent; color:var(--muted); font-size:11px; }
+.irs--shiny .irs-grid-text { color:var(--muted); font-size:11px; }
+.irs--shiny .irs-grid-pol { background:var(--line-strong); }
+.pf-pay-slider .irs--shiny .irs-single { display:none; }
+.pf-pay-slider .irs--shiny .irs-min, .pf-pay-slider .irs--shiny .irs-max { display:none; }
+.pf-field .form-group, .pf-pay-slider .form-group { margin:0; }
+
+/* ---------- Tarjetas con ícono del formulario (Predecir) ---------- */
+.pf-tiles .dash-options-list-option { cursor:pointer; }
+.pf-tiles .dash-options-list-option:has(input:checked) .pf-tile > span { border-color:var(--accent-2); color:var(--text);
+  background:linear-gradient(180deg, rgba(210,187,137,.20), rgba(210,187,137,.06));
+  box-shadow:0 0 0 3px rgba(210,187,137,.25), 0 8px 18px -12px rgba(184,143,61,.8); }
+.pf-tiles .dash-options-list-option:has(input:checked) .pf-tile-ico { color:var(--accent-2); }
+.pf-input::-webkit-outer-spin-button, .pf-input::-webkit-inner-spin-button { opacity:.5; }
+#pf-verdict.recalculating .rc { animation:rc-pulse .9s ease-in-out infinite; }
+
+/* ---------- Kyo ---------- */
+.bot-sug { cursor:pointer; }
+.bm-bubble > p:first-child { margin-top:0; } .bm-bubble > p:last-child { margin-bottom:0; }
+
+/* ---------- MathJax 3 dentro de las fórmulas ---------- */
+.formula { overflow-x:auto; overflow-y:hidden; }
+/* en Kyo solo se enmarca la fórmula, no su párrafo (evita un doble borde) */
+.bm-bubble p:has(> mjx-container:only-child) { border:0 !important; background:none !important; padding:0 !important; }
