@@ -28,6 +28,7 @@
 """
 
 import json
+import re
 import sys
 import warnings
 from contextvars import ContextVar
@@ -173,6 +174,7 @@ BROWN = "#8A6E3A"
 GOLD_SOFT = "#C9A85F"
 GOLD_MID = "#9A7A33"
 GOLD_DARK = "#6E5628"
+BRIGHT_GOLD = "#F2C14E"  # punto del mejor modelo (dorado más luminoso)
 DEEP_RGBA = _rgba_prefix(DEEP_NAVY)   # para gridlines y rellenos translúcidos
 PALETTE = [DEEP_NAVY, WARM_GOLD, NAVY, PALE_GOLD, GREY_BLUE, BROWN]
 SERIES6 = [DEEP_NAVY, NAVY, MID_BLUE, PALE_GOLD, WARM_GOLD, BROWN]  # 6 meses
@@ -416,7 +418,21 @@ def fig_target():
                                "Target variable: default payment next month"),
                       yaxis_title=tx("Número de clientes", "Number of clients"), showlegend=False)
     fig.update_yaxes(range=[0, vc.max() * 1.18])
-    return style_fig(fig, 430, legend_top=False)
+    return style_fig(fig, 478, legend_top=False)
+
+
+def target_strip():
+    """Barra apilada 100 % con la proporción de clases y la razón de desbalance."""
+    vc = df[TARGET].value_counts()
+    p0, p1 = vc[0] / len(df), vc[1] / len(df)
+    return html.Div([
+        html.Div([html.Span(tx("Proporción de clases", "Class proportion"), className="ts-lbl"),
+                  html.Span([tx("Razón ", "Ratio "), html.B(f"{vc[0] / vc[1]:.1f} : 1")], className="ts-ratio")],
+                 className="ts-head"),
+        html.Div([html.Div(f"No default {p0:.1%}", className="ts-seg ts-0", style={"width": f"{p0:.2%}"}),
+                  html.Div(f"Default {p1:.1%}", className="ts-seg ts-1", style={"width": f"{p1:.2%}"})],
+                 className="ts-bar"),
+    ], className="target-strip")
 
 
 def interp_target():
@@ -442,7 +458,7 @@ def interp_target():
     return basic, tech
 
 
-def fig_uni(col, clip):
+def fig_uni(col):
     """Distribución univariada de cualquier variable (numérica o categórica), un solo color."""
     if col in DISCRETE:
         cats = as_cat(col)
@@ -460,17 +476,25 @@ def fig_uni(col, clip):
         return style_fig(fig, 470, legend_top=False)
 
     s = df[col]
-    view = s[s <= s.quantile(0.99)] if clip else s
+    q1, q3 = s.quantile([0.25, 0.75])
+    top = max(s.quantile(0.99), min(q3 + 1.5 * (q3 - q1), s.max()))
+    view = s[s <= top]
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                         row_heights=[0.74, 0.26], vertical_spacing=0.03)
     fig.add_trace(go.Histogram(x=view, nbinsx=60, marker_color=MONO,
                                marker_line_color=WHITE, marker_line_width=0.4,
                                name=tx("Frecuencia", "Frequency"), showlegend=False), row=1, col=1)
-    fig.add_trace(go.Box(x=view, name="", marker_color=MONO, boxpoints=False,
-                         boxmean=True, showlegend=False), row=2, col=1)
+    fig.add_trace(go.Box(x=s, name="", marker_color=MONO, boxpoints="outliers", marker_size=3,
+                         marker_opacity=0.35, boxmean=True, showlegend=False), row=2, col=1)
+    lo = s.min() - (top - s.min()) * 0.02
+    fig.update_xaxes(range=[lo, top * 1.02 if top > 0 else top], row=2, col=1)
     fig.add_vline(x=s.median(), line_dash="dash", line_color=WARM_GOLD, row=1, col=1,
                   annotation_text=tx("mediana", "median"), annotation_font_color=WARM_GOLD)
-    suf = tx(" (vista recortada al P99)", " (view trimmed at P99)") if clip else ""
+    n_out = int((s > top).sum())
+    suf = ("<br><span style='font-size:12px;font-weight:400'>"
+           + tx(f"{n_out:,} valores extremos quedan fuera de la vista (se ven como atípicos en el boxplot)",
+                f"{n_out:,} extreme values fall outside the view (shown as outliers in the boxplot)")
+           + "</span>" if n_out else "")
     fig.update_layout(title=tx(f"Distribución de {pretty(col)}{suf}", f"Distribution of {pretty(col)}{suf}"))
     fig.update_yaxes(title_text=tx("Frecuencia", "Frequency"), row=1, col=1)
     fig.update_xaxes(title_text=pretty(col), row=2, col=1)
@@ -763,13 +787,19 @@ def fig_rates():
                           + tx("Clientes", "Clients") + ": %{customdata:,}<extra></extra>",
             showlegend=False), row=1, col=j)
         fig.add_hline(y=GLOBAL_RATE, line_dash="dash", line_color=DEEP_NAVY, row=1, col=j)
-    fig.add_annotation(x=1, y=GLOBAL_RATE, xref="x3 domain", yref="y", xanchor="right", yanchor="bottom",
-                       text=tx(f"Tasa global {GLOBAL_RATE:.1%}", f"Overall rate {GLOBAL_RATE:.1%}"), showarrow=False,
-                       font=dict(color=DEEP_NAVY, size=11))
+    # Leyenda real (abajo, centrada) en lugar de explicar los colores en el título
+    for name, kw in [(tx("Por encima del promedio", "Above average"), dict(marker=dict(color=WARM_GOLD, size=12, symbol="square"))),
+                     (tx("En o bajo el promedio", "At or below average"), dict(marker=dict(color=NAVY, size=12, symbol="square"))),
+                     (tx(f"Tasa global {GLOBAL_RATE:.1%}", f"Overall rate {GLOBAL_RATE:.1%}"),
+                      dict(mode="lines", line=dict(color=DEEP_NAVY, dash="dash", width=2)))]:
+        fig.add_trace(go.Scatter(x=[None], y=[None], mode=kw.pop("mode", "markers"), name=name,
+                                 hoverinfo="skip", **kw), row=1, col=1)
     fig.update_yaxes(tickformat=".0%", range=[0, 0.32], title_text=tx("Tasa de default", "Default rate"), col=1)
-    fig.update_layout(title=tx("Tasa de incumplimiento según perfil demográfico (dorado = por encima del promedio)",
-                               "Default rate by demographic profile (gold = above average)"))
-    return style_fig(fig, 460, legend_top=False)
+    fig.update_layout(title=tx("Tasa de incumplimiento según perfil demográfico", "Default rate by demographic profile"))
+    style_fig(fig, 480, legend_top=False)
+    fig.update_layout(showlegend=True, margin=dict(b=90),
+                      legend=dict(orientation="h", yanchor="top", y=-0.16, xanchor="center", x=0.5))
+    return fig
 
 
 def interp_rates():
@@ -945,7 +975,7 @@ def interp_age(view):
 
 
 # ----- 4.5 Módulo interactivo de cruce de variables ---------------------------
-def cross_fig(x, y, c, clip):
+def cross_fig(x, y, c):
     """Cruza 2 (o 3) variables y devuelve (figura, interpretación básica, técnica)."""
     cdisc = c not in (None, "none") and c in DISCRETE
     cnum = c not in (None, "none") and c not in DISCRETE
@@ -969,9 +999,8 @@ def cross_fig(x, y, c, clip):
             xs = np.array([df[x].min(), df[x].max()])
             fig.add_trace(go.Scatter(x=xs, y=m * xs + b, mode="lines", name=tx("Tendencia lineal", "Linear trend"),
                                      line=dict(color=WARM_GOLD, width=3, dash="dash")))
-        if clip:
-            fig.update_xaxes(range=[df[x].min(), df[x].quantile(0.99) * 1.05])
-            fig.update_yaxes(range=[df[y].min(), df[y].quantile(0.99) * 1.05])
+        fig.update_xaxes(range=[df[x].min(), df[x].quantile(0.99) * 1.05])
+        fig.update_yaxes(range=[df[y].min(), df[y].quantile(0.99) * 1.05])
         fig.update_layout(title=tx(f"{y} vs. {x} (muestra de {len(d):,} clientes)",
                                    f"{y} vs. {x} (sample of {len(d):,} clients)"))
         r, pr = stats.pearsonr(df[x], df[y])
@@ -1089,13 +1118,18 @@ def cross_fig(x, y, c, clip):
     else:
         kw["color_discrete_sequence"] = [NAVY]
     if horizontal:
-        fig = px.box(d, x=numv, y="_k", orientation="h", points=False, **kw)
+        fig = px.box(d, x=numv, y="_k", orientation="h", points="outliers", **kw)
     else:
-        fig = px.box(d, x="_k", y=numv, points=False, **kw)
-    fig.update_traces(boxmean=True)
-    lim = [df[numv].min(), df[numv].quantile(0.99) * 1.05]
-    if clip:
-        (fig.update_xaxes if horizontal else fig.update_yaxes)(range=lim)
+        fig = px.box(d, x="_k", y=numv, points="outliers", **kw)
+    # Bigotes en 1,5·IQR (Tukey) y eje ajustado a ellos: los atípicos quedan como puntos tenues
+    # y no estiran la escala hasta el máximo.
+    fig.update_traces(boxmean=True, marker=dict(size=3, opacity=0.3))
+    grp = d.groupby(["_k"] + (["_c"] if "_c" in d else []), observed=True)[numv]
+    q1, q3 = grp.quantile(0.25), grp.quantile(0.75)
+    hi = float(np.minimum(q3 + 1.5 * (q3 - q1), grp.max()).max())
+    lo = float(np.maximum(q1 - 1.5 * (q3 - q1), grp.min()).min())
+    pad = (hi - lo) * 0.06
+    (fig.update_xaxes if horizontal else fig.update_yaxes)(range=[lo - pad, hi + pad])
     fig.update_layout(title=tx(f"{numv} según {catv}", f"{numv} by {catv}"))
     cats = as_cat(catv)
     groups = [df.loc[cats == k, numv] for k in cat_order(catv)]
@@ -1326,9 +1360,13 @@ def fig_models_scatter():
                                  d["method"].map(method_lbl), d["recall_mean"]], axis=-1),
             hovertemplate="<b>%{customdata[0]}</b> · " + tech_lbl(t) + "<br>%{customdata[1]}"
                           "<br>F1: %{y:.4f}<br>ROC-AUC: %{x:.4f}<br>Recall: %{customdata[2]:.3f}<extra></extra>"))
+    # Mejor modelo: punto dorado brillante con un halo suave (en vez de estrella)
+    fig.add_trace(go.Scatter(
+        x=[BEST["roc_auc_mean"]], y=[BEST["f1_mean"]], mode="markers", showlegend=False, hoverinfo="skip",
+        marker=dict(size=34, color="rgba(245,196,81,0.28)", line=dict(width=0))))
     fig.add_trace(go.Scatter(
         x=[BEST["roc_auc_mean"]], y=[BEST["f1_mean"]], mode="markers", name=tx("Mejor combinación", "Best combination"),
-        marker=dict(symbol="star", size=20, color=PALE_GOLD, line=dict(width=1.5, color=GOLD_DARK)),
+        marker=dict(symbol="circle", size=17, color=BRIGHT_GOLD, line=dict(width=2, color=WHITE)),
         hovertemplate=f"<b>{tx('Mejor', 'Best')}: {minfo(BEST['model'], 'label')}</b><br>{tech_lbl(BEST['technique'])} · "
                       f"{method_lbl(BEST['method'])}<br>F1: %{{y:.4f}}<br>ROC-AUC: %{{x:.4f}}<extra></extra>"))
     style_fig(fig, 420)
@@ -1579,6 +1617,16 @@ ICONS = {
     "card": '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/>',
     "chip": '<rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 10h16M4 14h16M10 5v14M14 5v14"/>',
     "contactless": '<path d="M8.5 8.5a5 5 0 0 1 0 7M12 6a9 9 0 0 1 0 12M15.5 3.5a13 13 0 0 1 0 17"/>',
+    # íconos financieros para el pipeline (datafono, recibo, billetera, tarjeta con pago)
+    "pos": '<rect x="5" y="2" width="14" height="20" rx="2.5"/><rect x="7.5" y="4.5" width="9" height="5" rx="1"/>'
+           '<path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 16h.01M12 16h.01M15.5 16h.01M8.5 19h.01M12 19h.01M15.5 19h.01"/>',
+    "receipt": '<path d="M6 2.5h12v19l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 7h6M9 11h6M9 15h3.5"/>',
+    "wallet": '<path d="M4 7.5V18a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-3M4 7.5A2 2 0 0 1 6 5.5h11V8"/>'
+              '<path d="M4 7.5A1.5 1.5 0 0 0 5.5 9H20v4"/><path d="M21 13h-4a1.5 1.5 0 0 0 0 3h4z"/>',
+    "cardpay": '<rect x="2" y="4" width="16" height="11" rx="2"/><path d="M2 8h16M5 12h3"/>'
+               '<circle cx="18" cy="17" r="4"/><path d="M16.4 17l1.1 1.1 2.1-2.2"/>',
+    "safe": '<rect x="3" y="3" width="18" height="16" rx="2"/><circle cx="12" cy="11" r="3.5"/>'
+            '<path d="M12 7.5v1M12 13.5v1M8.5 11h1M14.5 11h1M6 19v2M18 19v2"/>',
     # --- página Modelos ---
     "layers": '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
     "trophy": '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
@@ -1685,15 +1733,12 @@ def page_uni():
         ], className="kpi-row k4"),
         html.Div([
             card(tx("Variable objetivo: Default vs. No Default", "Target variable: Default vs. No Default"),
-                 [dcc.Graph(id="target-graph", figure=fig_target(), config={"displaylogo": False}), interp_block(b_t, t_t)]),
+                 [dcc.Graph(id="target-graph", figure=fig_target(), config={"displaylogo": False}), target_strip(),
+                  interp_block(b_t, t_t)]),
             card(tx("Explorador univariado", "Univariate explorer"),
                  [html.Div([
                      control("Variable", dcc.Dropdown(id="uni-var", options=var_options(ALL_VARS),
                                                       value="LIMIT_BAL", clearable=False)),
-                     control(tx("Opciones", "Options"), dcc.Checklist(
-                         id="uni-clip", options=[{"label": tx(" Recortar cola superior (P99) en la vista",
-                                                              " Trim the upper tail (P99) in the view"), "value": "clip"}],
-                         value=["clip"], className="check")),
                  ], className="controls"),
                   dcc.Loading(dcc.Graph(id="uni-graph", config={"displaylogo": False}), type="dot", color=WARM_GOLD),
                   html.Div(id="uni-interp")]),
@@ -1754,11 +1799,6 @@ def page_multi():
                  control(tx("Color / grupo (opcional)", "Color / group (optional)"), dcc.Dropdown(
                      id="c-var", options=[{"label": tx("(ninguna)", "(none)"), "value": "none"}] + var_options(ALL_VARS),
                      value=TARGET, clearable=False)),
-                 control(tx("Opciones", "Options"), dcc.Checklist(
-                     id="x-clip",
-                     options=[{"label": tx(" Ejes ajustados al percentil 99 para facilitar la lectura",
-                                           " Axes fitted to the 99th percentile for easier reading"), "value": "clip"}],
-                     value=["clip"], className="check")),
              ], className="controls"),
               dcc.Loading(dcc.Graph(id="x-graph", config={"displaylogo": False}), type="dot", color=WARM_GOLD),
               html.Div(id="x-interp")]),
@@ -1826,56 +1866,20 @@ def page_intro():
                           "predictive models. Each chart comes with a basic interpretation (everyday language) and a "
                           "technical one (statistics and modeling recommendations).")),
             ], cls="span-2"),
-            card(tx("Fuente y alcance", "Source and scope"), [
+            card(tx("Fuentes", "Sources"), [
                 html.P("Yeh, I-C. & Lien, C. (2009). The comparisons of data mining techniques for the predictive "
                        "accuracy of probability of default of credit card clients. Expert Systems with Applications, "
-                       "36(2), 2473–2480. " + tx("Datos: UCI Machine Learning Repository.",
-                                                 "Data: UCI Machine Learning Repository.")),
+                       "36(2), 2473–2480."),
+                html.P([tx("Datos: ", "Data: "),
+                        html.A("UCI Machine Learning Repository",
+                               href="https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients",
+                               target="_blank", rel="noopener")]),
                 html.P(tx("Cifras monetarias en dólares taiwaneses (NT$).", "Monetary figures in New Taiwan dollars (NT$).")),
-                html.P(tx("Alcance: el EDA es descriptivo y no estima causalidad. La sección Modelos resume los "
-                          "clasificadores entrenados en el repositorio del proyecto.",
-                          "Scope: the EDA is descriptive and does not estimate causality. The Models section summarizes "
-                          "the classifiers trained in the project repository."), className="muted"),
+                _ul([tx(f"{I['filas_originales']:,} clientes de un banco de Taiwán", f"{I['filas_originales']:,} clients of a Taiwanese bank"),
+                     tx("23 variables explicativas y 1 objetivo", "23 explanatory variables and 1 target"),
+                     tx("Seis meses de historia: abril a septiembre de 2005", "Six months of history: April to September 2005")]),
             ]),
-        ], className="grid g3"),
-        html.Div([
-            card(tx("Preparación de los datos", "Data preparation"), _ul([
-                tx(f"Se eliminaron {I['duplicados']} filas duplicadas exactas.",
-                   f"{I['duplicados']} exact duplicate rows were removed."),
-                tx(f"{I['edu_reagrupadas']} registros con EDUCATION = 0, 5 o 6 (códigos no documentados) pasaron a «Otros».",
-                   f"{I['edu_reagrupadas']} records with EDUCATION = 0, 5 or 6 (undocumented codes) were moved to “Others”."),
-                tx(f"{I['mar_reagrupadas']} registros con MARRIAGE = 0 (no documentado) pasaron a «Otros».",
-                   f"{I['mar_reagrupadas']} records with MARRIAGE = 0 (undocumented) were moved to “Others”."),
-                tx(f"Se conservaron {I['bill_neg_clientes']:,} clientes con saldo facturado negativo (saldo a favor, "
-                   "económicamente válido).",
-                   f"{I['bill_neg_clientes']:,} clients with a negative bill amount (credit balance, economically valid) "
-                   "were kept."),
-                tx("El estado de pago de septiembre se llama PAY_0 (el dataset no incluye PAY_1).",
-                   "September's repayment status is called PAY_0 (the dataset has no PAY_1)."),
-                tx("La matriz de correlación usa Spearman sobre los datos originales: al basarse en rangos, es robusta a "
-                   "valores extremos y no requiere recortarlos.",
-                   "The correlation matrix uses Spearman on the original data: since it is rank-based, it is robust to "
-                   "extreme values and does not require trimming them."),
-            ])),
-            card(tx("Cómo recorrer este tablero", "How to navigate this dashboard"), _ul([
-                tx("Problema y Objetivos: qué se quiere responder, hipótesis y metas del análisis.",
-                   "Problem and Objectives: what we want to answer, hypotheses and goals of the analysis."),
-                tx("Marco Teórico: conceptos y pruebas estadísticas usadas, más el diccionario de variables.",
-                   "Theoretical Framework: concepts and statistical tests used, plus the variable dictionary."),
-                tx("EDA Univariado: calidad y distribución de cada variable, y desbalance de la variable objetivo.",
-                   "Univariate EDA: quality and distribution of each variable, and imbalance of the target."),
-                tx("EDA Multivariado: correlaciones, perfiles de riesgo, cruces interactivos y hallazgos clave.",
-                   "Multivariate EDA: correlations, risk profiles, interactive crosses and key findings."),
-                tx("Enlaces: libro del proyecto, notebooks y repositorios.",
-                   "Links: project book, notebooks and repositories."),
-                tx("Con el botón de panel de la barra superior ocultas el menú lateral; el interruptor de sol y luna "
-                   "cambia entre modo claro y oscuro, y el botón ES/EN cambia el idioma.",
-                   "The panel button in the top bar hides the side menu; the sun/moon switch toggles light and dark "
-                   "mode, and the ES/EN button changes the language."),
-                tx("Al final de cada página, los botones Anterior y Siguiente te llevan por el tablero en orden.",
-                   "At the end of each page, the Previous and Next buttons take you through the dashboard in order."),
-            ])),
-        ], className="grid g2"),
+        ], className="grid g3 intro-grid"),
     ])
 
 
@@ -2000,30 +2004,45 @@ def page_problem():
         card(tx("Hipótesis exploratorias", "Exploratory hypotheses"),
              _tbl(["#", tx("Hipótesis", "Hypothesis"), tx("Dónde se evalúa", "Where it is assessed")],
                   [(html.B(a), b, c) for a, b, c in hip])),
-        html.Div([
-            card(tx("Objetivo general", "General objective"), [
-                html.Div(tx("Analizar los factores que se asocian con el incumplimiento de pago (default) de los clientes "
-                            "de tarjetas de crédito mediante un análisis exploratorio de datos univariado y multivariado.",
-                            "Analyze the factors associated with payment default among credit card clients through a "
-                            "univariate and multivariate exploratory data analysis."),
-                         className="callout"),
-            ]),
-            card(tx("Objetivos específicos", "Specific objectives"), html.Ol(
-                [html.Li([t, html.Span(s, className="tag")]) for t, s in objs])),
-        ], className="grid g2"),
+        card(tx("Objetivos", "Objectives"), [
+            html.Div(tx("Objetivo general", "General objective"), className="obj-label"),
+            html.Div(tx("Analizar los factores que se asocian con el incumplimiento de pago (default) de los clientes "
+                        "de tarjetas de crédito mediante un análisis exploratorio de datos univariado y multivariado.",
+                        "Analyze the factors associated with payment default among credit card clients through a "
+                        "univariate and multivariate exploratory data analysis."),
+                     className="callout"),
+            html.Div(tx("Objetivos específicos", "Specific objectives"), className="obj-label"),
+            html.Ol([html.Li([t, html.Span(s, className="tag")]) for t, s in objs], className="obj-list"),
+        ]),
     ])
 
 
 def page_marco():
+    # Referencias en formato IEEE (texto tal cual lo entregó el equipo; [1] es el artículo base del dataset)
     refs = [
-        "Basel Committee on Banking Supervision (2006). International Convergence of Capital Measurement and Capital Standards (Basel II).",
-        "Chawla, N. V., Bowyer, K. W., Hall, L. O. & Kegelmeyer, W. P. (2002). SMOTE: Synthetic Minority Over-sampling Technique. Journal of Artificial Intelligence Research, 16, 321–357.",
-        "Cramér, H. (1946). Mathematical Methods of Statistics. Princeton University Press.",
-        "Kruskal, W. H. & Wallis, W. A. (1952). Use of ranks in one-criterion variance analysis. Journal of the American Statistical Association, 47(260), 583–621.",
-        "Mann, H. B. & Whitney, D. R. (1947). On a test of whether one of two random variables is stochastically larger than the other. Annals of Mathematical Statistics, 18(1), 50–60.",
-        "Spearman, C. (1904). The proof and measurement of association between two things. The American Journal of Psychology, 15(1), 72–101.",
-        "Tukey, J. W. (1977). Exploratory Data Analysis. Addison-Wesley.",
-        "Yeh, I-C. & Lien, C. (2009). The comparisons of data mining techniques for the predictive accuracy of probability of default of credit card clients. Expert Systems with Applications, 36(2), 2473–2480.",
+        "[1] I.-C. Yeh y C.-H. Lien, “The comparisons of data mining techniques for the predictive accuracy of "
+        "probability of default of credit card clients,” *Expert Systems with Applications*, vol. 36, no. 2, "
+        "pp. 2473-2480, 2009, doi: 10.1016/j.eswa.2007.12.020.",
+        "[2] UCI Machine Learning Repository, “Default of Credit Card Clients,” conjunto de datos. [En línea]. "
+        "Disponible: <https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients>. Consultado: 28 oct. "
+        "2026. Repositorio; excepción al filtro temporal.",
+        "[3] S. M. Lundberg y S.-I. Lee, “A unified approach to interpreting model predictions,” en *Advances in "
+        "Neural Information Processing Systems*, vol. 30, 2017, pp. 4765-4774.",
+        "[4] N. Bussmann, P. Giudici, D. Marinelli y J. Papenbrock, “Explainable machine learning in credit risk "
+        "management,” *Computational Economics*, vol. 57, pp. 203-216, 2021; publicación en línea, 2020, "
+        "doi: 10.1007/s10614-020-10042-0.",
+        "[5] P. Branco, L. Torgo y R. P. Ribeiro, “A survey of predictive modeling on imbalanced domains,” *ACM "
+        "Computing Surveys*, vol. 49, no. 2, art. 31, 2016, doi: 10.1145/2907070.",
+        "[6] A. Fernández, S. García, F. Herrera y N. V. Chawla, “SMOTE for learning from imbalanced data: Progress "
+        "and challenges, marking the 15-year anniversary,” *Journal of Artificial Intelligence Research*, vol. 61, "
+        "pp. 863-905, 2018, doi: 10.1613/jair.1.11192.",
+        "[7] G. James, D. Witten, T. Hastie y R. Tibshirani, *An Introduction to Statistical Learning: With "
+        "Applications in R*, 2.ª ed. Springer, 2021, doi: 10.1007/978-1-0716-1418-1.",
+        "[8] M. B. A. McDermott, L. H. Hansen, H. Zhang, G. Angelotti y J. Gallifant, “A closer look at AUROC and "
+        "AUPRC under class imbalance,” arXiv:2401.06091, versión 2, 2024. Prepublicación. [En línea]. "
+        "Disponible: <https://arxiv.org/abs/2401.06091>.",
+        "[9] T. Chen y C. Guestrin, “XGBoost: A scalable tree boosting system,” en *Proc. 22nd ACM SIGKDD Int. Conf. "
+        "Knowledge Discovery and Data Mining*, 2016, pp. 785-794, doi: 10.1145/2939672.2939785.",
     ]
     var_table = [
         ("LIMIT_BAL", tx("Numérica continua", "Continuous numeric"),
@@ -2109,8 +2128,8 @@ def page_marco():
                           "qué tan pesadas son sus colas. Los montos de dinero suelen ser muy asimétricos.",
                           "Skewness indicates which way a distribution's tail stretches; kurtosis, how heavy its tails "
                           "are. Money amounts are usually highly skewed.")),
-                F(r"x < Q_1 - 1.5\,\mathrm{IQR} \quad \text{" + tx("ó", "or") + r"} \quad x > Q_3 + 1.5\,\mathrm{IQR}, "
-                  r"\qquad \mathrm{IQR} = Q_3 - Q_1"),
+                F(r"\begin{gathered} x < Q_1 - 1.5\,\mathrm{IQR} \quad \text{" + tx("ó", "or")
+                  + r"} \quad x > Q_3 + 1.5\,\mathrm{IQR} \\ \mathrm{IQR} = Q_3 - Q_1 \end{gathered}"),
                 html.P(tx("La winsorización recorta los extremos a percentiles (por ejemplo P1–P99) sin eliminar clientes. "
                           "La transformación logarítmica con signo suaviza colas largas cuando hay ceros o negativos.",
                           "Winsorization caps the extremes at percentiles (e.g. P1–P99) without removing clients. "
@@ -2121,14 +2140,15 @@ def page_marco():
                           "ignorándola. Por eso se recomienda:",
                           "When one class is much less frequent, a classifier can achieve high accuracy by ignoring "
                           "it. That is why it is recommended to:")),
-                _ul([tx("Ponderar las clases (class_weight) o sobremuestrear la minoritaria (SMOTE, Chawla et al., 2002).",
-                        "Weight the classes (class_weight) or oversample the minority (SMOTE, Chawla et al., 2002)."),
+                _ul([tx("Ponderar las clases (class_weight) o sobremuestrear la minoritaria (SMOTE, ADASYN) [5], [6].",
+                        "Weight the classes (class_weight) or oversample the minority (SMOTE, ADASYN) [5], [6]."),
                      tx("Ajustar el umbral de decisión.", "Adjust the decision threshold."),
-                     tx("Evaluar con AUC-ROC, F1 y recall de la clase minoritaria en lugar de accuracy.",
-                        "Evaluate with ROC-AUC, F1 and minority-class recall instead of accuracy.")]),
+                     tx("Evaluar con AUC-ROC, PR-AUC, F1 y recall de la clase minoritaria en lugar de accuracy [8].",
+                        "Evaluate with ROC-AUC, PR-AUC, F1 and minority-class recall instead of accuracy [8].")]),
             ]),
             card(tx("6. Correlación de Spearman y multicolinealidad", "6. Spearman correlation and multicollinearity"), [
-                F(r"\rho_s = r\big(" + rank + r"(X),\, " + rank + r"(Y)\big) = 1 - \frac{6 \sum d_i^2}{n\,(n^2 - 1)}"),
+                F(r"\begin{aligned} \rho_s &= r\big(" + rank + r"(X),\, " + rank + r"(Y)\big) \\ "
+                  r"&= 1 - \frac{6 \sum d_i^2}{n\,(n^2 - 1)} \end{aligned}"),
                 html.P(tx("La segunda forma vale cuando no hay empates (dᵢ es la diferencia de rangos de cada cliente).",
                           "The second form holds when there are no ties (dᵢ is each client's rank difference).")),
                 html.P(tx("Spearman (1904) mide asociación monótona usando los rangos de los datos. No exige linealidad "
@@ -2169,14 +2189,14 @@ def page_marco():
                           "With n ≈ 30,000 almost any difference is significant; that is why the effect size and "
                           "practical relevance are reported, not just the p-value.")),
             ]),
-        ], className="grid g2"),
+        ], className="masonry"),
         html.Div([
             card(tx("Antecedentes", "Background"), [
-                html.P(tx("Yeh y Lien (2009) compararon seis técnicas de minería de datos (regresión logística, análisis "
+                html.P(tx("Yeh y Lien (2009) [1] compararon seis técnicas de minería de datos (regresión logística, análisis "
                           "discriminante, k vecinos, Naive Bayes, redes neuronales y árboles de clasificación) para "
                           "predecir el incumplimiento con estos mismos datos, y propusieron un método de suavizado por "
                           "ordenamiento (Sorting Smoothing Method) para estimar la probabilidad real de incumplimiento.",
-                          "Yeh and Lien (2009) compared six data mining techniques (logistic regression, discriminant "
+                          "Yeh and Lien (2009) [1] compared six data mining techniques (logistic regression, discriminant "
                           "analysis, k-nearest neighbors, Naive Bayes, neural networks and classification trees) to "
                           "predict default with this same data, and proposed the Sorting Smoothing Method to estimate "
                           "the real probability of default.")),
@@ -2190,7 +2210,8 @@ def page_marco():
              _tbl(["Variable", tx("Tipo", "Type"), tx("Descripción", "Description")],
                   [(html.Code(v), t, d) for v, t, d in var_table])),
         html.Details([html.Summary([icon("book"), f"{tx('Referencias', 'References')} ({len(refs)})"]),
-                      html.Ul([html.Li(r) for r in refs], className="refs")], className="card fold"),
+                      html.Div([dcc.Markdown(r, link_target="_blank", className="ref-item") for r in refs],
+                               className="refs ieee")], className="card fold"),
     ])
 
 
@@ -2223,7 +2244,6 @@ def link_cards(compact=False):
                 html.Div(title, className="lc-title")]
         if not compact:
             body.append(html.P(L(lk["desc"])))
-        body.append(html.Div(lk["url"].split("//", 1)[-1], className="lc-url"))
         items.append(html.A(body, href=lk["url"], target="_blank", rel="noopener noreferrer",
                             className="link-card", title=f"{tx('Abrir', 'Open')}: {title}"))
     return html.Div(items, className="link-grid")
@@ -2484,12 +2504,6 @@ def page_models():
                           "perfil demográfico pesa poco.",
                           "This matches the EDA: payment history is the strongest signal of default and the "
                           "demographic profile matters little."), className="callout"),
-                html.P(tx("SHAP del Random Forest sobre 100 clientes de un fold (06_interpretability.ipynb). Con "
-                          "variables correlacionadas SHAP reparte la importancia entre ellas, así que el orden "
-                          "exacto entre PAY_2 … PAY_6 es aproximado.",
-                          "Random Forest SHAP on 100 clients from one fold (06_interpretability.ipynb). With correlated "
-                          "variables SHAP splits importance among them, so the exact order among PAY_2 … PAY_6 is "
-                          "approximate."), className="muted"),
             ]),
         ], className="grid g2"),
     ])
@@ -2586,15 +2600,8 @@ def model_info_card():
                             html.B(t), html.P(d)], className="pf-step") for i, (t, d, ic) in enumerate(steps)],
                  className="pf-steps"),
         html.Details([html.Summary(tx("Ver el código", "Show the code")),
-                      html.Pre(L(SERIALIZE_CODE), className="formula pf-code")], className="pf-details"),
+                      html.Pre(html.Code(L(SERIALIZE_CODE)), className="pf-code")], className="pf-details"),
         html.Div(_tbl([tx("Detalle", "Detail"), tx("Valor", "Value")], rows), className="table-wrap"),
-        html.P([tx("El archivo guarda todo el pipeline, incluidas las transformaciones del proyecto (logaritmos y "
-                   "resumen de las facturas), que viven en ",
-                   "The file stores the whole pipeline, including the project's transformations (logarithms and the "
-                   "bill summary), which live in "), html.Code("modelo/features.py"),
-                tx(". Para cargarlo hay que usar la misma versión de scikit-learn con la que se guardó.",
-                   ". It must be loaded with the same scikit-learn version it was saved with.")],
-               className="muted"),
     ])
 
 
@@ -2899,8 +2906,12 @@ def book_summary():
     ])
 
 
+PIPE_ICONS = {"00": "receipt", "01": "card", "02": "pos", "03": "chip", "04": "wallet", "05": "cardpay",
+              "06": "contactless"}
+
+
 def pipeline_card():
-    rows = [html.A([html.Span(n, className="nb-num"),
+    rows = [html.A([html.Span([icon(PIPE_ICONS.get(n, "card")), html.Span(n, className="nb-n")], className="nb-num"),
                     html.Div([html.Div(L(t), className="nb-t"), html.P(L(d))], className="nb-body"),
                     icon("external", "nb-ext")],
                    href=BOOK_URL + "notebooks/" + f, target="_blank", rel="noopener noreferrer", className="nb-row")
@@ -2997,6 +3008,14 @@ def ping():
     servicio gratis de Render, sin cargar la página completa."""
     return "ok", 200, {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store"}
 
+
+@server.route("/health")
+def health():
+    """Chequeo de salud para monitores externos y el workflow de GitHub: confirma que la app y el
+    modelo están cargados, sin dibujar la página (responde en milisegundos)."""
+    body = '{"status": "ok", "modelo": %s}' % ("true" if MODELO is not None else "false")
+    return body, 200, {"Content-Type": "application/json", "Cache-Control": "no-store"}
+
 CSS = """
 :root {
   --deep:%%DEEP%%; --navy:%%NAVY%%; --pale:%%PALE%%; --gold:%%GOLD%%; --cream:%%CREAM%%;
@@ -3092,6 +3111,24 @@ a { color:inherit; }
 .card ol { margin:6px 0 6px 22px; padding:0; }
 .muted { color:var(--muted); font-size:13.5px; }
 .refs li { font-size:13.5px; }
+.refs.ieee { display:grid; gap:8px; }
+.target-strip { margin:4px 0 14px; }
+.ts-head { display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:6px; }
+.ts-ratio b { color:var(--text); }
+.ts-bar { display:flex; height:30px; border-radius:8px; overflow:hidden; font-size:12.5px; font-weight:700; }
+.ts-seg { display:flex; align-items:center; padding:0 10px; white-space:nowrap; overflow:hidden; }
+.ts-0 { background:var(--accent); color:var(--on-accent); }
+.ts-1 { background:#B88F3D; color:#fff; justify-content:flex-end; }
+.obj-label { font-weight:700; font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin:2px 0 8px; }
+.callout + .obj-label { margin-top:18px; }
+.obj-list { columns:2; column-gap:40px; margin:0; padding-left:22px; }
+.obj-list li { break-inside:avoid; margin-bottom:8px; }
+@media (max-width:900px) { .obj-list { columns:1; } }
+.ref-item p { margin:0; font-size:13.5px; line-height:1.55; padding-left:2.4em; text-indent:-2.4em; overflow-wrap:anywhere; }
+/* Mosaico (masonry) de tarjetas: sin huecos cuando las alturas son distintas */
+.masonry { column-count:2; column-gap:20px; }
+.masonry > .card { break-inside:avoid; display:inline-block; width:100%; }
+@media (max-width:900px) { .masonry { column-count:1; } }
 .grid { display:grid; gap:20px; } .g2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .g3 { grid-template-columns:repeat(3,minmax(0,1fr)); } .g4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .span-2 { grid-column:span 2; }
@@ -3137,9 +3174,10 @@ details.fold[open] > summary::after { content:'−'; }
 details.fold > summary .ico { color:var(--accent-2); }
 details.fold[open] > summary { margin-bottom:10px; }
 /* fórmulas LaTeX (MathJax) */
-.formula.dash-markdown, .formula > div { overflow-x:auto; }
-.formula { text-align:center; }
-.formula mjx-container { margin:2px 0 !important; font-size:118% !important; }
+.formula.dash-markdown, .formula > div { overflow-x:auto; overflow-y:hidden; }
+.formula { text-align:center; overflow-y:hidden; }
+.formula mjx-container { margin:0 !important; padding:4px 0; font-size:112% !important; max-width:100%; }
+.formula mjx-container[display="true"] { overflow:visible; }
 .formula p { margin:0; }
 
 /* ---------- Contenido de texto ---------- */
@@ -3168,7 +3206,7 @@ code { background:var(--code-bg); color:var(--text); padding:2px 6px; border-rad
 .btn.primary .ico { transition:transform .15s; }
 .btn.ghost { border-color:var(--line-strong); color:var(--text); }
 .btn.ghost:hover { background:var(--surface-2); border-color:var(--accent-2); }
-.link-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin-bottom:20px; }
+.link-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:20px; }
 .link-card { display:flex; flex-direction:column; gap:8px; padding:16px; background:var(--surface); border:1px solid var(--line);
   border-radius:10px; text-decoration:none; color:var(--text); transition:border-color .15s, background .15s; }
 .link-card:hover { border-color:var(--accent-2); background:var(--surface-2); }
@@ -3306,8 +3344,14 @@ NEW_CSS = """
 .nb-row { display:flex; align-items:center; gap:14px; padding:12px 14px; border:1px solid var(--line); border-radius:10px;
   background:var(--surface); color:var(--text); text-decoration:none; transition:border-color .15s, background .15s; }
 .nb-row:hover { border-color:var(--accent-2); background:var(--surface-2); }
-.nb-num { flex:none; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px;
-  background:var(--accent); color:var(--on-accent); font-weight:700; font-size:13px; font-variant-numeric:tabular-nums; }
+.nb-num { position:relative; flex:none; width:42px; height:42px; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:11px; color:#F1E1B6; background:linear-gradient(145deg, #36456D 0%, #1A233D 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 6px 14px -8px rgba(8,12,30,.6); }
+.nb-num .ico { width:22px; height:22px; }
+.nb-n { position:absolute; right:-6px; bottom:-6px; min-width:20px; height:18px; padding:0 4px; border-radius:99px;
+  display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; line-height:1;
+  background:#D9AE4E; color:#1A233D; border:2px solid var(--surface); font-variant-numeric:tabular-nums; }
+.nb-row:hover .nb-num { color:#FFE7A8; }
 .nb-body { flex:1; min-width:0; } .nb-t { font-weight:700; } .nb-body p { margin:2px 0 0; color:var(--muted); font-size:13.5px; }
 .nb-ext { width:16px; height:16px; color:var(--muted); } .nb-row:hover .nb-ext { color:var(--accent-2); }
 
@@ -3368,27 +3412,28 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 
 /* ---- Modelos: carrusel deslizable de tarjetas ---- */
 @property --mc-ang { syntax:'<angle>'; initial-value:0deg; inherits:false; }
-.mc-wrap { --mc-w:min(370px, 80%); }
-.mc-stage { position:relative; margin:0 -8px; }
-.mc-track { position:relative; display:flex; gap:22px; overflow-x:auto; overscroll-behavior-x:contain;
-  scroll-snap-type:x mandatory; scroll-behavior:smooth; scrollbar-width:none;
-  padding:30px calc((100% - var(--mc-w)) / 2) 34px; outline:none; border-radius:14px; }
+/* Carrusel: tantas tarjetas como quepan (3 / 2 / 1 según el ancho del contenedor), alineadas al inicio,
+   sin márgenes vacíos a los lados. */
+.mc-stage { position:relative; padding:0 30px; container-type:inline-size; }
+.mc-track { --mc-gap:20px; --mc-w:88%; position:relative; display:flex; gap:var(--mc-gap); overflow-x:auto;
+  overscroll-behavior-x:contain; scroll-snap-type:x mandatory; scroll-behavior:smooth; scrollbar-width:none;
+  padding:26px 10px 30px; scroll-padding-inline:10px; outline:none; border-radius:14px; }
+@container (min-width:620px) { .mc-track { --mc-w:calc((100% - var(--mc-gap)) / 2); } }
+@container (min-width:1000px) { .mc-track { --mc-w:calc((100% - 2 * var(--mc-gap)) / 3); } }
 .mc-track::-webkit-scrollbar { display:none; }
 .mc-track:focus-visible { box-shadow:inset 0 0 0 2px var(--focus); }
-.mc-slide { position:relative; flex:0 0 var(--mc-w); scroll-snap-align:center; display:flex; flex-direction:column;
+.mc-slide { position:relative; flex:0 0 var(--mc-w); scroll-snap-align:start; display:flex; flex-direction:column;
   gap:12px; padding:20px 22px 18px; border-radius:20px; overflow:hidden; color:#F3EFE7;
   border:1px solid rgba(210,187,137,.30);
   background:repeating-radial-gradient(circle at 88% 12%, rgba(210,187,137,.07) 0 1px, transparent 1px 8px),
              linear-gradient(150deg, #2A3860 0%, #1A233D 58%, #141B30 100%);
   box-shadow:0 26px 46px -26px rgba(8,12,30,.65), inset 0 1px 0 rgba(255,255,255,.07);
-  opacity:.72; filter:saturate(.8); transform:scale(.95); transition:opacity .35s ease, transform .35s ease, filter .35s ease; }
-.mc-slide.is-active { opacity:1; filter:none; transform:none; }
+  transition:transform .3s ease, box-shadow .3s ease; }
+.mc-slide:hover { transform:translateY(-3px); }
 .mc-slide .cc-gloss { opacity:.45; }
 .mc-slide > *:not(.cc-gloss) { position:relative; }
 /* el mejor: borde con luz dorada que recorre el contorno + halo suave */
-.mc-slide.best { border-color:transparent; opacity:.8;
-  animation:mc-glow 3.4s ease-in-out infinite; }
-.mc-slide.best.is-active { opacity:1; }
+.mc-slide.best { border-color:transparent; animation:mc-glow 3.4s ease-in-out infinite; }
 .mc-slide.best::after { content:''; position:absolute; inset:0; border-radius:inherit; padding:2px; pointer-events:none;
   background:conic-gradient(from var(--mc-ang), rgba(210,187,137,.35) 0deg, rgba(210,187,137,.35) 200deg,
              #B88F3D 250deg, #F6E7C1 290deg, #D2BB89 315deg, rgba(210,187,137,.35) 350deg);
@@ -3432,13 +3477,13 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
   border-left:2px solid rgba(210,187,137,.55); }
 .mc-foot { margin-top:auto; padding-top:8px; font-size:11px; letter-spacing:.06em; color:#9AA3BA;
   font-variant-numeric:tabular-nums; }
-.mc-nav { position:absolute; top:50%; z-index:2; width:42px; height:42px; margin-top:-21px; display:inline-flex;
+.mc-nav { position:absolute; top:50%; z-index:2; width:38px; height:38px; margin-top:-19px; display:inline-flex;
   align-items:center; justify-content:center; padding:0; border-radius:50%; cursor:pointer; color:var(--text);
   background:var(--surface); border:1px solid var(--line-strong); box-shadow:0 6px 18px -8px rgba(8,12,30,.45);
   transition:background .15s, border-color .15s, color .15s, opacity .15s; }
 .mc-nav:hover { border-color:var(--accent-2); color:var(--accent-2); }
 .mc-nav .ico { width:20px; height:20px; }
-.mc-prev { left:4px; } .mc-prev .ico { transform:scaleX(-1); } .mc-next { right:4px; }
+.mc-prev { left:-6px; } .mc-prev .ico { transform:scaleX(-1); } .mc-next { right:-6px; }
 .mc-nav[disabled] { opacity:.35; cursor:default; }
 .mc-dots { display:flex; justify-content:center; gap:8px; margin-top:2px; }
 .mc-dot { width:9px; height:9px; padding:0; border-radius:99px; cursor:pointer; border:0; background:var(--line-strong);
@@ -3446,7 +3491,7 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .mc-dot.on { width:26px; background:var(--accent-2); }
 .mc-dot:first-child { box-shadow:0 0 0 2px rgba(210,187,137,.45); }
 .mc-hint { text-align:center; font-size:12.5px; margin:10px 0 0; }
-@media (max-width:600px) { .mc-wrap { --mc-w:86%; } .mc-nav { display:none; } .mc-track { gap:14px; }
+@media (max-width:600px) { .mc-stage { padding:0; } .mc-nav { display:none; } .mc-track { --mc-gap:14px; }
   .mc-slide { padding:18px 16px 16px; } .mc-f1 { font-size:30px; } .mc-chip { width:38px; }
   .mc-metric, .mc-tech .mc-metric { grid-template-columns:84px 1fr 40px; gap:8px; } }
 @media (prefers-reduced-motion:reduce) {
@@ -3534,6 +3579,18 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
       color-mix(in srgb, #1A233D, #4A1A14 calc(var(--heat) * 70%)) 60%,
       color-mix(in srgb, #141B30, #2B0F0C calc(var(--heat) * 70%)) 100%); }
 .rc.hi .rc-face { border-color:rgba(232,120,90,.55); }
+/* mientras predict_proba recalcula: la tarjeta "late" con un halo dorado y un brillo que la recorre */
+#pf-verdict.pf-busy .rc, #pf-verdict[data-dash-is-loading="true"] .rc { animation:rc-pulse 1.1s ease-in-out infinite; }
+#pf-verdict.pf-busy .rc-piece, #pf-verdict[data-dash-is-loading="true"] .rc-piece { filter:drop-shadow(0 18px 22px rgba(8,12,30,.35))
+  drop-shadow(0 0 14px rgba(242,193,78,.55)); }
+#pf-verdict.pf-busy .rc::after, #pf-verdict[data-dash-is-loading="true"] .rc::after { content:''; position:absolute; inset:0; border-radius:22px;
+  pointer-events:none; z-index:3; background:linear-gradient(110deg, transparent 30%, rgba(255,240,200,.28) 50%, transparent 70%);
+  background-size:220% 100%; animation:rc-shine 1.1s linear infinite; }
+#pf-verdict[data-dash-is-loading="true"] .rc-score { opacity:.55; transition:opacity .2s; }
+@keyframes rc-pulse { 0%,100% { transform:scale(1) translateY(0); } 50% { transform:scale(1.025) translateY(-3px); } }
+@keyframes rc-shine { from { background-position:120% 0; } to { background-position:-120% 0; } }
+@media (prefers-reduced-motion:reduce) {
+  #pf-verdict[data-dash-is-loading="true"] .rc, #pf-verdict.pf-busy .rc::after, #pf-verdict[data-dash-is-loading="true"] .rc::after { animation:none; } }
 .rc-mid { display:flex; align-items:center; gap:7%; }
 .rc-chip { width:19%; }
 .rc-score { font-family:Consolas,'Courier New',monospace; font-size:clamp(30px,4.6vw,44px); font-weight:700;
@@ -3571,7 +3628,10 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-step-n { position:absolute; top:10px; right:12px; font-size:22px; font-weight:800; color:var(--line-strong); }
 .pf-step-ico { width:24px; height:24px; color:var(--accent-2); }
 .pf-step b { display:block; margin-top:6px; } .card .pf-step p { margin:4px 0 0; font-size:12.5px; color:var(--muted); }
-.pf-code { white-space:pre; line-height:1.55; margin:10px 0 !important; }
+.pf-code { text-align:left; white-space:pre; tab-size:4; line-height:1.6; margin:10px 0; padding:14px 18px;
+  background:var(--tech-bg); border-left:3px solid var(--tech-line); border-radius:8px; overflow-x:auto;
+  font-family:Consolas,'Courier New',monospace; font-size:13px; }
+.pf-code code { background:none; padding:0; font-size:inherit; white-space:pre; display:block; }
 @media (max-width:1250px) { .pf-layout { grid-template-columns:1fr; } .pf-side { position:static; }
   .pf-flow { flex-wrap:wrap; } .pf-flow-item { flex:1 1 40%; } .pf-flow-arrow { display:none; } }
 @media (max-width:700px) { .pf-g2, .pf-steps { grid-template-columns:1fr; } .pf-flow-item { flex-basis:100%; }
@@ -3657,26 +3717,35 @@ COVER_JS = """
 // ---------- Modelos: carrusel deslizable (flechas, puntos y tarjeta activa) ----------
 (function () {
   function slides(t) { return t.querySelectorAll('.mc-slide'); }
-  function current(t) {           // tarjeta cuyo centro está más cerca del centro visible
-    var mid = t.scrollLeft + t.clientWidth / 2, best = 0, d = Infinity;
+  var PAD = 10;                    // = padding lateral de .mc-track
+  function current(t) {           // primera tarjeta visible (alineada al inicio)
+    var x = t.scrollLeft + PAD, best = 0, d = Infinity;
     slides(t).forEach(function (s, i) {
-      var dd = Math.abs(s.offsetLeft + s.offsetWidth / 2 - mid); if (dd < d) { d = dd; best = i; } });
+      var dd = Math.abs(s.offsetLeft - x); if (dd < d) { d = dd; best = i; } });
     return best;
   }
+  function visible(t, i) {         // cuántas tarjetas caben a la vez
+    var s = slides(t)[i]; if (!s) return 1;
+    return Math.max(1, Math.round((t.clientWidth - 2 * PAD + 20) / (s.offsetWidth + 20)));
+  }
   function go(t, i) {
-    var s = slides(t)[i]; if (!s) return;
-    t.scrollTo({ left: s.offsetLeft - (t.clientWidth - s.offsetWidth) / 2, behavior: 'smooth' });
+    var all = slides(t), n = all.length;
+    i = Math.max(0, Math.min(i, n - 1));
+    t.scrollTo({ left: all[i].offsetLeft - PAD, behavior: 'smooth' });
   }
   function sync(t) {
     var w = t.closest('.mc-wrap'); if (!w) return;
-    var i = current(t), n = slides(t).length;
-    slides(t).forEach(function (s, k) { s.classList.toggle('is-active', k === i); });
+    var i = current(t), n = slides(t).length, v = visible(t, i);
+    var end = t.scrollLeft + t.clientWidth >= t.scrollWidth - 4;
+    if (end) i = Math.max(0, n - v);
+    slides(t).forEach(function (s, k) { s.classList.toggle('is-active', k >= i && k < i + v); });
     w.querySelectorAll('.mc-dot').forEach(function (d, k) {
-      d.classList.toggle('on', k === i);
-      if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
+      var on = k >= i && k < i + v;
+      d.classList.toggle('on', on);
+      if (on) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
     var p = w.querySelector('.mc-prev'), nx = w.querySelector('.mc-next');
-    if (p) p.disabled = i <= 0;
-    if (nx) nx.disabled = i >= n - 1;
+    if (p) p.disabled = i <= 0 && t.scrollLeft < 4;
+    if (nx) nx.disabled = end;
   }
   document.addEventListener('click', function (e) {
     if (!e.target.closest) return;
@@ -3697,6 +3766,17 @@ COVER_JS = """
     if (!t.classList || !t.classList.contains('mc-track')) return;
     cancelAnimationFrame(raf); raf = requestAnimationFrame(function () { sync(t); });
   }, true);
+  // Predecir: al mover cualquier control, la tarjeta "late" al menos 0,9 s (y mientras Dash recalcula)
+  var busyT = 0;
+  function busy(e) {
+    if (!e.target.closest || !e.target.closest('.pf-form')) return;
+    var v = document.getElementById('pf-verdict'); if (!v) return;
+    v.classList.add('pf-busy'); clearTimeout(busyT);
+    busyT = setTimeout(function () { v.classList.remove('pf-busy'); }, 900);
+  }
+  document.addEventListener('input', busy, true);
+  document.addEventListener('change', busy, true);
+  document.addEventListener('pointerup', busy, true);
   // Dash dibuja la página después de cargar: sincroniza cuando aparece un carrusel nuevo
   function scan() {
     document.querySelectorAll('.mc-track:not([data-ready])').forEach(function (t) {
@@ -3749,6 +3829,10 @@ BOT_CSS = """
 .bm-bubble ul, .bm-bubble ol { margin:4px 0 7px; padding-left:18px; } .bm-bubble li { margin:2px 0; }
 .bm-bubble code { background:var(--code-bg); padding:1px 5px; border-radius:4px; font-size:12px; }
 .bm-bubble > div > *:last-child { margin-bottom:0; }
+.bm-bubble p:has(> mjx-container:only-child) { overflow-x:auto; overflow-y:hidden; padding:6px 10px; border-radius:8px;
+  background:var(--tech-bg); border-left:3px solid var(--tech-line); text-align:center; }
+.bm-bubble mjx-container[display="true"] { display:block; margin:6px 0 !important; padding:6px 8px; overflow-x:auto; overflow-y:hidden;
+  max-width:100%; border-radius:8px; background:var(--tech-bg); border-left:3px solid var(--tech-line); }
 .bot-go { display:inline-flex; align-items:center; gap:6px; margin-top:8px; padding:5px 10px; border-radius:999px;
   font-size:12.5px; font-weight:600; text-decoration:none; color:var(--accent-2); border:1px solid var(--accent-2); }
 .bot-go .ico { width:14px; height:14px; }
@@ -3774,7 +3858,7 @@ BOT_CSS = """
 .kyo-walker:focus-visible { outline:2px solid var(--focus); outline-offset:4px; border-radius:12px; }
 .bot-open .kyo-walker { opacity:0; pointer-events:none; }
 .kyo-flip { width:100%; height:100%; transition:transform .25s ease; }
-.kyo-svg { width:100%; height:100%; overflow:visible; display:block; filter:drop-shadow(0 4px 6px rgba(20,16,43,.25));
+.kyo-svg { width:100%; height:100%; overflow:visible; display:block; filter:drop-shadow(0 4px 6px rgba(20,16,43,.22)) drop-shadow(0 0 10px rgba(246,200,90,.55));
   transition:transform .2s ease; }
 .kyo-walker:hover .kyo-svg { transform:translateY(-4px) scale(1.06); }
 .kyo-svg .a-eyes { transform-box:fill-box; transform-origin:center; animation:kyo-blink 4.6s infinite; }
@@ -4039,7 +4123,9 @@ def _bot_path(path):
 def _bot_msg(m, path):
     if m["r"] == "u":
         return html.Div(html.Div(m["t"], className="bm-bubble"), className="bm user")
-    body = [dcc.Markdown(m["t"], link_target="_blank")]
+    # MathJax para que las fórmulas de Kyo ($$…$$) se vean como fórmulas; "NT$" se escapa para no abrir una fórmula
+    txt = re.sub(r"\$\$(.+?)\$\$", r"$$\\displaystyle \1$$", m["t"].replace("NT$", "NT&#36;"), flags=re.S)
+    body = [dcc.Markdown(txt, link_target="_blank", mathjax=True)]
     if m.get("p") and m["p"] != path:
         body.append(dcc.Link([f"{tx('Ir a', 'Go to')} {m.get('n') or tx('la sección', 'the section')}", icon("arrow")],
                              href=m["p"], className="bot-go"))
@@ -4253,9 +4339,9 @@ def _route(path):
 
 # ---------- Callbacks: Univariado (gráficas de un solo color) ------------------
 @graph_cb(Output("uni-graph", "figure"), Output("uni-interp", "children"),
-          Input("uni-var", "value"), Input("uni-clip", "value"), mono=True)
-def cb_uni(var, clip):
-    return fig_uni(var, bool(clip)), interp_block(*interp_uni(var))
+          Input("uni-var", "value"), mono=True)
+def cb_uni(var):
+    return fig_uni(var), interp_block(*interp_uni(var))
 
 
 @graph_cb(Output("q-graph", "figure"), Output("q-interp", "children"),
@@ -4277,9 +4363,9 @@ def cb_age(view):
 
 
 @graph_cb(Output("x-graph", "figure"), Output("x-interp", "children"),
-          Input("x-var", "value"), Input("y-var", "value"), Input("c-var", "value"), Input("x-clip", "value"))
-def cb_cross(x, y, c, clip):
-    fig, b, t = cross_fig(x, y, c, bool(clip))
+          Input("x-var", "value"), Input("y-var", "value"), Input("c-var", "value"))
+def cb_cross(x, y, c):
+    fig, b, t = cross_fig(x, y, c)
     return fig, interp_block(b, t)
 
 
