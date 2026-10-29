@@ -244,13 +244,16 @@ def _construir(A, EN):
           "- **Vistazo rápido:** una gráfica que muestra que el atraso de septiembre anticipa el incumplimiento.\n"
           f"- **KPIs:** {n:,} clientes, 24 variables (23 predictoras + 1 objetivo), {pct(rate)} de default y el "
           "periodo abril–septiembre 2005.\n"
-          "- **Introducción:** el problema del riesgo en tarjetas de crédito y qué analiza el tablero.\n"
+          "- **Introducción:** el problema del riesgo en tarjetas de crédito y el recorrido del proyecto: EDA, "
+          "comparación de 112 combinaciones de modelos (la mejor, Random Forest con pesos de clase, F1 0.546) y "
+          "la página Predecir.\n"
           "- **Fuentes:** el artículo de Yeh & Lien (2009) y los datos del repositorio UCI; montos en NT$.",
           "The **Introduction** gives the context:\n\n"
           "- **Quick look:** a chart showing that September's delay anticipates default.\n"
           f"- **KPIs:** {n:,} clients, 24 variables (23 predictors + 1 target), {pct(rate)} default and the "
           "April–September 2005 period.\n"
-          "- **Introduction:** the risk problem in credit cards and what the dashboard analyzes.\n"
+          "- **Introduction:** the credit card risk problem and the project's path: EDA, a comparison of 112 "
+          "model combinations (the best, Random Forest with class weights, F1 0.546) and the Predict page.\n"
           "- **Sources:** the Yeh & Lien (2009) article and the UCI repository data; amounts in NT$."),
         pagina="/introduccion", sug=t(["Explícame el vistazo rápido", "¿Cómo se limpiaron los datos?",
                                        "¿De dónde salen los datos?"],
