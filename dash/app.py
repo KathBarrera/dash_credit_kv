@@ -3156,7 +3156,7 @@ def book_summary():
 
 
 PIPE_ICONS = {"00": "receipt", "01": "card", "02": "pos", "03": "chip", "04": "wallet", "05": "cardpay",
-              "06": "contactless"}
+              "06": "contactless", "08": "layers", "09": "bars"}
 
 
 def pipeline_card():

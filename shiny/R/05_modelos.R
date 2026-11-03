@@ -1,8 +1,13 @@
 # =============================================================================
-# 5. MODELOS (resultados del repositorio Credit_Card_Project, notebooks 04, 05 y 07)
+# 5. MODELOS (resultados del repositorio Credit_Card_Project, notebooks 05, 06, 08 y 09)
 # =============================================================================
-# results/model_results.csv resume las 112 combinaciones (7 modelos x 4 técnicas de
-# balanceo x 4 métodos de optimización, validación cruzada anidada 3 x 3).
+# results/ tiene los mismos archivos que dash/results (los genera
+# dash/herramientas/actualizar_resultados.py a partir de Credit_Card_Project/results):
+#   - model_results.csv: las 112 combinaciones (7 modelos x 4 técnicas de balanceo x 4 métodos
+#     de optimización, validación cruzada anidada 5 x 5; desviaciones con ddof=1). SVM conserva
+#     el F1 de Colab y trae aparte f1_cpu_refit_mean (reajuste con scikit-learn en CPU).
+#   - shap_by_fold.csv y lime_vs_shap.csv: interpretabilidad en los 5 folds (notebook 06).
+#   - anytime_curves.csv y anytime_summary.csv: costo de los optimizadores (notebook 09).
 MR <- utils::read.csv("results/model_results.csv", stringsAsFactors = FALSE)
 
 MODEL_INFO <- list(
@@ -11,50 +16,50 @@ MODEL_INFO <- list(
     family = c("Ensamble de árboles (bagging)", "Tree ensemble (bagging)"),
     desc = c("Promedia muchos árboles entrenados sobre muestras distintas de clientes; capta relaciones no lineales entre el historial de pagos y el riesgo.",
              "Averages many trees trained on different samples of clients; captures non-linear relationships between payment history and risk."),
-    note = c("Mayor F1 medio de las 112 combinaciones. Encabeza el grupo superior junto a XGBoost y SVM, sin diferencia significativa entre los tres (Nemenyi, p ≥ 0.88).",
-             "Highest mean F1 of the 112 combinations. It leads the top group together with XGBoost and SVM, with no significant difference among the three (Nemenyi, p ≥ 0.88).")),
+    note = c("Segundo, a solo 0.0014 de XGBoost: una diferencia mucho menor que la variación entre folds. Con sus 16 combinaciones tiene el mejor rango medio de los siete modelos, y es el que usa la página Predecir.",
+             "Second, only 0.0014 behind XGBoost: a difference much smaller than the variation between folds. Across its 16 combinations it has the best mean rank of the seven models, and it is the one used by the Predict page.")),
   xgboost = list(
     label = c("XGBoost", "XGBoost"),
     family = c("Ensamble de árboles (boosting)", "Tree ensemble (boosting)"),
     desc = c("Construye árboles en secuencia: cada uno corrige los errores del anterior.",
              "Builds trees in sequence: each one corrects the errors of the previous one."),
-    note = c("A menos de una milésima del primer lugar: la diferencia es mucho menor que la variación entre folds, así que en la práctica empata con Random Forest.",
-             "Less than a thousandth behind first place: the difference is much smaller than the variation between folds, so in practice it ties with Random Forest.")),
+    note = c("Mayor F1 medio de las 112 combinaciones. Forma el grupo superior con Random Forest y SVM, y la prueba de Nemenyi no separa a los tres (p ≥ 0.85): en la práctica empatan.",
+             "Highest mean F1 of the 112 combinations. It forms the top group with Random Forest and SVM, and the Nemenyi test does not separate the three (p ≥ 0.85): in practice they tie.")),
   svm = list(
     label = c("SVM", "SVM"),
     family = c("Máquina de vectores de soporte (kernel RBF)", "Support vector machine (RBF kernel)"),
     desc = c("Busca la frontera que separa mejor a quienes pagan de quienes incumplen, con un margen máximo.",
              "Looks for the boundary that best separates payers from defaulters, with maximum margin."),
-    note = c("Corrida en Colab con GPU (cuML): no es estrictamente comparable con los demás modelos y no tiene PR-AUC calculado.",
-             "Run on Colab with a GPU (cuML): not strictly comparable with the other models and without a computed PR-AUC.")),
+    note = c("Corrió en Colab con GPU (cuML). Al reajustarlo en CPU con scikit-learn, con los mismos hiperparámetros y folds, el F1 sube en promedio 0.009: su mejor combinación pasa de 0.539 a 0.545, a 0.002 de XGBoost. Aquí se muestra el valor de Colab, tal como se reportó.",
+             "Run on Colab with a GPU (cuML). Refitting it on CPU with scikit-learn, with the same hyperparameters and folds, raises F1 by 0.009 on average: its best combination goes from 0.539 to 0.545, 0.002 behind XGBoost. The Colab value is shown here, as reported.")),
   knn = list(
     label = c("KNN", "KNN"),
     family = c("Vecinos más cercanos", "Nearest neighbors"),
     desc = c("Clasifica a cada cliente según lo que hicieron los clientes más parecidos a él.",
              "Classifies each client according to what the most similar clients did."),
-    note = c("Con pesos de clase usa un ajuste propio del proyecto (el voto de cada vecino se pondera por la rareza de su clase), no un mecanismo estándar de scikit-learn.",
-             "With class weights it uses a project-specific adjustment (each neighbor's vote is weighted by the rarity of its class), not a standard scikit-learn mechanism.")),
+    note = c("Con pesos de clase usa un ajuste propio del proyecto (el voto de cada vecino se pondera por la rareza de su clase), no un mecanismo estándar de scikit-learn. Corrió en GPU (cuML), pero sus predicciones coinciden con las de scikit-learn en 99.98 % a 100 % de los casos.",
+             "With class weights it uses a project-specific adjustment (each neighbor's vote is weighted by the rarity of its class), not a standard scikit-learn mechanism. It ran on a GPU (cuML), but its predictions match scikit-learn's in 99.98% to 100% of cases.")),
   decision_tree = list(
     label = c("Árbol de decisión", "Decision tree"),
     family = c("Árbol de clasificación", "Classification tree"),
     desc = c("Una secuencia de preguntas sí/no sobre las variables; fácil de leer, pero inestable.",
              "A sequence of yes/no questions about the variables; easy to read, but unstable."),
-    note = c("Queda por debajo del grupo superior: Random Forest lo supera de forma significativa (p = 0.018).",
-             "It falls below the top group: Random Forest beats it significantly (p = 0.018).")),
+    note = c("Queda por debajo del grupo superior, aunque la diferencia con Random Forest está justo en el límite de la significancia (Nemenyi, p = 0.050) y con XGBoost no lo es (p = 0.12).",
+             "It falls below the top group, although the difference with Random Forest is right at the edge of significance (Nemenyi, p = 0.050) and with XGBoost it is not significant (p = 0.12).")),
   logistic_regression = list(
     label = c("Regresión logística", "Logistic regression"),
     family = c("Modelo lineal · línea base", "Linear model · baseline"),
     desc = c("Modelo de referencia: combina las variables de forma lineal para estimar la probabilidad de default.",
              "Reference model: combines the variables linearly to estimate the probability of default."),
-    note = c("Sin balanceo es la combinación con menor F1 (0.378): solo detecta 26 % de quienes incumplen. Con SMOTE o pesos de clase sube a 0.515, con un ROC-AUC casi igual.",
-             "Without balancing it is the combination with the lowest F1 (0.378): it detects only 26% of defaulters. With SMOTE or class weights it rises to 0.515, with almost the same ROC-AUC.")),
+    note = c("Sin balanceo es la combinación con menor F1 (0.378): solo detecta 27 % de quienes incumplen. Con SMOTE o pesos de clase sube a 0.516, con un ROC-AUC casi igual.",
+             "Without balancing it is the combination with the lowest F1 (0.378): it detects only 27% of defaulters. With SMOTE or class weights it rises to 0.516, with almost the same ROC-AUC.")),
   naive_bayes = list(
     label = c("Naive Bayes", "Naive Bayes"),
     family = c("Probabilístico (gaussiano)", "Probabilistic (Gaussian)"),
     desc = c("Aplica el teorema de Bayes suponiendo que las variables son independientes entre sí.",
              "Applies Bayes' theorem assuming the variables are independent of each other."),
-    note = c("Ese supuesto no se cumple con el historial de pagos, muy correlacionado mes a mes; por eso el balanceo casi no lo cambia (F1 entre 0.494 y 0.499).",
-             "That assumption does not hold for payment history, which is highly correlated month to month; that is why balancing barely changes it (F1 between 0.494 and 0.499)."))
+    note = c("Ese supuesto no se cumple con el historial de pagos, muy correlacionado mes a mes; por eso el balanceo casi no lo cambia (F1 entre 0.495 y 0.499).",
+             "That assumption does not hold for payment history, which is highly correlated month to month; that is why balancing barely changes it (F1 between 0.495 and 0.499)."))
 )
 minfo <- function(model, key) L(MODEL_INFO[[model]][[key]])
 
@@ -74,8 +79,9 @@ rownames(BEST_BY_MODEL) <- NULL
 BEST <- BEST_BY_MODEL[1, ]
 BASELINE <- max(MR$f1_mean[MR$model == "logistic_regression" & MR$technique == "none"])
 F1_MAX <- max(MR$f1_mean)
-# Matriz de confusión out-of-fold de la mejor combinación (05_results_analysis.ipynb)
-BEST_CM <- list(tn = 19295, fp = 4040, fn = 2624, tp = 4006)
+# Matriz de confusión out-of-fold de la mejor combinación (05_results_analysis.ipynb, corrida 5 x 5:
+# XGBoost, class_weight, bayesian_optuna; figura results/figures/confusion_roc_xgboost.png)
+BEST_CM <- list(tn = 19126, fp = 4209, fn = 2553, tp = 4077)
 TECH_COLORS <- c(none = GREY_BLUE, class_weight = WARM_GOLD, smote = DEEP_NAVY, adasyn = MID_BLUE)
 
 fig_models_heat <- function() {
@@ -129,6 +135,171 @@ fig_best_cm <- function() {
   p <- layout(p, yaxis = list(autorange = "reversed", showgrid = FALSE, title = ""),
               xaxis = list(side = "top", showgrid = FALSE, title = ""))
   style_fig(p, 340, legend_top = FALSE, margin = list(l = 100, r = 20, t = 24, b = 40))
+}
+
+# ---------- Interpretabilidad en los 5 folds (06_interpretability, secciones 5 y 6) ----------
+SHAP_FOLDS <- utils::read.csv("results/shap_by_fold.csv", stringsAsFactors = FALSE)
+LIME_SHAP <- utils::read.csv("results/lime_vs_shap.csv", stringsAsFactors = FALSE)
+FEAT_LBL <- list(LIMIT_BAL_LOG = c("LIMIT_BAL (log)", "LIMIT_BAL (log)"),
+                 BILL_AMT_MEAN_6M_LOG = c("BILL_AMT media 6 m (log)", "BILL_AMT 6-mo mean (log)"),
+                 BILL_AMT_TREND_6M_LOG = c("BILL_AMT tendencia 6 m (log)", "BILL_AMT 6-mo trend (log)"),
+                 N_CREDIT_BALANCE_MONTHS = c("Meses con saldo a favor", "Months with credit balance"))
+feat_lbl <- function(f) {
+  if (!is.null(FEAT_LBL[[f]])) return(L(FEAT_LBL[[f]]))
+  if (endsWith(f, "_LOG")) sub("_LOG$", " (log)", f) else f
+}
+
+# Spearman medio entre folds, Jaccard medio del top 5 y variables que siempre están en el top 5
+shap_stability <- function(model) {
+  d <- SHAP_FOLDS[SHAP_FOLDS$model == model, ]
+  folds <- sort(unique(d$fold))
+  feats <- sort(unique(d$feature))
+  m <- sapply(folds, function(f) { x <- d[d$fold == f, ]; x$mean_abs_shap[match(feats, x$feature)] })
+  rownames(m) <- feats
+  pares <- utils::combn(seq_along(folds), 2)
+  sp <- apply(pares, 2, function(ij) stats::cor(m[, ij[1]], m[, ij[2]], method = "spearman"))
+  tops <- lapply(seq_along(folds), function(j) names(sort(m[, j], decreasing = TRUE))[1:5])
+  jac <- apply(pares, 2, function(ij) length(intersect(tops[[ij[1]]], tops[[ij[2]]])) /
+                                      length(union(tops[[ij[1]]], tops[[ij[2]]])))
+  orden <- names(sort(rowMeans(m), decreasing = TRUE))
+  always <- orden[vapply(orden, function(f) all(vapply(tops, function(t) f %in% t, TRUE)), TRUE)]
+  list(sp = mean(sp), jac = mean(jac), always = always)
+}
+
+# Importancia SHAP (media de |SHAP|) de las variables principales en cada uno de los 5 folds
+fig_shap_folds <- function(model, top = 10) {
+  d <- SHAP_FOLDS[SHAP_FOLDS$model == model, ]
+  media <- sort(tapply(d$mean_abs_shap, d$feature, mean), decreasing = TRUE)[1:top]
+  orden <- rev(names(media))                       # la más importante queda arriba
+  lv <- vapply(orden, feat_lbl, "")
+  d <- d[d$feature %in% orden, ]
+  yf <- function(f) factor(vapply(f, feat_lbl, ""), levels = lv)
+  p <- plot_ly()
+  for (f in orden) {   # rango entre folds como una línea tenue
+    v <- d$mean_abs_shap[d$feature == f]
+    p <- add_trace(p, x = c(min(v), max(v)), y = yf(c(f, f)), type = "scatter", mode = "lines", showlegend = FALSE,
+                   hoverinfo = "skip", line = list(color = rgba(DEEP_NAVY, .25), width = 6))
+  }
+  cd <- lapply(seq_len(nrow(d)), function(i) list(d$fold[i] + 1, d$rank[i]))
+  p <- add_trace(p, x = d$mean_abs_shap, y = yf(d$feature), type = "scatter", mode = "markers",
+                 name = tx("Cada fold", "Each fold"), customdata = cd,
+                 marker = list(size = 8, color = NAVY, opacity = .75, line = list(width = .6, color = WHITE)),
+                 hovertemplate = paste0("%{y}<br>Fold %{customdata[0]}: %{x:.3f}<br>", tx("Puesto", "Rank"),
+                                        " %{customdata[1]}<extra></extra>"))
+  p <- add_trace(p, x = unname(media[orden]), y = yf(orden), type = "scatter", mode = "markers",
+                 name = tx("Media de los 5 folds", "Mean of 5 folds"),
+                 marker = list(symbol = "diamond", size = 12, color = WARM_GOLD, line = list(width = 1, color = WHITE)),
+                 hovertemplate = paste0("%{y}<br>", tx("Media", "Mean"), ": %{x:.3f}<extra></extra>"))
+  unidad <- if (model == "xgboost") "log-odds" else tx("probabilidad", "probability")
+  p <- layout(p, xaxis = list(title = tx(sprintf("Importancia SHAP media |SHAP| (%s)", unidad),
+                                         sprintf("Mean SHAP importance |SHAP| (%s)", unidad))),
+              yaxis = list(title = "", showgrid = FALSE))
+  style_fig(p, 420, margin = list(l = 170, r = 20, t = 50, b = 55))
+}
+
+interp_shap_folds <- function(model) {
+  st <- shap_stability(model)
+  alw <- paste(vapply(st$always, feat_lbl, ""), collapse = ", ")
+  basic <- if (model == "random_forest")
+    tx("En Random Forest la explicación es estable: las cuatro primeras variables (PAY_0, PAY_2, el límite de crédito y PAY_3) son las mismas y en el mismo orden en los cinco folds; solo cambia la quinta.",
+       "In Random Forest the explanation is stable: the top four variables (PAY_0, PAY_2, the credit limit and PAY_3) are the same and in the same order in all five folds; only the fifth changes.") else
+    tx("En XGBoost, PAY_0 es la primera variable en los cinco folds, pero el resto del top 5 cambia: en algunos folds PAY_2 y PAY_3 salen y entran los montos pagados. El orden fino de los montos no debe interpretarse.",
+       "In XGBoost, PAY_0 is the top variable in all five folds, but the rest of the top 5 changes: in some folds PAY_2 and PAY_3 drop out and paid amounts come in. The fine order of the amounts should not be interpreted.")
+  tech <- tx(sprintf("Spearman medio entre folds = %.2f; Jaccard medio del top 5 = %.2f; siempre en el top 5: %s. Cada fold usa los hiperparámetros de su propio bucle interno y SHAP (TreeExplainer, exacto) sobre 300 clientes de su fold de prueba. Las magnitudes entre folds no son estrictamente comparables; por eso la estabilidad se juzga por el orden.", st$sp, st$jac, alw),
+             sprintf("Mean Spearman between folds = %.2f; mean top-5 Jaccard = %.2f; always in the top 5: %s. Each fold uses the hyperparameters of its own inner loop and SHAP (TreeExplainer, exact) on 300 clients from its test fold. Magnitudes across folds are not strictly comparable, so stability is judged by order.", st$sp, st$jac, alw))
+  list(basic, tech)
+}
+
+lime_shap_table <- function() {
+  g <- function(m, col) mean(LIME_SHAP[[col]][LIME_SHAP$model == m])
+  filas <- list(list(tx("Coinciden en el signo del efecto (top 5)", "Agree on the sign of the effect (top 5)"), "sign_agreement_topk", TRUE),
+                list(tx("Variables compartidas en el top 5", "Shared variables in the top 5"), "top5_overlap", FALSE),
+                list(tx("Correlación de orden (Spearman)", "Rank correlation (Spearman)"), "spearman_abs", FALSE),
+                list(tx("LIME consigo mismo entre semillas (top 5)", "LIME with itself across seeds (top 5)"), "lime_seed_topk_overlap", FALSE))
+  fmt <- function(v, es_pct) if (es_pct) pct(v, 1) else sprintf("%.2f", v)
+  tbl_(c(tx("Medida", "Measure"), "Random Forest", "XGBoost"),
+       lapply(filas, function(f) list(f[[1]], fmt(g("random_forest", f[[2]]), f[[3]]), fmt(g("xgboost", f[[2]]), f[[3]]))))
+}
+
+CELL_LBL <- list(TP = c("Verdaderos positivos", "True positives"), FP = c("Falsas alarmas", "False alarms"),
+                 TN = c("Verdaderos negativos", "True negatives"), FN = c("No detectados", "Missed"))
+
+# Variables principales compartidas por LIME y SHAP (de 5), según la celda de la matriz de confusión
+fig_lime_cells <- function() {
+  cells <- c("TP", "FP", "TN", "FN")
+  xl <- fx(vapply(cells, function(k) L(CELL_LBL[[k]]), ""))
+  p <- plot_ly()
+  for (m in c("random_forest", "xgboost")) {
+    v <- vapply(cells, function(k) 5 * mean(LIME_SHAP$top5_overlap[LIME_SHAP$model == m & LIME_SHAP$outcome == k]), 0)
+    p <- add_trace(p, x = xl, y = unname(v), type = "bar", name = minfo(m, "label"),
+                   marker = list(color = if (m == "random_forest") NAVY else WARM_GOLD),
+                   text = sprintf("%.1f", v), textposition = "outside", cliponaxis = FALSE,
+                   hovertemplate = paste0("<b>", minfo(m, "label"), "</b> · %{x}<br>",
+                                          tx("Variables compartidas", "Shared variables"), ": %{y:.2f} / 5<extra></extra>"))
+  }
+  p <- layout(p, barmode = "group", bargap = .3, xaxis = list(title = "", showgrid = FALSE),
+              yaxis = list(range = c(0, 5), dtick = 1, title = tx("Variables compartidas (de 5)", "Shared variables (of 5)")))
+  style_fig(p, 330, margin = list(l = 55, r = 10, t = 50, b = 40))
+}
+
+# ---------- Optimizadores: curvas anytime y multi-fidelidad (09_anytime_multifidelidad) ----------
+ANYTIME <- utils::read.csv("results/anytime_curves.csv", stringsAsFactors = FALSE)
+ANYTIME_SUM <- utils::read.csv("results/anytime_summary.csv", stringsAsFactors = FALSE)
+ANY_METHODS <- c("grid_search", "random_search", "bayesian_optuna", "genetic_deap", "hyperband")
+ANY_COLORS <- c(grid_search = GREY_BLUE, random_search = MID_BLUE, bayesian_optuna = WARM_GOLD,
+                genetic_deap = DEEP_NAVY, hyperband = BROWN)
+ANY_DASH <- c(grid_search = "solid", random_search = "solid", bayesian_optuna = "solid", genetic_deap = "dot", hyperband = "dash")
+METHOD_LBL$hyperband <- c("Hyperband (multi-fidelidad)", "Hyperband (multi-fidelity)")
+ANY_MODELS <- c("xgboost", "decision_tree", "logistic_regression")
+
+# Arrepentimiento (mejor F1 interno posible - mejor F1 hallado) frente al costo acumulado
+fig_anytime <- function(model) {
+  d <- ANYTIME[ANYTIME$model == model, ]
+  p <- plot_ly()
+  for (m in ANY_METHODS) {
+    r <- d[d$method == m, ]
+    if (!nrow(r)) next
+    r <- r[order(r$cost_s), ]
+    col <- ANY_COLORS[[m]]
+    p <- add_trace(p, x = c(r$cost_s, rev(r$cost_s)), y = c(r$regret_max, rev(r$regret_min)), type = "scatter",
+                   mode = "lines", fill = "toself", fillcolor = rgba(col, .10), line = list(width = 0),
+                   hoverinfo = "skip", showlegend = FALSE, legendgroup = m)
+    p <- add_trace(p, x = r$cost_s, y = r$regret_med, type = "scatter", mode = "lines", name = method_lbl(m),
+                   legendgroup = m, line = list(color = col, width = 2.4, dash = ANY_DASH[[m]]),
+                   hovertemplate = paste0("<b>", method_lbl(m), "</b><br>", tx("Costo", "Cost"), ": %{x:.0f} s<br>",
+                                          tx("Arrepentimiento", "Regret"), ": %{y:.4f}<extra></extra>"))
+  }
+  p <- layout(p, shapes = list(hline(0.002, color = WARM_GOLD, dash = "dot", width = 1)),
+              annotations = list(nota(tx("objetivo: a 0.002 del mejor", "target: within 0.002 of the best"),
+                                      0.01, 0.002, color = DEEP_NAVY)),
+              xaxis = list(type = "log", title = tx("Costo de cómputo acumulado (s, escala log)", "Cumulative compute cost (s, log scale)")),
+              yaxis = list(title = tx("Arrepentimiento en F1 interno", "Regret in inner F1")),
+              legend = list(orientation = "h", yanchor = "top", y = -0.2, xanchor = "center", x = 0.5))
+  style_fig(p, 460, legend_top = FALSE, margin = list(l = 60, r = 20, t = 24, b = 40))
+}
+
+anytime_table <- function(model) {
+  d <- ANYTIME_SUM[ANYTIME_SUM$model == model, ]
+  filas <- lapply(ANY_METHODS, function(m) {
+    r <- d[d$method == m, ]
+    tgt <- if (r$llegan > 0) sprintf("%s s (%d/3)", num(r$costo_objetivo_s), as.integer(r$llegan)) else
+      tx("no llega (0/3)", "never (0/3)")
+    list(method_lbl(m), sprintf("%.0f", r$evaluaciones), paste(num(r$costo_total_s), "s"), tgt,
+         sprintf("%.3f ± %.3f", r$f1_externo, r$f1_externo_std))
+  })
+  tbl_(c(tx("Método", "Method"), tx("Evaluaciones", "Evaluations"), tx("Costo total", "Total cost"),
+         tx("Costo hasta el objetivo", "Cost to target"), tx("F1 externo", "Outer F1")), filas)
+}
+
+interp_anytime <- function(model) {
+  d <- ANYTIME_SUM[ANYTIME_SUM$model == model, ]
+  lo <- min(d$f1_externo); hi <- max(d$f1_externo)
+  cheap <- method_lbl(d$method[which.min(d$costo_total_s)])
+  basic <- tx(sprintf("Cada línea muestra qué tan lejos está cada método del mejor resultado posible a medida que gasta tiempo de cómputo. Todos terminan muy cerca: el F1 en datos nuevos va de %.3f a %.3f. Lo que cambia es el costo para llegar; aquí el más barato es %s.", lo, hi, cheap),
+              sprintf("Each line shows how far each method is from the best possible result as it spends compute time. All of them end very close: the F1 on new data ranges from %.3f to %.3f. What changes is the cost to get there; here the cheapest is %s.", lo, hi, cheap))
+  tech <- tx("Mediana y rango entre los folds externos 0 a 2 (de 5), con pesos de clase y una semilla; arrepentimiento = mejor F1 interno visto por cualquier método a fidelidad completa − mejor F1 del método hasta ese punto. En la tabla maestra los cuatro optimizadores empatan (Friedman con 28 bloques, p = 0.080; F1 medio entre 0.5022 y 0.5040). Hyperband, implementado desde cero con la fracción de filas como fidelidad, logra un F1 externo 0.0022 mayor que Random Search (desviación 0.0051, 9 corridas) con un costo 1.12 veces mayor: no demuestra ventaja.",
+             "Median and range over outer folds 0 to 2 (of 5), with class weights and one seed; regret = best inner F1 seen by any method at full fidelity − the method's best F1 so far. In the master table the four optimizers tie (Friedman with 28 blocks, p = 0.080; mean F1 between 0.5022 and 0.5040). Hyperband, implemented from scratch with the fraction of rows as fidelity, reaches an outer F1 0.0022 higher than Random Search (SD 0.0051, 9 runs) at 1.12 times the cost: it shows no advantage.")
+  list(basic, tech)
 }
 
 # ---------- Carrusel de modelos (mismo diseño de tarjeta de crédito del Dash) ----------
@@ -190,7 +361,7 @@ models_carousel <- function() {
                                          "Swipe, or use the arrows or dots to browse the seven models.")))
 }
 
-page_models <- function() {
+page_models <- function(sel = list()) {
   b <- BEST; best_lbl <- minfo(b$model, "label"); c <- BEST_CM
   pos <- c$tp + c$fn; flagged <- c$tp + c$fp
   tagList(
@@ -211,15 +382,15 @@ page_models <- function() {
              interp_block(
                tx("Cada celda es el mejor F1 que logró el modelo con esa técnica. Sin balanceo todos rinden peor, porque casi no detectan a quienes incumplen; con pesos de clase, Random Forest y XGBoost llegan a 0.55.",
                   "Each cell is the best F1 the model achieved with that technique. Without balancing all of them perform worse, because they barely detect defaulters; with class weights, Random Forest and XGBoost reach 0.55."),
-               tx("Comparación por factor (Friedman con 28 bloques modelo × método): χ² = 59.8, p ≈ 7·10⁻¹³. Sin balanceo el F1 medio es 0.453, frente a 0.526 (pesos de clase), 0.519 (SMOTE) y 0.513 (ADASYN); «sin balanceo» es peor que las tres (Nemenyi, p ≤ 10⁻⁴). Pesos de clase supera a ADASYN (p = 0.020) y no se distingue de SMOTE (p = 0.67). Naive Bayes es el único modelo al que el balanceo casi no le cambia el F1.",
-                  "Comparison by factor (Friedman with 28 model × method blocks): χ² = 59.8, p ≈ 7·10⁻¹³. Without balancing the mean F1 is 0.453, versus 0.526 (class weights), 0.519 (SMOTE) and 0.513 (ADASYN); “no balancing” is worse than all three (Nemenyi, p ≤ 10⁻⁴). Class weights beat ADASYN (p = 0.020) and are indistinguishable from SMOTE (p = 0.67). Naive Bayes is the only model whose F1 barely changes with balancing."))),
+               tx("Comparación por factor (Friedman con 28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. Sin balanceo el F1 medio es 0.455, frente a 0.526 (pesos de clase), 0.520 (SMOTE) y 0.513 (ADASYN); «sin balanceo» es peor que las tres (Nemenyi, p ≤ 0.010). Pesos de clase supera a ADASYN (p < 10⁻⁴) y no se distingue de SMOTE (p = 0.35); SMOTE supera a ADASYN (p = 0.007). Naive Bayes es el único modelo al que el balanceo casi no le cambia el F1.",
+                  "Comparison by factor (Friedman with 28 model × method blocks): χ² = 76.0, p ≈ 2·10⁻¹⁶. Without balancing the mean F1 is 0.455, versus 0.526 (class weights), 0.520 (SMOTE) and 0.513 (ADASYN); “no balancing” is worse than all three (Nemenyi, p ≤ 0.010). Class weights beat ADASYN (p < 10⁻⁴) and are indistinguishable from SMOTE (p = 0.35); SMOTE beats ADASYN (p = 0.007). Naive Bayes is the only model whose F1 barely changes with balancing."))),
         card(tx("Balancear mueve el umbral, no la capacidad de ordenar", "Balancing moves the threshold, not the ranking ability"),
              grafica("mdl_scatter", 420),
              interp_block(
                tx("Cada punto es una de las 112 combinaciones. Las que no balancean (gris) quedan abajo: aciertan poco con quienes incumplen. Pero no quedan más a la izquierda: ordenan a los clientes casi igual de bien; lo que cambia es dónde se pone el corte entre «paga» e «incumple».",
                   "Each point is one of the 112 combinations. Those without balancing (grey) sit at the bottom: they rarely get defaulters right. But they are not further to the left: they rank clients almost equally well; what changes is where the cut between “pays” and “defaults” is placed."),
-               tx("ROC-AUC medio por técnica (96 combinaciones locales): 0.758 sin balanceo, 0.761 con pesos de clase, 0.754 con SMOTE y 0.749 con ADASYN. Al umbral de 0.5 el recall pasa de 0.377 a 0.610 y la precisión baja de 0.618 a 0.460, así que la ganancia de F1 (0.456 → 0.523) viene en gran parte del umbral y no de un modelo que discrimine mejor.",
-                  "Mean ROC-AUC by technique (96 local combinations): 0.758 without balancing, 0.761 with class weights, 0.754 with SMOTE and 0.749 with ADASYN. At the 0.5 threshold recall goes from 0.377 to 0.610 and precision drops from 0.618 to 0.460, so the F1 gain (0.456 → 0.523) comes largely from the threshold rather than from a model that discriminates better.")))),
+               tx("ROC-AUC medio por técnica (96 combinaciones sin SVM): 0.759 sin balanceo, 0.762 con pesos de clase, 0.754 con SMOTE y 0.750 con ADASYN. Al umbral de 0.5 el recall pasa de 0.378 a 0.607 y la precisión baja de 0.621 a 0.464, así que la ganancia de F1 (0.458 → 0.524) viene en gran parte del umbral y no de un modelo que discrimine mejor.",
+                  "Mean ROC-AUC by technique (96 combinations without SVM): 0.759 without balancing, 0.762 with class weights, 0.754 with SMOTE and 0.750 with ADASYN. At the 0.5 threshold recall goes from 0.378 to 0.607 and precision drops from 0.621 to 0.464, so the F1 gain (0.458 → 0.524) comes largely from the threshold rather than from a model that discriminates better.")))),
     div(class = "grid g2",
         card(tx(paste("Mejor combinación:", best_lbl), paste("Best combination:", best_lbl)),
              grafica("mdl_cm", 340),
@@ -228,23 +399,28 @@ page_models <- function() {
                           num(pos), num(c$tp), pct(c$tp / pos, 0), num(c$fp), num(flagged), pct(c$tp / flagged, 0)),
                   sprintf("Of the %s clients who defaulted, the model detects %s (%s). In exchange it raises %s false alarms: of the %s clients it flags as risky, %s actually default.",
                           num(pos), num(c$tp), pct(c$tp / pos, 0), num(c$fp), num(flagged), pct(c$tp / flagged, 0))),
-               tx(sprintf("%s y optimización %s. Predicciones out-of-fold de los tres modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.781). Las probabilidades no están calibradas (ECE = 0.196) porque el balanceo infla la clase positiva; una recalibración isotónica la baja a 0.017 en un fold. Ajustar el umbral según el costo de cada tipo de error es el siguiente paso natural.",
+               tx(sprintf("%s y optimización %s. Predicciones out-of-fold de los cinco modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.782). Las probabilidades no están calibradas (ECE = 0.196) porque el balanceo infla la clase positiva; una recalibración isotónica la baja de 0.180 a 0.013 en un fold. Ajustar el umbral según el costo de cada tipo de error es el siguiente paso natural.",
                           tech_lbl(b$technique), tolower(method_lbl(b$method))),
-                  sprintf("%s and %s optimization. Out-of-fold predictions from the three outer-fold models, with a 0.5 threshold (pooled AUC 0.781). The probabilities are not calibrated (ECE = 0.196) because balancing inflates the positive class; isotonic recalibration lowers it to 0.017 on one fold. Tuning the threshold to the cost of each type of error is the natural next step.",
+                  sprintf("%s and %s optimization. Out-of-fold predictions from the five outer-fold models, with a 0.5 threshold (pooled AUC 0.782). The probabilities are not calibrated (ECE = 0.196) because balancing inflates the positive class; isotonic recalibration lowers it from 0.180 to 0.013 on one fold. Tuning the threshold to the cost of each type of error is the natural next step.",
                           tech_lbl(b$technique), tolower(method_lbl(b$method)))))),
-        card(tx("Qué variables pesan más en el mejor modelo (SHAP)", "Which variables matter most in the best model (SHAP)"),
-             ul_(list(
-               tagList(tags$b(tx("PAY_0 domina: ", "PAY_0 dominates: ")),
-                       tx("el atraso de septiembre es, con diferencia, la variable más importante; más meses de atraso empujan la predicción hacia el default.",
-                          "September's delay is by far the most important variable; more months of delay push the prediction toward default.")),
-               tagList(tags$b(tx("Le siguen PAY_2 y PAY_3, ", "PAY_2 and PAY_3 follow, ")),
-                       tx("y más abajo PAY_4 a PAY_6: en todas, más atraso, más riesgo.", "and further down PAY_4 to PAY_6: in all of them, more delay means more risk.")),
-               tagList(tags$b(tx("Mayor límite de crédito, menor riesgo: ", "Higher credit limit, lower risk: ")),
-                       tx("los valores altos de LIMIT_BAL reducen la probabilidad de default.", "high LIMIT_BAL values reduce the probability of default.")),
-               tagList(tags$b(tx("Montos pagados y facturados: ", "Paid and billed amounts: ")),
-                       tx("pagar más se asocia con menor riesgo, pero con un efecto individual pequeño; la facturación media aparece quinta y discrimina poco.",
-                          "paying more is associated with lower risk, but with a small individual effect; average billing comes fifth and discriminates little.")))),
-             tags$p(class = "callout", tx("Coincide con el EDA: el historial de pagos es la señal más fuerte del incumplimiento y el perfil demográfico pesa poco.",
-                                          "This matches the EDA: payment history is the strongest signal of default and the demographic profile matters little."))))
+        card(tx("Qué variables pesan más: SHAP en los 5 folds", "Which variables matter most: SHAP across 5 folds"),
+             div(class = "controls", control(tx("Modelo", "Model"),
+                 radio_("shap_model", c("XGBoost" = "xgboost", "Random Forest" = "random_forest"), sel$shap_model %||% "xgboost"))),
+             grafica("shap_graph", 420),
+             uiOutput("shap_interp"),
+             tags$p(class = "callout", tx("Coincide con el EDA: el historial de pagos (PAY_0 primero) es la señal más fuerte del incumplimiento, le sigue el límite de crédito, y el perfil demográfico pesa poco.",
+                                          "This matches the EDA: payment history (PAY_0 first) is the strongest signal of default, followed by the credit limit, and the demographic profile matters little.")))),
+    card(tx("¿LIME y SHAP explican lo mismo?", "Do LIME and SHAP explain the same thing?"),
+         div(class = "grid g2", div(lime_shap_table()), grafica("lime_graph", 330)),
+         interp_block(
+           tx("Casi siempre coinciden en la dirección: si una variable sube el riesgo para SHAP, también lo sube para LIME. Pero no en el orden: comparten entre 3 y 4 de sus 5 variables principales.",
+              "They almost always agree on direction: if a variable raises the risk for SHAP, it also raises it for LIME. But not on order: they share 3 to 4 of their top 5 variables."),
+           tx("200 observaciones por modelo (10 al azar de cada celda de la matriz de confusión en cada fold) y LIME con 3 semillas. Como LIME coincide más consigo mismo (0.85 y 0.88) que con SHAP (0.72 y 0.63), la diferencia entre métodos no es solo ruido de LIME. El acuerdo es mayor en los verdaderos positivos. Solo se comparan orden y signo: SHAP está en log-odds (XGBoost) o probabilidad (Random Forest) y LIME en probabilidad.",
+              "200 observations per model (10 at random from each confusion-matrix cell in each fold) and LIME with 3 seeds. Since LIME agrees more with itself (0.85 and 0.88) than with SHAP (0.72 and 0.63), the difference between methods is not just LIME noise. Agreement is highest on true positives. Only order and sign are compared: SHAP is in log-odds (XGBoost) or probability (Random Forest) and LIME in probability."))),
+    card(tx("Optimizadores: mismo destino, distinto costo", "Optimizers: same destination, different cost"),
+         div(class = "controls", control(tx("Modelo", "Model"),
+             radio_("any_model", stats::setNames(ANY_MODELS, vapply(ANY_MODELS, minfo, "", "label")), sel$any_model %||% "xgboost"))),
+         div(class = "grid g2", grafica("any_graph", 460), uiOutput("any_table")),
+         uiOutput("any_interp"))
   )
 }
