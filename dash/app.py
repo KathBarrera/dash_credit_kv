@@ -130,13 +130,24 @@ NOTEBOOKS = [
     ("05", ("Análisis de resultados", "Results analysis"), "05_results_analysis.html",
      ("Comparación de los resultados de los experimentos.", "Comparison of the experiment results.")),
     ("06", ("Interpretabilidad (SHAP y LIME)", "Interpretability (SHAP and LIME)"), "06_interpretability.html",
-     ("Qué variables explican las predicciones del modelo.", "Which variables explain the model's predictions.")),
+     ("Qué variables explican las predicciones del modelo, en los 5 folds.",
+      "Which variables explain the model's predictions, across the 5 folds.")),
+    # 08 y 09 aún no están en el libro publicado (gh-pages se construyó el 2026-10-05): por ahora se
+    # enlazan en GitHub. Cuando se reconstruya el libro, cambiar por "08_tabla_maestra_svm.html", etc.
+    ("08", ("Tabla maestra y comparabilidad del SVM", "Master table and SVM comparability"),
+     REPO_PROJECT + "/blob/main/notebooks/08_tabla_maestra_svm.ipynb",
+     ("Las 112 combinaciones en una tabla y el reajuste del SVM en CPU.",
+      "The 112 combinations in one table and the SVM refit on CPU.")),
+    ("09", ("Curvas anytime y multi-fidelidad", "Anytime curves and multi-fidelity"),
+     REPO_PROJECT + "/blob/main/notebooks/09_anytime_multifidelidad.ipynb",
+     ("Costo de cada optimizador y Hyperband frente a Random Search.",
+      "Cost of each optimizer and Hyperband versus Random Search.")),
 ]
 DATA_URL = "https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients"
 LINKS = [
     {"icon": "book", "title": ("Libro del proyecto", "Project book"), "url": BOOK_URL + "README.html",
-     "desc": ("Jupyter Book con el README y los siete notebooks del pipeline.",
-              "Jupyter Book with the README and the seven pipeline notebooks.")},
+     "desc": ("Jupyter Book con el README y los notebooks del pipeline.",
+              "Jupyter Book with the README and the pipeline notebooks.")},
     {"icon": "notebook", "title": ("Notebook del EDA", "EDA notebook"), "url": NOTEBOOK_URL,
      "desc": ("Análisis exploratorio completo del que sale este tablero (00_eda).",
               "Full exploratory analysis this dashboard is based on (00_eda).")},
@@ -1228,10 +1239,17 @@ def key_findings():
 # 4a. MODELOS (resultados del repositorio Credit_Card_Project, notebooks 04, 05 y 07)
 # =============================================================================
 # results/model_results.csv resume las 112 combinaciones (7 modelos x 4 técnicas de
-# balanceo x 4 métodos de optimización, validación cruzada anidada 3 x 3):
-#   - 96 filas locales: results/experiments_posthoc_metrics.csv (F1, precisión, recall,
-#     ROC-AUC y PR-AUC; desviación del F1 con ddof=1).
-#   - 16 filas de SVM: results/svm_gpu_results_colab.csv (Colab con GPU; sin PR-AUC).
+# balanceo x 4 métodos de optimización, validación cruzada anidada 5 x 5). Sale de
+# results/master_table_112.csv del proyecto (notebook 08_tabla_maestra_svm):
+#   - 80 filas en CPU local y 16 de KNN en Colab con GPU (cuML); métricas complementarias
+#     de posthoc_metrics. Todas las desviaciones usan ddof=1.
+#   - 16 filas de SVM corridas en Colab con GPU (cuML), con el F1 tal como se reportó.
+#     f1_cpu_refit_mean es el F1 al reajustarlas con scikit-learn en CPU (mismos
+#     hiperparámetros y folds); su PR-AUC también sale de ese reajuste.
+# Otros archivos de results/ (notebooks 06 y 09):
+#   - shap_by_fold.csv: importancia SHAP media por fold (Random Forest y XGBoost).
+#   - lime_vs_shap.csv: acuerdo entre LIME y SHAP en 200 observaciones por modelo.
+#   - anytime_curves.csv / anytime_summary.csv: curvas anytime y costo de los optimizadores.
 MODEL_RESULTS_PATH = BASE_DIR / "results" / "model_results.csv"
 MR = pd.read_csv(MODEL_RESULTS_PATH)
 
@@ -1243,62 +1261,70 @@ MODEL_INFO = {   # textos bilingües (es, en): se leen con minfo(modelo, campo)
                  "lineales entre el historial de pagos y el riesgo.",
                  "Averages many trees trained on different samples of clients; captures non-linear "
                  "relationships between payment history and risk."),
-        "note": ("Mayor F1 medio de las 112 combinaciones. Encabeza el grupo superior junto a XGBoost y SVM, "
-                 "sin diferencia significativa entre los tres (Nemenyi, p ≥ 0.88).",
-                 "Highest mean F1 of the 112 combinations. It leads the top group together with XGBoost and SVM, "
-                 "with no significant difference among the three (Nemenyi, p ≥ 0.88).")},
+        "note": ("Segundo, a solo 0.0014 de XGBoost: una diferencia mucho menor que la variación entre folds. "
+                 "Con sus 16 combinaciones tiene el mejor rango medio de los siete modelos, y es el que usa la "
+                 "página Predecir.",
+                 "Second, only 0.0014 behind XGBoost: a difference much smaller than the variation between folds. "
+                 "Across its 16 combinations it has the best mean rank of the seven models, and it is the one used "
+                 "by the Predict page.")},
     "xgboost": {
         "label": ("XGBoost", "XGBoost"),
         "family": ("Ensamble de árboles (boosting)", "Tree ensemble (boosting)"),
         "desc": ("Construye árboles en secuencia: cada uno corrige los errores del anterior.",
                  "Builds trees in sequence: each one corrects the errors of the previous one."),
-        "note": ("A menos de una milésima del primer lugar: la diferencia es mucho menor que la variación "
-                 "entre folds, así que en la práctica empata con Random Forest.",
-                 "Less than a thousandth behind first place: the difference is much smaller than the variation "
-                 "between folds, so in practice it ties with Random Forest.")},
+        "note": ("Mayor F1 medio de las 112 combinaciones. Forma el grupo superior con Random Forest y SVM, y la "
+                 "prueba de Nemenyi no separa a los tres (p ≥ 0.85): en la práctica empatan.",
+                 "Highest mean F1 of the 112 combinations. It forms the top group with Random Forest and SVM, and "
+                 "the Nemenyi test does not separate the three (p ≥ 0.85): in practice they tie.")},
     "svm": {
         "label": ("SVM", "SVM"),
         "family": ("Máquina de vectores de soporte (kernel RBF)", "Support vector machine (RBF kernel)"),
         "desc": ("Busca la frontera que separa mejor a quienes pagan de quienes incumplen, con un margen máximo.",
                  "Looks for the boundary that best separates payers from defaulters, with maximum margin."),
-        "note": ("Corrida en Colab con GPU (cuML): no es estrictamente comparable con los demás modelos "
-                 "y no tiene PR-AUC calculado.",
-                 "Run on Colab with a GPU (cuML): not strictly comparable with the other models and "
-                 "without a computed PR-AUC.")},
+        "note": ("Corrió en Colab con GPU (cuML). Al reajustarlo en CPU con scikit-learn, con los mismos "
+                 "hiperparámetros y folds, el F1 sube en promedio 0.009: su mejor combinación pasa de 0.539 a "
+                 "0.545, a 0.002 de XGBoost. Aquí se muestra el valor de Colab, tal como se reportó.",
+                 "Run on Colab with a GPU (cuML). Refitting it on CPU with scikit-learn, with the same "
+                 "hyperparameters and folds, raises F1 by 0.009 on average: its best combination goes from 0.539 "
+                 "to 0.545, 0.002 behind XGBoost. The Colab value is shown here, as reported.")},
     "knn": {
         "label": ("KNN", "KNN"),
         "family": ("Vecinos más cercanos", "Nearest neighbors"),
         "desc": ("Clasifica a cada cliente según lo que hicieron los clientes más parecidos a él.",
                  "Classifies each client according to what the most similar clients did."),
         "note": ("Con pesos de clase usa un ajuste propio del proyecto (el voto de cada vecino se pondera por la "
-                 "rareza de su clase), no un mecanismo estándar de scikit-learn.",
+                 "rareza de su clase), no un mecanismo estándar de scikit-learn. Corrió en GPU (cuML), pero sus "
+                 "predicciones coinciden con las de scikit-learn en 99.98 % a 100 % de los casos.",
                  "With class weights it uses a project-specific adjustment (each neighbor's vote is weighted by "
-                 "the rarity of its class), not a standard scikit-learn mechanism.")},
+                 "the rarity of its class), not a standard scikit-learn mechanism. It ran on a GPU (cuML), but its "
+                 "predictions match scikit-learn's in 99.98% to 100% of cases.")},
     "decision_tree": {
         "label": ("Árbol de decisión", "Decision tree"),
         "family": ("Árbol de clasificación", "Classification tree"),
         "desc": ("Una secuencia de preguntas sí/no sobre las variables; fácil de leer, pero inestable.",
                  "A sequence of yes/no questions about the variables; easy to read, but unstable."),
-        "note": ("Queda por debajo del grupo superior: Random Forest lo supera de forma significativa (p = 0.018).",
-                 "It falls below the top group: Random Forest beats it significantly (p = 0.018).")},
+        "note": ("Queda por debajo del grupo superior, aunque la diferencia con Random Forest está justo en el "
+                 "límite de la significancia (Nemenyi, p = 0.050) y con XGBoost no lo es (p = 0.12).",
+                 "It falls below the top group, although the difference with Random Forest is right at the edge "
+                 "of significance (Nemenyi, p = 0.050) and with XGBoost it is not significant (p = 0.12).")},
     "logistic_regression": {
         "label": ("Regresión logística", "Logistic regression"),
         "family": ("Modelo lineal · línea base", "Linear model · baseline"),
         "desc": ("Modelo de referencia: combina las variables de forma lineal para estimar la probabilidad de default.",
                  "Reference model: combines the variables linearly to estimate the probability of default."),
-        "note": ("Sin balanceo es la combinación con menor F1 (0.378): solo detecta 26 % de quienes incumplen. "
-                 "Con SMOTE o pesos de clase sube a 0.515, con un ROC-AUC casi igual.",
-                 "Without balancing it is the combination with the lowest F1 (0.378): it detects only 26% of "
-                 "defaulters. With SMOTE or class weights it rises to 0.515, with almost the same ROC-AUC.")},
+        "note": ("Sin balanceo es la combinación con menor F1 (0.378): solo detecta 27 % de quienes incumplen. "
+                 "Con SMOTE o pesos de clase sube a 0.516, con un ROC-AUC casi igual.",
+                 "Without balancing it is the combination with the lowest F1 (0.378): it detects only 27% of "
+                 "defaulters. With SMOTE or class weights it rises to 0.516, with almost the same ROC-AUC.")},
     "naive_bayes": {
         "label": ("Naive Bayes", "Naive Bayes"),
         "family": ("Probabilístico (gaussiano)", "Probabilistic (Gaussian)"),
         "desc": ("Aplica el teorema de Bayes suponiendo que las variables son independientes entre sí.",
                  "Applies Bayes' theorem assuming the variables are independent of each other."),
         "note": ("Ese supuesto no se cumple con el historial de pagos, muy correlacionado mes a mes; "
-                 "por eso el balanceo casi no lo cambia (F1 entre 0.494 y 0.499).",
+                 "por eso el balanceo casi no lo cambia (F1 entre 0.495 y 0.499).",
                  "That assumption does not hold for payment history, which is highly correlated month to month; "
-                 "that is why balancing barely changes it (F1 between 0.494 and 0.499).")},
+                 "that is why balancing barely changes it (F1 between 0.495 and 0.499).")},
 }
 
 
@@ -1327,8 +1353,9 @@ BEST_BY_MODEL = (MR.loc[MR.groupby("model")["f1_mean"].idxmax()]
                  .sort_values("f1_mean", ascending=False).reset_index(drop=True))
 BEST = BEST_BY_MODEL.iloc[0]
 BASELINE = MR[(MR["model"] == "logistic_regression") & (MR["technique"] == "none")]["f1_mean"].max()
-# Matriz de confusión out-of-fold de la mejor combinación (05_results_analysis.ipynb)
-BEST_CM = {"tn": 19295, "fp": 4040, "fn": 2624, "tp": 4006}
+# Matriz de confusión out-of-fold de la mejor combinación (05_results_analysis.ipynb, corrida 5 x 5:
+# XGBoost, class_weight, bayesian_optuna; figura results/figures/confusion_roc_xgboost.png)
+BEST_CM = {"tn": 19126, "fp": 4209, "fn": 2553, "tp": 4077}
 TECH_COLORS = {"none": GREY_BLUE, "class_weight": WARM_GOLD, "smote": DEEP_NAVY, "adasyn": MID_BLUE}
 
 
@@ -1395,6 +1422,178 @@ def fig_best_cm():
     fig.update_yaxes(autorange="reversed", showgrid=False)
     fig.update_xaxes(side="top", showgrid=False)
     return fig
+
+
+# ----- Interpretabilidad en los 5 folds (06_interpretability, secciones 5 y 6) -----
+SHAP_FOLDS = pd.read_csv(BASE_DIR / "results" / "shap_by_fold.csv")
+LIME_SHAP = pd.read_csv(BASE_DIR / "results" / "lime_vs_shap.csv")
+_FEAT_LBL = {"LIMIT_BAL_LOG": "LIMIT_BAL (log)", "BILL_AMT_MEAN_6M_LOG": ("BILL_AMT media 6 m (log)", "BILL_AMT 6-mo mean (log)"),
+             "BILL_AMT_TREND_6M_LOG": ("BILL_AMT tendencia 6 m (log)", "BILL_AMT 6-mo trend (log)"),
+             "N_CREDIT_BALANCE_MONTHS": ("Meses con saldo a favor", "Months with credit balance")}
+
+
+def feat_lbl(f):
+    v = _FEAT_LBL.get(f)
+    if v is None:
+        return f.replace("_LOG", " (log)") if f.endswith("_LOG") else f
+    return v if isinstance(v, str) else L(v)
+
+
+def shap_stability(model):
+    """Spearman medio entre folds, Jaccard medio del top 5 y variables que siempre están en el top 5."""
+    d = SHAP_FOLDS[SHAP_FOLDS["model"] == model]
+    rk = d.pivot_table(index="feature", columns="fold", values="mean_abs_shap")
+    folds = list(rk.columns)
+    sp = [rk[a].corr(rk[b], method="spearman") for i, a in enumerate(folds) for b in folds[i + 1:]]
+    tops = [set(rk[f].nlargest(5).index) for f in folds]
+    jac = [len(a & b) / len(a | b) for i, a in enumerate(tops) for b in tops[i + 1:]]
+    always = [f for f in rk.mean(axis=1).sort_values(ascending=False).index if all(f in t for t in tops)]
+    return float(np.mean(sp)), float(np.mean(jac)), always
+
+
+def fig_shap_folds(model, top=10):
+    """Importancia SHAP (media de |SHAP|) de las variables principales en cada uno de los 5 folds."""
+    d = SHAP_FOLDS[SHAP_FOLDS["model"] == model]
+    order = d.groupby("feature")["mean_abs_shap"].mean().sort_values(ascending=False).head(top).index[::-1]
+    d = d[d["feature"].isin(order)]
+    labels = {f: feat_lbl(f) for f in order}
+    fig = go.Figure()
+    for f in order:   # rango entre folds como una línea tenue
+        v = d.loc[d["feature"] == f, "mean_abs_shap"]
+        fig.add_trace(go.Scatter(x=[v.min(), v.max()], y=[labels[f]] * 2, mode="lines", showlegend=False,
+                                 hoverinfo="skip", line=dict(color=_rgba(DEEP_NAVY, .25), width=6)))
+    fig.add_trace(go.Scatter(
+        x=d["mean_abs_shap"], y=d["feature"].map(labels), mode="markers", name=tx("Cada fold", "Each fold"),
+        marker=dict(size=8, color=NAVY, opacity=.75, line=dict(width=.6, color=WHITE)),
+        customdata=np.stack([d["fold"] + 1, d["rank"]], axis=-1),
+        hovertemplate="%{y}<br>Fold %{customdata[0]}: %{x:.3f}<br>" + tx("Puesto", "Rank")
+                      + " %{customdata[1]}<extra></extra>"))
+    mean = d.groupby("feature")["mean_abs_shap"].mean().reindex(order)
+    fig.add_trace(go.Scatter(
+        x=mean.values, y=[labels[f] for f in order], mode="markers", name=tx("Media de los 5 folds", "Mean of 5 folds"),
+        marker=dict(symbol="diamond", size=12, color=WARM_GOLD, line=dict(width=1, color=WHITE)),
+        hovertemplate="%{y}<br>" + tx("Media", "Mean") + ": %{x:.3f}<extra></extra>"))
+    style_fig(fig, 420)
+    unit = tx("log-odds", "log-odds") if model == "xgboost" else tx("probabilidad", "probability")
+    fig.update_layout(margin=dict(l=170, r=20, t=50, b=55),
+                      xaxis_title=tx(f"Importancia SHAP media |SHAP| ({unit})", f"Mean SHAP importance |SHAP| ({unit})"))
+    fig.update_yaxes(showgrid=False)
+    return fig
+
+
+def interp_shap_folds(model):
+    sp, jac, always = shap_stability(model)
+    alw = ", ".join(feat_lbl(f) for f in always)
+    if model == "random_forest":
+        basic = tx("En Random Forest la explicación es estable: las cuatro primeras variables (PAY_0, PAY_2, el límite "
+                   "de crédito y PAY_3) son las mismas y en el mismo orden en los cinco folds; solo cambia la quinta.",
+                   "In Random Forest the explanation is stable: the top four variables (PAY_0, PAY_2, the credit "
+                   "limit and PAY_3) are the same and in the same order in all five folds; only the fifth changes.")
+    else:
+        basic = tx("En XGBoost, PAY_0 es la primera variable en los cinco folds, pero el resto del top 5 cambia: en "
+                   "algunos folds PAY_2 y PAY_3 salen y entran los montos pagados. El orden fino de los montos no "
+                   "debe interpretarse.",
+                   "In XGBoost, PAY_0 is the top variable in all five folds, but the rest of the top 5 changes: in "
+                   "some folds PAY_2 and PAY_3 drop out and paid amounts come in. The fine order of the amounts "
+                   "should not be interpreted.")
+    tech = tx(f"Spearman medio entre folds = {sp:.2f}; Jaccard medio del top 5 = {jac:.2f}; siempre en el top 5: "
+              f"{alw}. Cada fold usa los hiperparámetros de su propio bucle interno y SHAP (TreeExplainer, exacto) "
+              "sobre 300 clientes de su fold de prueba. Las magnitudes entre folds no son estrictamente comparables; "
+              "por eso la estabilidad se juzga por el orden.",
+              f"Mean Spearman between folds = {sp:.2f}; mean top-5 Jaccard = {jac:.2f}; always in the top 5: {alw}. "
+              "Each fold uses the hyperparameters of its own inner loop and SHAP (TreeExplainer, exact) on 300 "
+              "clients from its test fold. Magnitudes across folds are not strictly comparable, so stability is "
+              "judged by order.")
+    return basic, tech
+
+
+def lime_shap_table():
+    g = LIME_SHAP.groupby("model")[["spearman_abs", "top5_overlap", "sign_agreement_topk",
+                                     "lime_seed_topk_overlap"]].mean()
+    rows = [(tx("Coinciden en el signo del efecto (top 5)", "Agree on the sign of the effect (top 5)"),
+             "sign_agreement_topk", "{:.1%}"),
+            (tx("Variables compartidas en el top 5", "Shared variables in the top 5"), "top5_overlap", "{:.2f}"),
+            (tx("Correlación de orden (Spearman)", "Rank correlation (Spearman)"), "spearman_abs", "{:.2f}"),
+            (tx("LIME consigo mismo entre semillas (top 5)", "LIME with itself across seeds (top 5)"),
+             "lime_seed_topk_overlap", "{:.2f}")]
+    return _tbl([tx("Medida", "Measure"), "Random Forest", "XGBoost"],
+                [(lbl, fmt.format(g.loc["random_forest", c]), fmt.format(g.loc["xgboost", c])) for lbl, c, fmt in rows])
+
+
+# ----- Optimizadores: curvas anytime y multi-fidelidad (09_anytime_multifidelidad) -----
+ANYTIME = pd.read_csv(BASE_DIR / "results" / "anytime_curves.csv")
+ANYTIME_SUM = pd.read_csv(BASE_DIR / "results" / "anytime_summary.csv")
+ANY_METHODS = ["grid_search", "random_search", "bayesian_optuna", "genetic_deap", "hyperband"]
+ANY_COLORS = {"grid_search": GREY_BLUE, "random_search": MID_BLUE, "bayesian_optuna": WARM_GOLD,
+              "genetic_deap": DEEP_NAVY, "hyperband": BROWN}
+_METHOD_LBL["hyperband"] = ("Hyperband (multi-fidelidad)", "Hyperband (multi-fidelity)")
+ANY_MODELS = ["xgboost", "decision_tree", "logistic_regression"]
+
+
+def fig_anytime(model):
+    """Arrepentimiento (mejor F1 interno posible - mejor F1 hallado) frente al costo acumulado."""
+    d = ANYTIME[ANYTIME["model"] == model]
+    fig = go.Figure()
+    for m in ANY_METHODS:
+        r = d[d["method"] == m].sort_values("cost_s")
+        if r.empty:
+            continue
+        col = ANY_COLORS[m]
+        fig.add_trace(go.Scatter(x=list(r["cost_s"]) + list(r["cost_s"][::-1]),
+                                 y=list(r["regret_max"]) + list(r["regret_min"][::-1]), fill="toself",
+                                 fillcolor=_rgba(col, .10), line=dict(width=0), hoverinfo="skip",
+                                 showlegend=False, legendgroup=m))
+        fig.add_trace(go.Scatter(x=r["cost_s"], y=r["regret_med"], mode="lines", name=method_lbl(m), legendgroup=m,
+                                 line=dict(color=col, width=2.4, dash={"hyperband": "dash", "genetic_deap": "dot"}.get(m, "solid")),
+                                 hovertemplate="<b>" + method_lbl(m) + "</b><br>" + tx("Costo", "Cost")
+                                               + ": %{x:.0f} s<br>" + tx("Arrepentimiento", "Regret")
+                                               + ": %{y:.4f}<extra></extra>"))
+    fig.add_hline(y=0.002, line=dict(color=WARM_GOLD, width=1, dash="dot"),
+                  annotation_text=tx("objetivo: a 0.002 del mejor", "target: within 0.002 of the best"),
+                  annotation_position="top left", annotation_font_size=11)
+    style_fig(fig, 460, legend_top=False)
+    fig.update_layout(margin=dict(l=60, r=20, t=24, b=40),
+                      legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
+                      xaxis_title=tx("Costo de cómputo acumulado (s, escala log)", "Cumulative compute cost (s, log scale)"),
+                      yaxis_title=tx("Arrepentimiento en F1 interno", "Regret in inner F1"))
+    fig.update_xaxes(type="log")
+    return fig
+
+
+def anytime_table(model):
+    d = ANYTIME_SUM[ANYTIME_SUM["model"] == model].set_index("method").reindex(ANY_METHODS)
+    rows = []
+    for m, r in d.iterrows():
+        tgt = (f"{r['costo_objetivo_s']:,.0f} s ({int(r['llegan'])}/3)" if r["llegan"] > 0
+               else tx("no llega (0/3)", "never (0/3)"))
+        rows.append((method_lbl(m), f"{r['evaluaciones']:.0f}", f"{r['costo_total_s']:,.0f} s", tgt,
+                     f"{r['f1_externo']:.3f} ± {r['f1_externo_std']:.3f}"))
+    return _tbl([tx("Método", "Method"), tx("Evaluaciones", "Evaluations"), tx("Costo total", "Total cost"),
+                 tx("Costo hasta el objetivo", "Cost to target"), tx("F1 externo", "Outer F1")], rows)
+
+
+def interp_anytime(model):
+    d = ANYTIME_SUM[ANYTIME_SUM["model"] == model].set_index("method")
+    lo, hi = d["f1_externo"].min(), d["f1_externo"].max()
+    cheap = d["costo_total_s"].idxmin()
+    basic = tx(f"Cada línea muestra qué tan lejos está cada método del mejor resultado posible a medida que gasta "
+               f"tiempo de cómputo. Todos terminan muy cerca: el F1 en datos nuevos va de {lo:.3f} a {hi:.3f}. Lo que "
+               f"cambia es el costo para llegar; aquí el más barato es {method_lbl(cheap)}.",
+               f"Each line shows how far each method is from the best possible result as it spends compute time. "
+               f"All of them end very close: the F1 on new data ranges from {lo:.3f} to {hi:.3f}. What changes is the "
+               f"cost to get there; here the cheapest is {method_lbl(cheap)}.")
+    tech = tx("Mediana y rango entre los folds externos 0 a 2 (de 5), con pesos de clase y una semilla; arrepentimiento = "
+              "mejor F1 interno visto por cualquier método a fidelidad completa − mejor F1 del método hasta ese punto. "
+              "En la tabla maestra los cuatro optimizadores empatan (Friedman con 28 bloques, p = 0.080; F1 medio entre "
+              "0.5022 y 0.5040). Hyperband, implementado desde cero con la fracción de filas como fidelidad, logra un F1 "
+              "externo 0.0022 mayor que Random Search (desviación 0.0051, 9 corridas) con un costo 1.12 veces mayor: "
+              "no demuestra ventaja.",
+              "Median and range over outer folds 0 to 2 (of 5), with class weights and one seed; regret = best inner F1 "
+              "seen by any method at full fidelity − the method's best F1 so far. In the master table the four "
+              "optimizers tie (Friedman with 28 blocks, p = 0.080; mean F1 between 0.5022 and 0.5040). Hyperband, "
+              "implemented from scratch with the fraction of rows as fidelity, reaches an outer F1 0.0022 higher than "
+              "Random Search (SD 0.0051, 9 runs) at 1.12 times the cost: it shows no advantage.")
+    return basic, tech
 
 
 # =============================================================================
@@ -1862,13 +2061,14 @@ def page_intro():
                           "(7 algoritmos × 4 técnicas de balanceo × 4 optimizadores). La mejor, "
                           f"{best_lbl} con {tech_lbl(BEST['technique']).lower()}, logra un F1 de {BEST['f1_mean']:.3f} y "
                           f"detecta el {BEST['recall_mean']:.0%} de los incumplimientos. Por último, la página Predecir "
-                          "usa ese modelo para estimar el riesgo de un cliente nuevo.",
+                          "usa un Random Forest con pesos de clase (estadísticamente empatado con el mejor) para "
+                          "estimar el riesgo de un cliente nuevo.",
                           "First the data is explored (univariate and multivariate EDA) to see which variables "
                           f"anticipate default. Then {len(MR)} model combinations are trained and compared "
                           "(7 algorithms × 4 balancing techniques × 4 optimizers). The best one, "
                           f"{best_lbl} with {tech_lbl(BEST['technique']).lower()}, reaches an F1 of {BEST['f1_mean']:.3f} "
-                          f"and detects {BEST['recall_mean']:.0%} of defaults. Finally, the Predict page uses that model "
-                          "to estimate the risk of a new client.")),
+                          f"and detects {BEST['recall_mean']:.0%} of defaults. Finally, the Predict page uses a Random Forest "
+                          "with class weights (statistically tied with the best) to estimate the risk of a new client.")),
                 html.P(tx("Cada gráfico trae una interpretación básica (lenguaje cotidiano) y una técnica "
                           "(estadísticos y recomendaciones de modelado).",
                           "Each chart comes with a basic interpretation (everyday language) and a technical one "
@@ -2436,16 +2636,16 @@ def page_models():
                        "Each cell is the best F1 the model achieved with that technique. Without balancing all of them "
                        "perform worse, because they barely detect defaulters; with class weights, Random Forest and "
                        "XGBoost reach 0.55."),
-                    tx("Comparación por factor (Friedman con 28 bloques modelo × método): χ² = 59.8, p ≈ 7·10⁻¹³. "
-                       "Sin balanceo el F1 medio es 0.453, frente a 0.526 (pesos de clase), 0.519 (SMOTE) y 0.513 "
-                       "(ADASYN); «sin balanceo» es peor que las tres (Nemenyi, p ≤ 10⁻⁴). Pesos de clase supera a "
-                       "ADASYN (p = 0.020) y no se distingue de SMOTE (p = 0.67). Naive Bayes es el único modelo "
-                       "al que el balanceo casi no le cambia el F1.",
-                       "Comparison by factor (Friedman with 28 model × method blocks): χ² = 59.8, p ≈ 7·10⁻¹³. "
-                       "Without balancing the mean F1 is 0.453, versus 0.526 (class weights), 0.519 (SMOTE) and 0.513 "
-                       "(ADASYN); “no balancing” is worse than all three (Nemenyi, p ≤ 10⁻⁴). Class weights beat "
-                       "ADASYN (p = 0.020) and are indistinguishable from SMOTE (p = 0.67). Naive Bayes is the only "
-                       "model whose F1 barely changes with balancing.")),
+                    tx("Comparación por factor (Friedman con 28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. "
+                       "Sin balanceo el F1 medio es 0.455, frente a 0.526 (pesos de clase), 0.520 (SMOTE) y 0.513 "
+                       "(ADASYN); «sin balanceo» es peor que las tres (Nemenyi, p ≤ 0.010). Pesos de clase supera a "
+                       "ADASYN (p < 10⁻⁴) y no se distingue de SMOTE (p = 0.35); SMOTE supera a ADASYN (p = 0.007). "
+                       "Naive Bayes es el único modelo al que el balanceo casi no le cambia el F1.",
+                       "Comparison by factor (Friedman with 28 model × method blocks): χ² = 76.0, p ≈ 2·10⁻¹⁶. "
+                       "Without balancing the mean F1 is 0.455, versus 0.526 (class weights), 0.520 (SMOTE) and 0.513 "
+                       "(ADASYN); “no balancing” is worse than all three (Nemenyi, p ≤ 0.010). Class weights beat "
+                       "ADASYN (p < 10⁻⁴) and are indistinguishable from SMOTE (p = 0.35); SMOTE beats ADASYN "
+                       "(p = 0.007). Naive Bayes is the only model whose F1 barely changes with balancing.")),
             ]),
             card(tx("Balancear mueve el umbral, no la capacidad de ordenar",
                     "Balancing moves the threshold, not the ranking ability"), [
@@ -2457,14 +2657,14 @@ def page_models():
                        "Each point is one of the 112 combinations. Those without balancing (grey) sit at the bottom: "
                        "they rarely get defaulters right. But they are not further to the left: they rank clients "
                        "almost equally well; what changes is where the cut between “pays” and “defaults” is placed."),
-                    tx("ROC-AUC medio por técnica (96 combinaciones locales): 0.758 sin balanceo, 0.761 con pesos de "
-                       "clase, 0.754 con SMOTE y 0.749 con ADASYN. Al umbral de 0.5 el recall pasa de 0.377 a 0.610 y "
-                       "la precisión baja de 0.618 a 0.460, así que la ganancia de F1 (0.456 → 0.523) viene en gran "
+                    tx("ROC-AUC medio por técnica (96 combinaciones sin SVM): 0.759 sin balanceo, 0.762 con pesos de "
+                       "clase, 0.754 con SMOTE y 0.750 con ADASYN. Al umbral de 0.5 el recall pasa de 0.378 a 0.607 y "
+                       "la precisión baja de 0.621 a 0.464, así que la ganancia de F1 (0.458 → 0.524) viene en gran "
                        "parte del umbral y no de un modelo que discrimine mejor.",
-                       "Mean ROC-AUC by technique (96 local combinations): 0.758 without balancing, 0.761 with class "
-                       "weights, 0.754 with SMOTE and 0.749 with ADASYN. At the 0.5 threshold recall goes from 0.377 to "
-                       "0.610 and precision drops from 0.618 to 0.460, so the F1 gain (0.456 → 0.523) comes largely "
-                       "from the threshold rather than from a model that discriminates better.")),
+                       "Mean ROC-AUC by technique (96 combinations without SVM): 0.759 without balancing, 0.762 with "
+                       "class weights, 0.754 with SMOTE and 0.750 with ADASYN. At the 0.5 threshold recall goes from "
+                       "0.378 to 0.607 and precision drops from 0.621 to 0.464, so the F1 gain (0.458 → 0.524) comes "
+                       "largely from the threshold rather than from a model that discriminates better.")),
             ]),
         ], className="grid g2"),
         html.Div([
@@ -2478,40 +2678,56 @@ def page_models():
                        f"In exchange it raises {c['fp']:,} false alarms: of the {flagged:,} clients it flags as risky, "
                        f"{c['tp'] / flagged:.0%} actually default."),
                     tx(f"{tech_lbl(b['technique'])} y optimización {method_lbl(b['method']).lower()}. Predicciones "
-                       "out-of-fold de los tres modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.781). "
+                       "out-of-fold de los cinco modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.782). "
                        "Las probabilidades no están calibradas (ECE = 0.196) porque el balanceo infla la clase "
-                       "positiva; una recalibración isotónica la baja a 0.017 en un fold. Ajustar el umbral según el "
-                       "costo de cada tipo de error es el siguiente paso natural.",
+                       "positiva; una recalibración isotónica la baja de 0.180 a 0.013 en un fold. Ajustar el umbral "
+                       "según el costo de cada tipo de error es el siguiente paso natural.",
                        f"{tech_lbl(b['technique'])} and {method_lbl(b['method']).lower()} optimization. Out-of-fold "
-                       "predictions from the three outer-fold models, with a 0.5 threshold (pooled AUC 0.781). The "
+                       "predictions from the five outer-fold models, with a 0.5 threshold (pooled AUC 0.782). The "
                        "probabilities are not calibrated (ECE = 0.196) because balancing inflates the positive class; "
-                       "isotonic recalibration lowers it to 0.017 on one fold. Tuning the threshold to the cost of each "
-                       "type of error is the natural next step.")),
+                       "isotonic recalibration lowers it from 0.180 to 0.013 on one fold. Tuning the threshold to the "
+                       "cost of each type of error is the natural next step.")),
             ]),
-            card(tx("Qué variables pesan más en el mejor modelo (SHAP)",
-                    "Which variables matter most in the best model (SHAP)"), [
-                _ul([
-                    [html.B(tx("PAY_0 domina: ", "PAY_0 dominates: ")),
-                     tx("el atraso de septiembre es, con diferencia, la variable más importante; más meses de atraso "
-                        "empujan la predicción hacia el default.",
-                        "September's delay is by far the most important variable; more months of delay push the "
-                        "prediction toward default.")],
-                    [html.B(tx("Le siguen PAY_2 y PAY_3, ", "PAY_2 and PAY_3 follow, ")),
-                     tx("y más abajo PAY_4 a PAY_6: en todas, más atraso, más riesgo.",
-                        "and further down PAY_4 to PAY_6: in all of them, more delay means more risk.")],
-                    [html.B(tx("Mayor límite de crédito, menor riesgo: ", "Higher credit limit, lower risk: ")),
-                     tx("los valores altos de LIMIT_BAL reducen la probabilidad de default.",
-                        "high LIMIT_BAL values reduce the probability of default.")],
-                    [html.B(tx("Montos pagados y facturados: ", "Paid and billed amounts: ")),
-                     tx("pagar más se asocia con menor riesgo, pero con un efecto individual pequeño; la facturación "
-                        "media aparece quinta y discrimina poco.",
-                        "paying more is associated with lower risk, but with a small individual effect; average "
-                        "billing comes fifth and discriminates little.")],
-                ]),
-                html.P(tx("Coincide con el EDA: el historial de pagos es la señal más fuerte del incumplimiento y el "
-                          "perfil demográfico pesa poco.",
-                          "This matches the EDA: payment history is the strongest signal of default and the "
-                          "demographic profile matters little."), className="callout"),
+            card(tx("Qué variables pesan más: SHAP en los 5 folds", "Which variables matter most: SHAP across 5 folds"), [
+                html.Div([control(tx("Modelo", "Model"), dcc.RadioItems(
+                    id="shap-model", value="xgboost", className="radio",
+                    options=[{"label": "XGBoost", "value": "xgboost"},
+                             {"label": "Random Forest", "value": "random_forest"}]))], className="controls"),
+                dcc.Graph(id="shap-graph", config=gcfg),
+                html.Div(id="shap-interp"),
+                html.P(tx("Coincide con el EDA: el historial de pagos (PAY_0 primero) es la señal más fuerte del "
+                          "incumplimiento, le sigue el límite de crédito, y el perfil demográfico pesa poco.",
+                          "This matches the EDA: payment history (PAY_0 first) is the strongest signal of default, "
+                          "followed by the credit limit, and the demographic profile matters little."),
+                       className="callout"),
+            ]),
+        ], className="grid g2"),
+        html.Div([
+            card(tx("¿LIME y SHAP explican lo mismo?", "Do LIME and SHAP explain the same thing?"), [
+                lime_shap_table(),
+                interp_block(
+                    tx("Casi siempre coinciden en la dirección: si una variable sube el riesgo para SHAP, también lo "
+                       "sube para LIME. Pero no en el orden: comparten entre 3 y 4 de sus 5 variables principales.",
+                       "They almost always agree on direction: if a variable raises the risk for SHAP, it also raises "
+                       "it for LIME. But not on order: they share 3 to 4 of their top 5 variables."),
+                    tx("200 observaciones por modelo (10 al azar de cada celda de la matriz de confusión en cada fold) y "
+                       "LIME con 3 semillas. Como LIME coincide más consigo mismo (0.85 y 0.88) que con SHAP (0.72 y "
+                       "0.63), la diferencia entre métodos no es solo ruido de LIME. El acuerdo es mayor en los "
+                       "verdaderos positivos. Solo se comparan orden y signo: SHAP está en log-odds (XGBoost) o "
+                       "probabilidad (Random Forest) y LIME en probabilidad.",
+                       "200 observations per model (10 at random from each confusion-matrix cell in each fold) and "
+                       "LIME with 3 seeds. Since LIME agrees more with itself (0.85 and 0.88) than with SHAP (0.72 and "
+                       "0.63), the difference between methods is not just LIME noise. Agreement is highest on true "
+                       "positives. Only order and sign are compared: SHAP is in log-odds (XGBoost) or probability "
+                       "(Random Forest) and LIME in probability.")),
+            ]),
+            card(tx("Optimizadores: mismo destino, distinto costo", "Optimizers: same destination, different cost"), [
+                html.Div([control(tx("Modelo", "Model"), dcc.RadioItems(
+                    id="any-model", value="xgboost", className="radio",
+                    options=[{"label": minfo(m, "label"), "value": m} for m in ANY_MODELS]))], className="controls"),
+                dcc.Graph(id="any-graph", config=gcfg),
+                html.Div(id="any-table"),
+                html.Div(id="any-interp"),
             ]),
         ], className="grid g2"),
     ])
@@ -2922,7 +3138,8 @@ def pipeline_card():
     rows = [html.A([html.Span([icon(PIPE_ICONS.get(n, "card")), html.Span(n, className="nb-n")], className="nb-num"),
                     html.Div([html.Div(L(t), className="nb-t"), html.P(L(d))], className="nb-body"),
                     icon("external", "nb-ext")],
-                   href=BOOK_URL + "notebooks/" + f, target="_blank", rel="noopener noreferrer", className="nb-row")
+                   href=f if f.startswith("http") else BOOK_URL + "notebooks/" + f, target="_blank",
+                   rel="noopener noreferrer", className="nb-row")
             for n, t, f, d in NOTEBOOKS]
     return card(tx("Pipeline completo", "Full pipeline"), html.Div(rows, className="nb-list"))
 
@@ -2970,9 +3187,9 @@ def page_conclusions():
             "severe multicollinearity.")),
         ("H5", tx("La clase default es minoritaria (desbalance).", "The default class is the minority (imbalance)."),
          yes,
-         tx(f"Solo el {GLOBAL_RATE:.1%} incumple ({ratio:.1f} : 1). Sin balanceo el F1 medio es 0.453; con pesos de "
+         tx(f"Solo el {GLOBAL_RATE:.1%} incumple ({ratio:.1f} : 1). Sin balanceo el F1 medio es 0.455; con pesos de "
             "clase sube a 0.526, así que corregir el desbalance era necesario.",
-            f"Only {GLOBAL_RATE:.1%} default ({ratio:.1f} : 1). Without balancing the mean F1 is 0.453; with class "
+            f"Only {GLOBAL_RATE:.1%} default ({ratio:.1f} : 1). Without balancing the mean F1 is 0.455; with class "
             "weights it rises to 0.526, so correcting the imbalance was necessary.")),
     ]
 
@@ -4370,6 +4587,17 @@ def cb_models_scatter():
 @graph_cb(Output("mdl-cm", "figure"))
 def cb_best_cm():
     return fig_best_cm()
+
+
+@graph_cb(Output("shap-graph", "figure"), Output("shap-interp", "children"), Input("shap-model", "value"))
+def cb_shap(model):
+    return fig_shap_folds(model), interp_block(*interp_shap_folds(model))
+
+
+@graph_cb(Output("any-graph", "figure"), Output("any-table", "children"), Output("any-interp", "children"),
+          Input("any-model", "value"))
+def cb_anytime(model):
+    return fig_anytime(model), anytime_table(model), interp_block(*interp_anytime(model))
 
 
 # ---------- Callbacks: Predecir -----------------------------------------------

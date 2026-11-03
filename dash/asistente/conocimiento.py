@@ -245,7 +245,7 @@ def _construir(A, EN):
           f"- **KPIs:** {n:,} clientes, 24 variables (23 predictoras + 1 objetivo), {pct(rate)} de default y el "
           "periodo abril–septiembre 2005.\n"
           "- **Introducción:** el problema del riesgo en tarjetas de crédito y el recorrido del proyecto: EDA, "
-          "comparación de 112 combinaciones de modelos (la mejor, Random Forest con pesos de clase, F1 0.546) y "
+          f"comparación de 112 combinaciones de modelos (la mejor, {best_lbl} con {tech_b}, F1 {B['f1_mean']:.3f}) y "
           "la página Predecir.\n"
           "- **Fuentes:** el artículo de Yeh & Lien (2009) y los datos del repositorio UCI; montos en NT$.",
           "The **Introduction** gives the context:\n\n"
@@ -253,7 +253,7 @@ def _construir(A, EN):
           f"- **KPIs:** {n:,} clients, 24 variables (23 predictors + 1 target), {pct(rate)} default and the "
           "April–September 2005 period.\n"
           "- **Introduction:** the credit card risk problem and the project's path: EDA, a comparison of 112 "
-          "model combinations (the best, Random Forest with class weights, F1 0.546) and the Predict page.\n"
+          f"model combinations (the best, {best_lbl} with {tech_b}, F1 {B['f1_mean']:.3f}) and the Predict page.\n"
           "- **Sources:** the Yeh & Lien (2009) article and the UCI repository data; amounts in NT$."),
         pagina="/introduccion", sug=t(["Explícame el vistazo rápido", "¿Cómo se limpiaron los datos?",
                                        "¿De dónde salen los datos?"],
@@ -1093,21 +1093,22 @@ def _construir(A, EN):
           f"- **F1:** {B['f1_mean']:.3f} ± {B['f1_std']:.3f} (línea base: {BL:.3f}, +{B['f1_mean'] - BL:.3f})\n"
           f"- **Recall:** {B['recall_mean']:.1%} · **Precisión:** {B['precision_mean']:.1%}\n"
           f"- **ROC-AUC:** {B['roc_auc_mean']:.3f} · **PR-AUC:** {B['pr_auc_mean']:.3f}\n\n"
-          "Ojo: está prácticamente **empatado** con XGBoost y SVM; la diferencia es menor que la variación entre folds.",
+          "Ojo: está prácticamente **empatado** con Random Forest (a 0.0014) y SVM; la diferencia es menor que la "
+          "variación entre folds.",
           f"The best is **{best_lbl}** with **{tech_b}** and **{meth_b}** optimization:\n\n"
           f"- **F1:** {B['f1_mean']:.3f} ± {B['f1_std']:.3f} (baseline: {BL:.3f}, +{B['f1_mean'] - BL:.3f})\n"
           f"- **Recall:** {B['recall_mean']:.1%} · **Precision:** {B['precision_mean']:.1%}\n"
           f"- **ROC-AUC:** {B['roc_auc_mean']:.3f} · **PR-AUC:** {B['pr_auc_mean']:.3f}\n\n"
-          "Note: it is practically **tied** with XGBoost and SVM; the difference is smaller than the variation "
-          "between folds."),
-        tecnico=t("Validación cruzada anidada 3×3; la prueba de Nemenyi no separa a Random Forest, XGBoost y SVM "
-                  "(p ≥ 0.88), aunque Random Forest sí supera al árbol de decisión (p = 0.018). 15 de las 112 "
-                  "combinaciones quedan a menos de una desviación estándar del mejor F1.",
-                  "Nested 3×3 cross-validation; the Nemenyi test does not separate Random Forest, XGBoost and SVM "
-                  "(p ≥ 0.88), although Random Forest does beat the decision tree (p = 0.018). 15 of the 112 "
-                  "combinations are within one standard deviation of the best F1."),
-        pagina="/modelos", sug=t(["Explícame la matriz de confusión", "¿Qué es el F1?", "¿Cómo le fue a XGBoost?"],
-                                 ["Explain the confusion matrix", "What is F1?", "How did XGBoost do?"]),
+          "Note: it is practically **tied** with Random Forest (0.0014 behind) and SVM; the difference is smaller "
+          "than the variation between folds."),
+        tecnico=t("Validación cruzada anidada 5×5. En la comparación por modelo, Nemenyi no separa a XGBoost, Random "
+                  "Forest y SVM (p ≥ 0.85). 14 de las 112 combinaciones quedan a menos de una desviación estándar del "
+                  "mejor F1. Con el SVM reajustado en CPU, su mejor F1 sube a 0.545, a 0.002 de XGBoost.",
+                  "Nested 5×5 cross-validation. In the by-model comparison, Nemenyi does not separate XGBoost, Random "
+                  "Forest and SVM (p ≥ 0.85). 14 of the 112 combinations are within one standard deviation of the best "
+                  "F1. With SVM refitted on CPU, its best F1 rises to 0.545, 0.002 behind XGBoost."),
+        pagina="/modelos", sug=t(["Explícame la matriz de confusión", "¿Qué es el F1?", "¿Cómo le fue a Random Forest?"],
+                                 ["Explain the confusion matrix", "What is F1?", "How did Random Forest do?"]),
         mood="proud"))
     ranking = ", ".join(f"{i + 1}. {A.minfo(r['model'], 'label')} ({r['f1_mean']:.3f})"
                         for i, r in A.BEST_BY_MODEL.iterrows())
@@ -1141,12 +1142,12 @@ def _construir(A, EN):
           "porque casi no detectan a quienes incumplen; con **pesos de clase**, Random Forest y XGBoost llegan a 0.55.",
           "Each cell is a model's **best F1** with a balancing technique. Without balancing all of them perform "
           "worse because they barely detect defaulters; with **class weights**, Random Forest and XGBoost reach 0.55."),
-        tecnico=t("Friedman (28 bloques modelo × método): χ² = 59.8, p ≈ 7·10⁻¹³. F1 medio: 0.453 sin balanceo, 0.526 "
-                  "pesos de clase, 0.519 SMOTE y 0.513 ADASYN. «Sin balanceo» es peor que las tres (Nemenyi p ≤ 10⁻⁴); "
-                  "pesos de clase supera a ADASYN (p = 0.020) y empata con SMOTE (p = 0.67). Naive Bayes casi no cambia.",
-                  "Friedman (28 model × method blocks): χ² = 59.8, p ≈ 7·10⁻¹³. Mean F1: 0.453 no balancing, 0.526 "
-                  "class weights, 0.519 SMOTE and 0.513 ADASYN. “No balancing” is worse than all three (Nemenyi "
-                  "p ≤ 10⁻⁴); class weights beat ADASYN (p = 0.020) and tie with SMOTE (p = 0.67). Naive Bayes barely "
+        tecnico=t("Friedman (28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. F1 medio: 0.455 sin balanceo, 0.526 "
+                  "pesos de clase, 0.520 SMOTE y 0.513 ADASYN. «Sin balanceo» es peor que las tres (Nemenyi p ≤ 0.010); "
+                  "pesos de clase supera a ADASYN (p < 10⁻⁴) y empata con SMOTE (p = 0.35). Naive Bayes casi no cambia.",
+                  "Friedman (28 model × method blocks): χ² = 76.0, p ≈ 2·10⁻¹⁶. Mean F1: 0.455 no balancing, 0.526 "
+                  "class weights, 0.520 SMOTE and 0.513 ADASYN. “No balancing” is worse than all three (Nemenyi "
+                  "p ≤ 0.010); class weights beat ADASYN (p < 10⁻⁴) and tie with SMOTE (p = 0.35). Naive Bayes barely "
                   "changes."),
         pagina="/modelos", sug=t(["¿Qué técnicas de balanceo usaron?", "Explícame la gráfica de F1 vs ROC-AUC"],
                                  ["Which balancing techniques were used?", "Explain the F1 vs ROC-AUC chart"])))
@@ -1166,12 +1167,12 @@ def _construir(A, EN):
           "without balancing (**grey**) sit at the bottom: they rarely get defaulters right. But they are **not** "
           "further left: they rank clients almost equally well. What changes is where the cut between “pays” and "
           "“defaults” is placed."),
-        tecnico=t("ROC-AUC medio: 0.758 sin balanceo, 0.761 pesos de clase, 0.754 SMOTE y 0.749 ADASYN. Con umbral 0.5 "
-                  "el recall pasa de 0.377 a 0.610 y la precisión baja de 0.618 a 0.460: la ganancia de F1 "
-                  "(0.456 → 0.523) viene sobre todo del umbral y no de un modelo que discrimine mejor.",
-                  "Mean ROC-AUC: 0.758 no balancing, 0.761 class weights, 0.754 SMOTE and 0.749 ADASYN. At a 0.5 "
-                  "threshold recall goes from 0.377 to 0.610 and precision drops from 0.618 to 0.460: the F1 gain "
-                  "(0.456 → 0.523) comes mostly from the threshold, not from a model that discriminates better."),
+        tecnico=t("ROC-AUC medio: 0.759 sin balanceo, 0.762 pesos de clase, 0.754 SMOTE y 0.750 ADASYN. Con umbral 0.5 "
+                  "el recall pasa de 0.378 a 0.607 y la precisión baja de 0.621 a 0.464: la ganancia de F1 "
+                  "(0.458 → 0.524) viene sobre todo del umbral y no de un modelo que discrimine mejor.",
+                  "Mean ROC-AUC: 0.759 no balancing, 0.762 class weights, 0.754 SMOTE and 0.750 ADASYN. At a 0.5 "
+                  "threshold recall goes from 0.378 to 0.607 and precision drops from 0.621 to 0.464: the F1 gain "
+                  "(0.458 → 0.524) comes mostly from the threshold, not from a model that discriminates better."),
         pagina="/modelos", sug=t(["¿Qué es el ROC-AUC?", "¿Qué es el umbral de decisión?"],
                                  ["What is ROC-AUC?", "What is the decision threshold?"])))
     add(Intencion(
@@ -1196,42 +1197,111 @@ def _construir(A, EN):
           f"- **False alarms** (false positives): {cm['fp']:,}.\n"
           f"- **Correctly classified payers:** {cm['tn']:,}.\n\n"
           f"Of the {flagged:,} it flags as risky, {cm['tp'] / flagged:.0%} actually default."),
-        tecnico=t("Predicciones out-of-fold de los tres modelos de los folds externos (AUC agrupado 0.781). Las "
+        tecnico=t("Predicciones out-of-fold de los cinco modelos de los folds externos (AUC agrupado 0.782). Las "
                   "probabilidades no están calibradas (ECE = 0.196) porque el balanceo infla la clase positiva; una "
-                  "recalibración isotónica la baja a 0.017 en un fold. Ajustar el umbral según el costo de cada "
-                  "error es el siguiente paso.",
-                  "Out-of-fold predictions from the three outer-fold models (pooled AUC 0.781). The probabilities are "
+                  "recalibración isotónica la baja de 0.180 a 0.013 en un fold. Ajustar el umbral según el costo de "
+                  "cada error es el siguiente paso.",
+                  "Out-of-fold predictions from the five outer-fold models (pooled AUC 0.782). The probabilities are "
                   "not calibrated (ECE = 0.196) because balancing inflates the positive class; isotonic recalibration "
-                  "lowers it to 0.017 on one fold. Tuning the threshold to the cost of each error is the next step."),
+                  "lowers it from 0.180 to 0.013 on one fold. Tuning the threshold to the cost of each error is the "
+                  "next step."),
         pagina="/modelos", sug=t(["¿Qué es el recall?", "¿Qué es el umbral de decisión?"],
                                  ["What is recall?", "What is the decision threshold?"])))
     add(Intencion(
         "shap", t("SHAP: variables que más pesan", "SHAP: most important variables"),
         t(["qué variables pesan más en el modelo", "qué es SHAP", "importancia de variables", "interpretabilidad",
-           "qué variable es más importante para el modelo", "explícame el resumen SHAP", "LIME"],
+           "qué variable es más importante para el modelo", "explícame el resumen SHAP", "SHAP en los 5 folds",
+           "es estable la explicación SHAP", "explícame la gráfica de SHAP por fold"],
           ["which variables matter most in the model", "what is SHAP", "feature importance", "interpretability",
-           "which variable is most important for the model", "explain the SHAP summary", "LIME"]),
-        t("**SHAP** reparte la predicción de un modelo entre las variables para ver cuánto aporta cada una. En el "
-          "mejor modelo:\n\n"
-          "- **PAY_0 domina:** más meses de atraso en septiembre empujan hacia el default.\n"
-          "- Le siguen **PAY_2 y PAY_3**, luego PAY_4 a PAY_6.\n"
-          "- **Mayor LIMIT_BAL, menor riesgo.**\n"
-          "- **Montos pagados y facturados:** efecto pequeño.\n\n"
+           "which variable is most important for the model", "explain the SHAP summary", "SHAP across the 5 folds",
+           "is the SHAP explanation stable", "explain the SHAP by fold chart"]),
+        t("**SHAP** reparte la predicción de un modelo entre las variables para ver cuánto aporta cada una. La gráfica "
+          "lo repite en los **5 folds** (cada punto es un fold; el rombo dorado, la media):\n\n"
+          "- **PAY_0 es la primera variable en todos los folds**, en XGBoost y en Random Forest.\n"
+          "- Le siguen el **límite de crédito** y **PAY_2/PAY_3**: mayor límite, menor riesgo; más atraso, más riesgo.\n"
+          "- **Random Forest es estable:** sus cuatro primeras variables no cambian entre folds.\n"
+          "- **XGBoost lo es menos:** el top 5 cambia entre folds, así que el orden fino de los montos pagados y "
+          "facturados no debe interpretarse.\n\n"
           "Coincide con el EDA: el historial de pagos es la señal más fuerte y lo demográfico pesa poco.",
-          "**SHAP** splits a model's prediction among the variables to see how much each one contributes. In the "
-          "best model:\n\n"
-          "- **PAY_0 dominates:** more months late in September push toward default.\n"
-          "- **PAY_2 and PAY_3** follow, then PAY_4 to PAY_6.\n"
-          "- **Higher LIMIT_BAL, lower risk.**\n"
-          "- **Paid and billed amounts:** small effect.\n\n"
+          "**SHAP** splits a model's prediction among the variables to see how much each one contributes. The chart "
+          "repeats it across the **5 folds** (each dot is a fold; the gold diamond, the mean):\n\n"
+          "- **PAY_0 is the top variable in every fold**, for both XGBoost and Random Forest.\n"
+          "- The **credit limit** and **PAY_2/PAY_3** follow: higher limit, lower risk; more delay, more risk.\n"
+          "- **Random Forest is stable:** its top four variables do not change across folds.\n"
+          "- **XGBoost less so:** its top 5 changes across folds, so the fine order of paid and billed amounts "
+          "should not be interpreted.\n\n"
           "It matches the EDA: payment history is the strongest signal and demographics matter little."),
-        tecnico=t("SHAP del Random Forest sobre 100 clientes de un fold (notebook 06_interpretability). Con variables "
-                  "correlacionadas SHAP reparte la importancia entre ellas, así que el orden exacto entre PAY_2…PAY_6 "
-                  "es aproximado.",
-                  "Random Forest SHAP on 100 clients from one fold (notebook 06_interpretability). With correlated "
-                  "variables SHAP splits importance among them, so the exact order among PAY_2…PAY_6 is approximate."),
-        pagina="/modelos", sug=t(["¿Qué es PAY_0?", "Explícame «¿Qué empuja su riesgo?»"],
-                                 ["What is PAY_0?", "Explain “What drives their risk?”"])))
+        tecnico=t("SHAP exacto (TreeExplainer) sobre 300 clientes del fold de prueba, con los hiperparámetros del bucle "
+                  "interno de cada fold. Spearman medio entre folds: 0.96 (Random Forest) y 0.92 (XGBoost); Jaccard "
+                  "medio del top 5: 0.77 y 0.65. Con variables correlacionadas SHAP reparte la importancia entre "
+                  "ellas, así que se compara el orden y no la magnitud.",
+                  "Exact SHAP (TreeExplainer) on 300 clients from the test fold, with each fold's inner-loop "
+                  "hyperparameters. Mean Spearman between folds: 0.96 (Random Forest) and 0.92 (XGBoost); mean top-5 "
+                  "Jaccard: 0.77 and 0.65. With correlated variables SHAP splits importance among them, so order is "
+                  "compared rather than magnitude."),
+        pagina="/modelos", sug=t(["¿LIME y SHAP dicen lo mismo?", "¿Qué es PAY_0?"],
+                                 ["Do LIME and SHAP agree?", "What is PAY_0?"])))
+    add(Intencion(
+        "lime_shap", t("LIME frente a SHAP", "LIME vs. SHAP"),
+        t(["qué es LIME", "LIME vs SHAP", "LIME y SHAP dicen lo mismo", "coinciden LIME y SHAP",
+           "diferencia entre LIME y SHAP", "explícame la tabla de LIME", "cuándo divergen LIME y SHAP"],
+          ["what is LIME", "LIME vs SHAP", "do LIME and SHAP agree", "do LIME and SHAP say the same",
+           "difference between LIME and SHAP", "explain the LIME table", "when do LIME and SHAP diverge"]),
+        t("**LIME** explica una predicción ajustando un modelo lineal sencillo alrededor de ese cliente; **SHAP** "
+          "reparte la predicción entre las variables con teoría de juegos. Se compararon en **200 clientes por "
+          "modelo**:\n\n"
+          "- **Casi siempre coinciden en la dirección** del efecto (más del 99 %).\n"
+          "- **No tanto en el orden:** comparten entre 3 y 4 de sus 5 variables principales.\n"
+          "- Parte de la diferencia es ruido de LIME, pero no toda: LIME se parece más a sí mismo entre semillas que "
+          "a SHAP.",
+          "**LIME** explains a prediction by fitting a simple linear model around that client; **SHAP** splits the "
+          "prediction among the variables using game theory. They were compared on **200 clients per model**:\n\n"
+          "- **They almost always agree on direction** (over 99%).\n"
+          "- **Less so on order:** they share 3 to 4 of their top 5 variables.\n"
+          "- Part of the difference is LIME noise, but not all of it: LIME resembles itself across seeds more than "
+          "it resembles SHAP."),
+        tecnico=t("10 observaciones al azar de cada celda de la matriz de confusión por fold y LIME con 3 semillas. "
+                  "Solapamiento del top 5: 0.72 (Random Forest) y 0.63 (XGBoost); LIME entre semillas: 0.85 y 0.88; "
+                  "Spearman de |atribución|: 0.57 y 0.53. Divergen más con variables correlacionadas y efectos no "
+                  "lineales.",
+                  "10 random observations from each confusion-matrix cell per fold and LIME with 3 seeds. Top-5 "
+                  "overlap: 0.72 (Random Forest) and 0.63 (XGBoost); LIME across seeds: 0.85 and 0.88; |attribution| "
+                  "Spearman: 0.57 and 0.53. They diverge more with correlated variables and non-linear effects."),
+        pagina="/modelos", sug=t(["¿Qué es SHAP?", "¿Importa el método de optimización?"],
+                                 ["What is SHAP?", "Does the optimization method matter?"])))
+    add(Intencion(
+        "anytime", t("Curvas anytime y Hyperband", "Anytime curves and Hyperband"),
+        t(["qué son las curvas anytime", "explícame la gráfica de optimizadores", "qué es el arrepentimiento",
+           "qué es Hyperband", "qué es multi-fidelidad", "cuál optimizador es más barato",
+           "cuánto cuesta cada optimizador", "Hyperband vs random search", "mismo destino distinto costo",
+           "qué método de búsqueda cuesta menos", "costo de cómputo de la búsqueda de hiperparámetros",
+           "cuál búsqueda es más rápida"],
+          ["what are anytime curves", "explain the optimizers chart", "what is regret", "what is Hyperband",
+           "what is multi-fidelity", "which optimizer is cheapest", "how much does each optimizer cost",
+           "Hyperband vs random search", "same destination different cost", "which search method costs less",
+           "compute cost of the hyperparameter search", "which search is fastest"]),
+        t("Las **curvas anytime** muestran qué tan lejos está cada optimizador del mejor resultado posible "
+          "(**arrepentimiento**) a medida que gasta tiempo de cómputo:\n\n"
+          "- **Todos llegan casi al mismo punto:** en XGBoost el F1 en datos nuevos va de 0.538 a 0.543.\n"
+          "- **Lo que cambia es el costo:** el genético usa unas 3 veces el tiempo de la bayesiana para el mismo F1.\n"
+          "- **Hyperband** (multi-fidelidad: prueba muchas configuraciones con pocos datos y solo sigue con las "
+          "buenas) no mostró ventaja sobre Random Search.",
+          "**Anytime curves** show how far each optimizer is from the best possible result (**regret**) as it "
+          "spends compute time:\n\n"
+          "- **They all reach almost the same point:** in XGBoost the F1 on new data ranges from 0.538 to 0.543.\n"
+          "- **What changes is the cost:** the genetic method uses about 3 times the time of the Bayesian one for the "
+          "same F1.\n"
+          "- **Hyperband** (multi-fidelity: tries many configurations on little data and only continues with the good "
+          "ones) showed no advantage over Random Search."),
+        tecnico=t("Folds externos 0 a 2 de 5, pesos de clase, una semilla; regresión logística, árbol y XGBoost. Hyperband "
+                  "(η = 3, fidelidad = fracción de filas) logra un F1 externo 0.0022 mayor que Random Search "
+                  "(desviación 0.0051) con un costo 1.12 veces mayor. En la tabla maestra los cuatro métodos empatan "
+                  "(Friedman, p = 0.080).",
+                  "Outer folds 0 to 2 of 5, class weights, one seed; logistic regression, tree and XGBoost. Hyperband "
+                  "(η = 3, fidelity = fraction of rows) reaches an outer F1 0.0022 higher than Random Search (SD "
+                  "0.0051) at 1.12 times the cost. In the master table the four methods tie (Friedman, p = 0.080)."),
+        pagina="/modelos", sug=t(["¿Qué métodos de optimización usaron?", "¿Están empatados los modelos?"],
+                                 ["Which optimization methods were used?", "Are the models tied?"])))
     add(Intencion(
         "como_leer", t("Qué tan distintos son los modelos", "How different the models are"),
         t(["cómo leer los resultados de los modelos", "están empatados los modelos", "qué es Nemenyi",
@@ -1241,24 +1311,28 @@ def _construir(A, EN):
            "does the optimization method matter", "are the SVM results comparable",
            "significant difference between models"]),
         t("**Qué tan distintos son los modelos:**\n\n"
-          "- Los primeros lugares están **prácticamente empatados**: 15 de 112 combinaciones quedan a menos de una "
-          "desviación del mejor F1 y Nemenyi no separa ningún par.\n"
-          "- Lo que sí importa es **balancear**. El método de optimización casi no cambia el F1 (0.5022 a 0.5032): "
+          "- Los primeros lugares están **prácticamente empatados**: 14 de 112 combinaciones quedan a menos de una "
+          "desviación del mejor F1, y Nemenyi solo separa combinaciones muy alejadas en el ranking.\n"
+          "- Lo que sí importa es **balancear**. El método de optimización casi no cambia el F1 (0.5022 a 0.5040): "
           "conviene elegirlo por su costo.\n"
-          "- SVM se corrió en Colab con GPU y no es estrictamente comparable; KNN y Naive Bayes con pesos de clase "
-          "usan ajustes propios.\n"
-          "- Validación cruzada anidada 3×3: con 3 folds las pruebas tienen poca potencia.",
+          "- SVM se corrió en Colab con GPU: reajustado en CPU con scikit-learn su F1 sube 0.009 en promedio, pero "
+          "las conclusiones no cambian. KNN y Naive Bayes con pesos de clase usan ajustes propios.\n"
+          "- Validación cruzada anidada 5×5: con 5 folds las pruebas tienen algo de potencia, pero los p-valores son "
+          "optimistas porque los folds comparten datos.",
           "**How different the models are:**\n\n"
-          "- The top places are **practically tied**: 15 of 112 combinations are within one deviation of the best F1 "
-          "and Nemenyi separates no pair.\n"
-          "- What does matter is **balancing**. The optimization method barely changes F1 (0.5022 to 0.5032): it "
+          "- The top places are **practically tied**: 14 of 112 combinations are within one deviation of the best F1, "
+          "and Nemenyi only separates combinations far apart in the ranking.\n"
+          "- What does matter is **balancing**. The optimization method barely changes F1 (0.5022 to 0.5040): it "
           "should be chosen by its cost.\n"
-          "- SVM was run on Colab with a GPU and is not strictly comparable; KNN and Naive Bayes with class weights "
-          "use project-specific adjustments.\n"
-          "- Nested 3×3 cross-validation: with 3 folds the tests have low power."),
-        tecnico=t("Friedman + Nemenyi: diferencia crítica 115.4 frente a 107.7 de diferencia máxima de rangos. La "
-                  "desviación del F1 usa ddof = 1.",
-                  "Friedman + Nemenyi: critical difference 115.4 versus a maximum rank difference of 107.7. The F1 "
+          "- SVM was run on Colab with a GPU: refitted on CPU with scikit-learn its F1 rises 0.009 on average, but "
+          "the conclusions do not change. KNN and Naive Bayes with class weights use project-specific adjustments.\n"
+          "- Nested 5×5 cross-validation: with 5 folds the tests have some power, but the p-values are optimistic "
+          "because the folds share data."),
+        tecnico=t("Friedman sobre las 112 combinaciones: χ² = 534.6, p ≈ 10⁻⁵². Nemenyi: diferencia crítica 89.4 frente "
+                  "a 108.3 de diferencia máxima de rangos; separa 224 de 6,216 pares, ninguno en el grupo de cabeza. "
+                  "La desviación del F1 usa ddof = 1.",
+                  "Friedman over the 112 combinations: χ² = 534.6, p ≈ 10⁻⁵². Nemenyi: critical difference 89.4 versus "
+                  "a maximum rank difference of 108.3; it separates 224 of 6,216 pairs, none in the top group. The F1 "
                   "deviation uses ddof = 1."),
         pagina="/modelos", sug=t(["¿Qué es la validación cruzada anidada?", "¿Qué métodos de optimización usaron?"],
                                  ["What is nested cross-validation?", "Which optimization methods were used?"])))
@@ -1317,13 +1391,13 @@ def _construir(A, EN):
           "- **Random search:** prueba combinaciones al azar.\n"
           "- **Bayesiana (Optuna):** usa los resultados previos para elegir la siguiente prueba.\n"
           "- **Genética (DEAP):** «evoluciona» una población de configuraciones.\n\n"
-          "Casi no cambian el F1 (0.5022 a 0.5032 en promedio), así que conviene elegir por costo computacional.",
+          "Casi no cambian el F1 (0.5022 a 0.5040 en promedio), así que conviene elegir por costo computacional.",
           "The **4 hyperparameter optimization methods**:\n\n"
           "- **Grid search:** tries every combination in a grid.\n"
           "- **Random search:** tries random combinations.\n"
           "- **Bayesian (Optuna):** uses previous results to choose the next trial.\n"
           "- **Genetic (DEAP):** “evolves” a population of configurations.\n\n"
-          "They barely change F1 (0.5022 to 0.5032 on average), so it is best to choose by computational cost."),
+          "They barely change F1 (0.5022 to 0.5040 on average), so it is best to choose by computational cost."),
         pagina="/modelos", sug=t(["¿Qué es la validación cruzada anidada?", "¿Qué técnicas de balanceo usaron?"],
                                  ["What is nested cross-validation?", "Which balancing techniques were used?"])))
     add(Intencion(
@@ -1332,11 +1406,11 @@ def _construir(A, EN):
            "qué son los folds externos e internos", "cross validation", "nested cv"],
           ["what is nested cross-validation", "cross-validation", "folds", "how were the models validated",
            "what are the outer and inner folds", "cross validation", "nested cv"]),
-        t("En la **validación cruzada anidada** hay dos niveles: los **3 folds internos** eligen los hiperparámetros y "
-          "los **3 folds externos** miden el rendimiento con datos que el ajuste nunca vio. Así el F1 reportado no "
+        t("En la **validación cruzada anidada** hay dos niveles: los **5 folds internos** eligen los hiperparámetros y "
+          "los **5 folds externos** miden el rendimiento con datos que el ajuste nunca vio. Así el F1 reportado no "
           "está inflado por la búsqueda de hiperparámetros. El «±» del F1 es la desviación entre los folds externos.",
-          "In **nested cross-validation** there are two levels: the **3 inner folds** choose the hyperparameters and "
-          "the **3 outer folds** measure performance on data the tuning never saw. That way the reported F1 is not "
+          "In **nested cross-validation** there are two levels: the **5 inner folds** choose the hyperparameters and "
+          "the **5 outer folds** measure performance on data the tuning never saw. That way the reported F1 is not "
           "inflated by the hyperparameter search. The “±” of F1 is the deviation across the outer folds."),
         pagina="/modelos", sug=t(["¿Están empatados los modelos?", "¿Qué es el F1?"],
                                  ["Are the models tied?", "What is F1?"])))

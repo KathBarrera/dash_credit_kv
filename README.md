@@ -28,7 +28,7 @@ El análisis incluye:
 - **Español e inglés**: botón **ES | EN** en la barra superior (y en la portada) que traduce todo el tablero — textos, interpretaciones, gráficas, formulario y a Kyo — y se recuerda en el navegador
 - Modo claro y oscuro, y menú lateral plegable
 - **Kyo, asistente del tablero**: una mascota fija en la esquina inferior derecha; al tocarla se abre a la derecha un panel de chat (estilo Copilot de VS Code) que explica cada página, gráfica, variable, modelo y concepto del dash. Es un bot **entrenado** con scikit-learn (TF-IDF + regresión logística) sobre preguntas de ejemplo, usa las mismas cifras que dibujan las gráficas y reconoce cuando una pregunta no es del tablero
-- Sección **Modelos**: carrusel deslizable con los siete clasificadores del proyecto (mejor combinación de cada uno), el mejor modelo resaltado, F1 por técnica de balanceo, F1 frente a ROC-AUC de las 112 combinaciones, matriz de confusión del mejor modelo y resumen de SHAP
+- Sección **Modelos**: carrusel deslizable con los siete clasificadores del proyecto (mejor combinación de cada uno), el mejor modelo resaltado, F1 por técnica de balanceo, F1 frente a ROC-AUC de las 112 combinaciones (validación cruzada anidada 5 × 5), matriz de confusión del mejor modelo (XGBoost con pesos de clase), estabilidad de SHAP en los 5 folds, comparación LIME frente a SHAP y curvas anytime de los optimizadores (con Hyperband)
 
 ---
 
@@ -51,7 +51,11 @@ dash_credit_kv/
 └── dash/
     ├── app.py                               # Aplicación completa (datos, figuras, páginas y callbacks)
     ├── results/
-    │   └── model_results.csv                # 112 combinaciones de modelos (del repositorio Credit_Card_Project)
+    │   ├── model_results.csv                # 112 combinaciones de modelos, corrida 5 x 5 (Credit_Card_Project)
+    │   ├── shap_by_fold.csv                 # importancia SHAP por fold (Random Forest y XGBoost)
+    │   ├── lime_vs_shap.csv                 # acuerdo LIME frente a SHAP, 200 observaciones por modelo
+    │   ├── anytime_curves.csv               # curvas anytime de los optimizadores (mediana entre folds)
+    │   └── anytime_summary.csv              # costo y F1 externo de cada optimizador
     └── modelo/
         ├── features.py                      # Transformaciones de variables del proyecto (las usa el .pkl)
         ├── entrenar.py                      # Entrena y serializa el modelo (python -m modelo.entrenar)
@@ -115,7 +119,17 @@ python -m asistente.evaluar
 
 Para enseñarle algo nuevo, agrega un `Intencion(...)` en `asistente/conocimiento.py` con varias formas de preguntar y su respuesta, usando `t("español", "english")`.
 
-`results/model_results.csv` resume los resultados de [Credit_Card_Project](https://github.com/valeriaflorezs/Credit_Card_Project) (`results/experiments_posthoc_metrics.csv` para los 96 experimentos locales y `results/svm_gpu_results_colab.csv` para SVM): F1, precisión, recall, ROC-AUC y PR-AUC medios de cada combinación modelo × técnica de balanceo × método de optimización.
+Los archivos de `results/` salen de [Credit_Card_Project](https://github.com/valeriaflorezs/Credit_Card_Project), corrida con validación cruzada anidada **5 × 5**:
+
+- `model_results.csv`: la tabla maestra `results/master_table_112.csv` (F1, precisión, recall, ROC-AUC y PR-AUC medios de cada combinación modelo × técnica de balanceo × método de optimización; desviaciones con `ddof=1`). SVM conserva el F1 de Colab tal como se reportó y trae aparte `f1_cpu_refit_mean`, su F1 al reajustarlo con scikit-learn en CPU.
+- `shap_by_fold.csv` y `lime_vs_shap.csv`: `results/interpretability/` (notebook `06_interpretability`, secciones 5 y 6).
+- `anytime_curves.csv` y `anytime_summary.csv`: se calculan a partir de `results/anytime/` igual que en el notebook `09_anytime_multifidelidad` (mediana y rango del arrepentimiento entre los folds 0 a 2).
+
+Para actualizarlos cuando cambien los resultados del proyecto (desde la carpeta `dash/`):
+
+```bash
+python herramientas/actualizar_resultados.py RUTA/Credit_Card_Project/results results
+```
 
 ---
 
