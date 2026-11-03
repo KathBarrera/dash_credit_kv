@@ -105,7 +105,7 @@ server <- function(input, output, session) {
       "/univariado" = page_uni(list(uni_var = input$uni_var, q_family = input$q_family, q_kind = input$q_kind)),
       "/multivariado" = page_multi(list(lim_scale = input$lim_scale, age_view = input$age_view, x_var = input$x_var,
                                         y_var = input$y_var, c_var = input$c_var, s_vars = input$s_vars)),
-      "/modelos" = page_models(),
+      "/modelos" = page_models(list(shap_model = input$shap_model, any_model = input$any_model)),
       "/predecir" = page_predict(pf_actual() %||% PROFILES$tipico[[2]], input$pf_whatif_var %||% "PAY_0"),
       "/conclusiones" = page_conclusions(),
       "/enlaces" = page_links(),
@@ -152,6 +152,12 @@ server <- function(input, output, session) {
   output$mdl_heat <- fig(fig_models_heat)
   output$mdl_scatter <- fig(fig_models_scatter)
   output$mdl_cm <- fig(fig_best_cm)
+  output$lime_graph <- fig(fig_lime_cells)
+  output$shap_graph <- renderPlotly({ set_lang(lang()); req(input$shap_model); themed(fig_shap_folds(input$shap_model), dark()) })
+  output$shap_interp <- renderUI({ set_lang(lang()); req(input$shap_model); r <- interp_shap_folds(input$shap_model); interp_block(r[[1]], r[[2]]) })
+  output$any_graph <- renderPlotly({ set_lang(lang()); req(input$any_model); themed(fig_anytime(input$any_model), dark()) })
+  output$any_table <- renderUI({ set_lang(lang()); req(input$any_model); anytime_table(input$any_model) })
+  output$any_interp <- renderUI({ set_lang(lang()); req(input$any_model); r <- interp_anytime(input$any_model); interp_block(r[[1]], r[[2]]) })
 
   # ---------- Predecir ----------
   pf_leer <- reactive({

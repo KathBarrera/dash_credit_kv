@@ -62,7 +62,7 @@ shiny/
 ├── kyo/                       # Conocimiento de Kyo (exportado del Dash), pruebas y modelo entrenado
 ├── www/                       # estilos.css y comun.js (los mismos del Dash), shiny.css, app.js, fotos y Kyo
 ├── data/                      # Dataset UCI (.xls)
-├── results/model_results.csv  # Resultados de los modelos
+├── results/                   # Los mismos CSV de dash/results: modelos (5 x 5), SHAP por fold, LIME vs SHAP y anytime
 └── herramientas/
     ├── exportar_desde_dash.py # Copia del Dash el CSS, el JS y el conocimiento de Kyo
     └── evaluar_kyo.R          # Evalúa a Kyo con las mismas preguntas de prueba del Dash
@@ -92,14 +92,14 @@ Kyo usa el mismo motor que la versión Dash, reescrito en R:
 - Clasifica con una regresión logística multinomial con penalización L2 (C = 25, optimizador L-BFGS).
 - Usa la misma base de conocimiento que el Dash.
 
-Con las preguntas de prueba del Dash obtiene los mismos resultados:
+Se evalúa con las mismas preguntas de prueba del Dash. Resultados del Dash con la base de conocimiento actual (la versión R debería dar lo mismo; compruébalo con el comando de abajo):
 
-| Prueba | Resultado |
+| Prueba | Resultado (Dash) |
 |---|---|
-| Preguntas nuevas en español | 78/78 |
-| Preguntas nuevas en inglés | 33/34 |
+| Preguntas nuevas en español | 81/81 |
+| Preguntas nuevas en inglés | 35/36 |
 | Preguntas ajenas al tablero rechazadas | 17/17 |
-| Sugerencias que llevan al mismo tema en ambos idiomas | 78/78 |
+| Sugerencias que llevan al mismo tema en ambos idiomas | 80/80 |
 
 ```bash
 cd shiny && Rscript herramientas/evaluar_kyo.R

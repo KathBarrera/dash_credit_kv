@@ -261,6 +261,21 @@
    "/modelos"
   ],
   [
+   "¿LIME y SHAP explican lo mismo?",
+   "lime_shap",
+   "/modelos"
+  ],
+  [
+   "¿cuál método de búsqueda de hiperparámetros sale más barato?",
+   "anytime",
+   "/modelos"
+  ],
+  [
+   "¿hyperband sirvió de algo?",
+   "anytime",
+   "/modelos"
+  ],
+  [
    "¿hay diferencias significativas entre los primeros modelos?",
    "como_leer",
    "/modelos"
@@ -520,6 +535,16 @@
   [
    "how did xgboost perform?",
    "m_xgboost",
+   "/modelos"
+  ],
+  [
+   "do LIME and SHAP give the same explanation?",
+   "lime_shap",
+   "/modelos"
+  ],
+  [
+   "which hyperparameter search is the cheapest?",
+   "anytime",
    "/modelos"
   ],
   [

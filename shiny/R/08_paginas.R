@@ -83,9 +83,9 @@ page_intro <- function() {
                        "Credit cards are one of the retail banking lines with the highest risk exposure: each client receives a limit and is expected to repay it on the agreed dates. When they do not, the bank faces losses, higher collection costs and the need to set aside capital.")),
              tags$p(tx(sprintf("Este tablero recorre el proyecto completo con el conjunto Default of Credit Card Clients (UCI): %s clientes observados entre abril y septiembre de 2005, de quienes se conoce su límite de crédito, sus datos demográficos, seis meses de historial de pagos, los montos facturados y pagados, y si incumplieron el pago del mes siguiente.", num(I$filas_originales)),
                        sprintf("This dashboard walks through the whole project using the Default of Credit Card Clients dataset (UCI): %s clients observed between April and September 2005, with their credit limit, demographics, six-month payment history, billed and paid amounts, and whether they defaulted the following month.", num(I$filas_originales)))),
-             tags$p(tx(sprintf("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables anticipan el incumplimiento. Luego se entrenan y comparan %d combinaciones de modelos (7 algoritmos × 4 técnicas de balanceo × 4 optimizadores). La mejor, %s con %s, logra un F1 de %.3f y detecta el %s de los incumplimientos. Por último, la página Predecir usa ese modelo para estimar el riesgo de un cliente nuevo.",
+             tags$p(tx(sprintf("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables anticipan el incumplimiento. Luego se entrenan y comparan %d combinaciones de modelos (7 algoritmos × 4 técnicas de balanceo × 4 optimizadores). La mejor, %s con %s, logra un F1 de %.3f y detecta el %s de los incumplimientos. Por último, la página Predecir usa un Random Forest con pesos de clase (estadísticamente empatado con el mejor) para estimar el riesgo de un cliente nuevo.",
                                nrow(MR), best_lbl, tech, BEST$f1_mean, pct(BEST$recall_mean, 0)),
-                       sprintf("First the data is explored (univariate and multivariate EDA) to see which variables anticipate default. Then %d model combinations are trained and compared (7 algorithms × 4 balancing techniques × 4 optimizers). The best one, %s with %s, reaches an F1 of %.3f and detects %s of defaults. Finally, the Predict page uses that model to estimate the risk of a new client.",
+                       sprintf("First the data is explored (univariate and multivariate EDA) to see which variables anticipate default. Then %d model combinations are trained and compared (7 algorithms × 4 balancing techniques × 4 optimizers). The best one, %s with %s, reaches an F1 of %.3f and detects %s of defaults. Finally, the Predict page uses a Random Forest with class weights (statistically tied with the best) to estimate the risk of a new client.",
                                nrow(MR), best_lbl, tech, BEST$f1_mean, pct(BEST$recall_mean, 0)))),
              tags$p(tx("Cada gráfico trae una interpretación básica (lenguaje cotidiano) y una técnica (estadísticos y recomendaciones de modelado).",
                        "Each chart comes with a basic interpretation (everyday language) and a technical one (statistics and modeling recommendations)."))),
@@ -362,8 +362,8 @@ page_conclusions <- function() {
          tx(sprintf("Correlaciones entre %.2f y %.2f entre meses y VIF mayor a 20 en BILL_AMT2–5: multicolinealidad severa.", min(bc), max(bc)),
             sprintf("Correlations between %.2f and %.2f across months and VIF above 20 for BILL_AMT2–5: severe multicollinearity.", min(bc), max(bc)))),
     list("H5", tx("La clase default es minoritaria (desbalance).", "The default class is the minority (imbalance)."), yes,
-         tx(sprintf("Solo el %s incumple (%.1f : 1). Sin balanceo el F1 medio es 0.453; con pesos de clase sube a 0.526, así que corregir el desbalance era necesario.", pct(GLOBAL_RATE), ratio),
-            sprintf("Only %s default (%.1f : 1). Without balancing the mean F1 is 0.453; with class weights it rises to 0.526, so correcting the imbalance was necessary.", pct(GLOBAL_RATE), ratio))))
+         tx(sprintf("Solo el %s incumple (%.1f : 1). Sin balanceo el F1 medio es 0.455; con pesos de clase sube a 0.526, así que corregir el desbalance era necesario.", pct(GLOBAL_RATE), ratio),
+            sprintf("Only %s default (%.1f : 1). Without balancing the mean F1 is 0.455; with class weights it rises to 0.526, so correcting the imbalance was necessary.", pct(GLOBAL_RATE), ratio))))
   tagList(
     page_title(tx("Conclusiones", "Conclusions")),
     card(tx("Respuesta a la pregunta de investigación", "Answer to the research question"),
@@ -406,7 +406,8 @@ link_cards <- function(compact = FALSE) {
            div(class = "lc-title", title), if (!compact) tags$p(L(lk$desc)))
   }))
 }
-PIPE_ICONS <- c("00" = "receipt", "01" = "card", "02" = "pos", "03" = "chip", "04" = "wallet", "05" = "cardpay", "06" = "contactless")
+PIPE_ICONS <- c("00" = "receipt", "01" = "card", "02" = "pos", "03" = "chip", "04" = "wallet", "05" = "cardpay", "06" = "contactless",
+                "08" = "layers", "09" = "bars")
 
 page_links <- function() {
   tagList(
@@ -418,7 +419,8 @@ page_links <- function() {
                    "It includes an extraction, cleaning and transformation (ETL) pipeline, an exploratory analysis focused on class imbalance and the severe multicollinearity among billed amounts, and a factorial design of 112 configurations comparing algorithms, feature representations, balancing techniques and optimization (genetic and Bayesian). The result improves the minority-class F1 and reduces false negatives compared with the baseline logistic regression."))),
     link_cards(),
     card(tx("Pipeline completo", "Full pipeline"), div(class = "nb-list", lapply(NOTEBOOKS, function(nb) {
-      tags$a(class = "nb-row", href = paste0(BOOK_URL, "notebooks/", nb[[3]]), target = "_blank", rel = "noopener noreferrer",
+      tags$a(class = "nb-row", href = if (startsWith(nb[[3]], "http")) nb[[3]] else paste0(BOOK_URL, "notebooks/", nb[[3]]),
+             target = "_blank", rel = "noopener noreferrer",
              tags$span(class = "nb-num", icon_(PIPE_ICONS[[nb[[1]]]]), tags$span(class = "nb-n", nb[[1]])),
              div(class = "nb-body", div(class = "nb-t", L(nb[[2]])), tags$p(L(nb[[4]]))),
              icon_("external", "nb-ext"))

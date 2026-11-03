@@ -72,12 +72,23 @@ NOTEBOOKS <- list(
   list("05", c("Análisis de resultados", "Results analysis"), "05_results_analysis.html",
        c("Comparación de los resultados de los experimentos.", "Comparison of the experiment results.")),
   list("06", c("Interpretabilidad (SHAP y LIME)", "Interpretability (SHAP and LIME)"), "06_interpretability.html",
-       c("Qué variables explican las predicciones del modelo.", "Which variables explain the model's predictions."))
+       c("Qué variables explican las predicciones del modelo, en los 5 folds.",
+         "Which variables explain the model's predictions, across the 5 folds.")),
+  # 08 y 09 aún no están en el libro publicado (gh-pages se construyó el 2026-10-05): por ahora se
+  # enlazan en GitHub. Cuando se reconstruya el libro, cambiar por "08_tabla_maestra_svm.html", etc.
+  list("08", c("Tabla maestra y comparabilidad del SVM", "Master table and SVM comparability"),
+       paste0(REPO_PROJECT, "/blob/main/notebooks/08_tabla_maestra_svm.ipynb"),
+       c("Las 112 combinaciones en una tabla y el reajuste del SVM en CPU.",
+         "The 112 combinations in one table and the SVM refit on CPU.")),
+  list("09", c("Curvas anytime y multi-fidelidad", "Anytime curves and multi-fidelity"),
+       paste0(REPO_PROJECT, "/blob/main/notebooks/09_anytime_multifidelidad.ipynb"),
+       c("Costo de cada optimizador y Hyperband frente a Random Search.",
+         "Cost of each optimizer and Hyperband versus Random Search."))
 )
 LINKS <- list(
   list(icon = "book", title = c("Libro del proyecto", "Project book"), url = paste0(BOOK_URL, "README.html"),
-       desc = c("Jupyter Book con el README y los siete notebooks del pipeline.",
-                "Jupyter Book with the README and the seven pipeline notebooks.")),
+       desc = c("Jupyter Book con el README y los notebooks del pipeline.",
+                "Jupyter Book with the README and the pipeline notebooks.")),
   list(icon = "notebook", title = c("Notebook del EDA", "EDA notebook"), url = NOTEBOOK_URL,
        desc = c("Análisis exploratorio completo del que sale este tablero (00_eda).",
                 "Full exploratory analysis this dashboard is based on (00_eda).")),

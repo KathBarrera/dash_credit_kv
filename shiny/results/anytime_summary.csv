@@ -1,0 +1,16 @@
+model,method,evaluaciones,costo_total_s,costo_objetivo_s,llegan,f1_externo,f1_externo_std
+decision_tree,bayesian_optuna,30.0,29.5567,17.6822,2,0.5246,0.0047
+decision_tree,genetic_deap,121.0,99.147,5.6731,3,0.5246,0.0045
+decision_tree,grid_search,128.0,148.972,,0,0.5104,0.0078
+decision_tree,hyperband,66.0,36.5645,20.288,3,0.5229,0.0052
+decision_tree,random_search,25.0,32.6494,4.3514,1,0.52,0.006
+logistic_regression,bayesian_optuna,30.0,148.1757,65.3013,3,0.5118,0.0127
+logistic_regression,genetic_deap,123.0,295.5575,16.6855,3,0.5146,0.0103
+logistic_regression,grid_search,8.0,37.9384,3.7677,1,0.5063,0.0062
+logistic_regression,hyperband,66.0,138.7949,60.0617,2,0.5057,0.0066
+logistic_regression,random_search,25.0,109.7,8.4755,3,0.5071,0.0091
+xgboost,bayesian_optuna,30.0,448.815,261.8016,3,0.5417,0.0038
+xgboost,genetic_deap,106.0,1443.3159,162.2658,3,0.5398,0.0103
+xgboost,grid_search,64.0,1182.1282,504.4752,2,0.5396,0.0032
+xgboost,hyperband,66.0,481.9337,385.3293,3,0.5434,0.0062
+xgboost,random_search,25.0,574.0626,170.3941,2,0.5383,0.007
