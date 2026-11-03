@@ -1520,6 +1520,28 @@ def lime_shap_table():
                 [(lbl, fmt.format(g.loc["random_forest", c]), fmt.format(g.loc["xgboost", c])) for lbl, c, fmt in rows])
 
 
+_CELL_LBL = {"TP": ("Verdaderos positivos", "True positives"), "FP": ("Falsas alarmas", "False alarms"),
+             "TN": ("Verdaderos negativos", "True negatives"), "FN": ("No detectados", "Missed")}
+
+
+def fig_lime_cells():
+    """Variables principales compartidas por LIME y SHAP (de 5), según la celda de la matriz de confusión."""
+    cells = ["TP", "FP", "TN", "FN"]
+    g = LIME_SHAP.groupby(["model", "outcome"])["top5_overlap"].mean() * 5
+    fig = go.Figure()
+    for m, col in (("random_forest", NAVY), ("xgboost", WARM_GOLD)):
+        v = [g.get((m, c), np.nan) for c in cells]
+        fig.add_trace(go.Bar(x=[L(_CELL_LBL[c]) for c in cells], y=v, name=minfo(m, "label"), marker_color=col,
+                             text=[f"{x:.1f}" for x in v], textposition="outside", cliponaxis=False,
+                             hovertemplate="<b>" + minfo(m, "label") + "</b> · %{x}<br>"
+                                           + tx("Variables compartidas", "Shared variables") + ": %{y:.2f} / 5<extra></extra>"))
+    style_fig(fig, 330)
+    fig.update_layout(barmode="group", bargap=.3, margin=dict(l=55, r=10, t=50, b=40),
+                      yaxis=dict(range=[0, 5], dtick=1, title=tx("Variables compartidas (de 5)", "Shared variables (of 5)")))
+    fig.update_xaxes(showgrid=False)
+    return fig
+
+
 # ----- Optimizadores: curvas anytime y multi-fidelidad (09_anytime_multifidelidad) -----
 ANYTIME = pd.read_csv(BASE_DIR / "results" / "anytime_curves.csv")
 ANYTIME_SUM = pd.read_csv(BASE_DIR / "results" / "anytime_summary.csv")
@@ -2702,34 +2724,37 @@ def page_models():
                        className="callout"),
             ]),
         ], className="grid g2"),
-        html.Div([
-            card(tx("¿LIME y SHAP explican lo mismo?", "Do LIME and SHAP explain the same thing?"), [
-                lime_shap_table(),
-                interp_block(
-                    tx("Casi siempre coinciden en la dirección: si una variable sube el riesgo para SHAP, también lo "
-                       "sube para LIME. Pero no en el orden: comparten entre 3 y 4 de sus 5 variables principales.",
-                       "They almost always agree on direction: if a variable raises the risk for SHAP, it also raises "
-                       "it for LIME. But not on order: they share 3 to 4 of their top 5 variables."),
-                    tx("200 observaciones por modelo (10 al azar de cada celda de la matriz de confusión en cada fold) y "
-                       "LIME con 3 semillas. Como LIME coincide más consigo mismo (0.85 y 0.88) que con SHAP (0.72 y "
-                       "0.63), la diferencia entre métodos no es solo ruido de LIME. El acuerdo es mayor en los "
-                       "verdaderos positivos. Solo se comparan orden y signo: SHAP está en log-odds (XGBoost) o "
-                       "probabilidad (Random Forest) y LIME en probabilidad.",
-                       "200 observations per model (10 at random from each confusion-matrix cell in each fold) and "
-                       "LIME with 3 seeds. Since LIME agrees more with itself (0.85 and 0.88) than with SHAP (0.72 and "
-                       "0.63), the difference between methods is not just LIME noise. Agreement is highest on true "
-                       "positives. Only order and sign are compared: SHAP is in log-odds (XGBoost) or probability "
-                       "(Random Forest) and LIME in probability.")),
-            ]),
-            card(tx("Optimizadores: mismo destino, distinto costo", "Optimizers: same destination, different cost"), [
-                html.Div([control(tx("Modelo", "Model"), dcc.RadioItems(
-                    id="any-model", value="xgboost", className="radio",
-                    options=[{"label": minfo(m, "label"), "value": m} for m in ANY_MODELS]))], className="controls"),
+        card(tx("¿LIME y SHAP explican lo mismo?", "Do LIME and SHAP explain the same thing?"), [
+            html.Div([
+                html.Div([lime_shap_table()]),
+                dcc.Graph(id="lime-graph", config=gcfg),
+            ], className="grid g2"),
+            interp_block(
+                tx("Casi siempre coinciden en la dirección: si una variable sube el riesgo para SHAP, también lo "
+                   "sube para LIME. Pero no en el orden: comparten entre 3 y 4 de sus 5 variables principales.",
+                   "They almost always agree on direction: if a variable raises the risk for SHAP, it also raises "
+                   "it for LIME. But not on order: they share 3 to 4 of their top 5 variables."),
+                tx("200 observaciones por modelo (10 al azar de cada celda de la matriz de confusión en cada fold) y "
+                   "LIME con 3 semillas. Como LIME coincide más consigo mismo (0.85 y 0.88) que con SHAP (0.72 y "
+                   "0.63), la diferencia entre métodos no es solo ruido de LIME. El acuerdo es mayor en los "
+                   "verdaderos positivos. Solo se comparan orden y signo: SHAP está en log-odds (XGBoost) o "
+                   "probabilidad (Random Forest) y LIME en probabilidad.",
+                   "200 observations per model (10 at random from each confusion-matrix cell in each fold) and "
+                   "LIME with 3 seeds. Since LIME agrees more with itself (0.85 and 0.88) than with SHAP (0.72 and "
+                   "0.63), the difference between methods is not just LIME noise. Agreement is highest on true "
+                   "positives. Only order and sign are compared: SHAP is in log-odds (XGBoost) or probability "
+                   "(Random Forest) and LIME in probability.")),
+        ]),
+        card(tx("Optimizadores: mismo destino, distinto costo", "Optimizers: same destination, different cost"), [
+            html.Div([control(tx("Modelo", "Model"), dcc.RadioItems(
+                id="any-model", value="xgboost", className="radio",
+                options=[{"label": minfo(m, "label"), "value": m} for m in ANY_MODELS]))], className="controls"),
+            html.Div([
                 dcc.Graph(id="any-graph", config=gcfg),
                 html.Div(id="any-table"),
-                html.Div(id="any-interp"),
-            ]),
-        ], className="grid g2"),
+            ], className="grid g2"),
+            html.Div(id="any-interp"),
+        ]),
     ])
 
 
@@ -4587,6 +4612,11 @@ def cb_models_scatter():
 @graph_cb(Output("mdl-cm", "figure"))
 def cb_best_cm():
     return fig_best_cm()
+
+
+@graph_cb(Output("lime-graph", "figure"))
+def cb_lime_cells():
+    return fig_lime_cells()
 
 
 @graph_cb(Output("shap-graph", "figure"), Output("shap-interp", "children"), Input("shap-model", "value"))
