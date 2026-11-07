@@ -3949,6 +3949,8 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 #pf-verdict.pf-busy .rc, #pf-verdict[data-dash-is-loading="true"] .rc { animation:rc-pulse 1.1s ease-in-out infinite; }
 #pf-verdict.pf-busy .rc-piece, #pf-verdict[data-dash-is-loading="true"] .rc-piece { filter:drop-shadow(0 18px 22px rgba(8,12,30,.35))
   drop-shadow(0 0 14px rgba(242,193,78,.55)); }
+#pf-verdict.pf-busy .rc.hi .rc-piece, #pf-verdict[data-dash-is-loading="true"] .rc.hi .rc-piece {
+  filter:drop-shadow(0 18px 22px rgba(8,12,30,.35)) drop-shadow(0 0 14px rgba(235,64,52,.55)); }   /* riesgo alto: halo rojo */
 #pf-verdict.pf-busy .rc::after, #pf-verdict[data-dash-is-loading="true"] .rc::after { content:''; position:absolute; inset:0; border-radius:22px;
   pointer-events:none; z-index:3; background:linear-gradient(110deg, transparent 30%, rgba(255,240,200,.28) 50%, transparent 70%);
   background-size:220% 100%; animation:rc-shine 1.1s linear infinite; }
@@ -3968,14 +3970,14 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .rc-face > :not(.rc-cracks):not(.cc-gloss) { position:relative; z-index:1; }   /* el texto queda sobre las grietas */
 .rc.split .rc-piece:first-child { animation:rc-crack .45s ease-out; }
 /* brillo de 2 s al cambiar el puntaje: dorado si es riesgo bajo, rojo si es riesgo alto */
-.rc-wrap.glow-good { animation:rc-glow-good 2s ease-out; }
-.rc-wrap.glow-bad { animation:rc-glow-bad 2s ease-out; }
-@keyframes rc-glow-good { 0% { filter:drop-shadow(0 0 0 rgba(242,193,78,0)); }
-  20% { filter:drop-shadow(0 0 16px rgba(242,193,78,.95)) drop-shadow(0 0 34px rgba(242,193,78,.6)); }
-  100% { filter:drop-shadow(0 0 0 rgba(242,193,78,0)); } }
-@keyframes rc-glow-bad { 0% { filter:drop-shadow(0 0 0 rgba(226,61,61,0)); }
-  20% { filter:drop-shadow(0 0 16px rgba(226,61,61,.95)) drop-shadow(0 0 34px rgba(226,61,61,.6)); }
-  100% { filter:drop-shadow(0 0 0 rgba(226,61,61,0)); } }
+.rc-wrap.glow-good { animation:rc-glow-good 2s ease-in-out; }
+.rc-wrap.glow-bad { animation:rc-glow-bad 2s ease-in-out; }
+@keyframes rc-glow-good {
+  0%, 100% { filter:drop-shadow(0 0 0 rgba(246,196,69,0)); }
+  15%, 55% { filter:drop-shadow(0 0 10px rgba(255,214,102,1)) drop-shadow(0 0 26px rgba(246,196,69,.95)) drop-shadow(0 0 48px rgba(246,196,69,.6)); } }
+@keyframes rc-glow-bad {
+  0%, 100% { filter:drop-shadow(0 0 0 rgba(235,64,52,0)); }
+  15%, 55% { filter:drop-shadow(0 0 10px rgba(255,90,80,1)) drop-shadow(0 0 26px rgba(235,64,52,.95)) drop-shadow(0 0 48px rgba(235,64,52,.6)); } }
 @media (prefers-reduced-motion:reduce) { .rc-wrap.glow-good, .rc-wrap.glow-bad { animation-duration:.01s; } }
 @keyframes rc-crack { 0% { translate:0 0; } 25% { translate:-3px 1px; } 50% { translate:3px -1px; } 75% { translate:-1px 0; } 100% { translate:0 0; } }
 @media (prefers-reduced-motion:reduce) { .rc-piece { transition:none; } .rc.split .rc-piece:first-child { animation:none; } }
