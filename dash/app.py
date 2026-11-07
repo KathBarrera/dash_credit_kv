@@ -3120,7 +3120,7 @@ def predict_verdict(values, score):
     signals.append(("card", tx(f"Su cupo supera al de {q:.0%} de los clientes.",
                                f"Their limit is higher than that of {q:.0%} of clients.")))
     return html.Div([
-        risk_card(score, thr),
+        html.Div(risk_card(score, thr), className="rc-wrap"),
         html.Ul([html.Li([icon(ic), html.Span(s)]) for ic, s in signals], className="pf-signals"),
         html.Details([html.Summary(tx("¿Cómo leer el puntaje?", "How to read the score?")), html.P(
             (tx(f"Con el umbral de 50 % el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
@@ -3967,6 +3967,16 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .rc-cracks { position:absolute; inset:0; z-index:0; pointer-events:none; background:center/100% 100% no-repeat; }
 .rc-face > :not(.rc-cracks):not(.cc-gloss) { position:relative; z-index:1; }   /* el texto queda sobre las grietas */
 .rc.split .rc-piece:first-child { animation:rc-crack .45s ease-out; }
+/* brillo de 2 s al cambiar el puntaje: dorado si es riesgo bajo, rojo si es riesgo alto */
+.rc-wrap.glow-good { animation:rc-glow-good 2s ease-out; }
+.rc-wrap.glow-bad { animation:rc-glow-bad 2s ease-out; }
+@keyframes rc-glow-good { 0% { filter:drop-shadow(0 0 0 rgba(242,193,78,0)); }
+  20% { filter:drop-shadow(0 0 16px rgba(242,193,78,.95)) drop-shadow(0 0 34px rgba(242,193,78,.6)); }
+  100% { filter:drop-shadow(0 0 0 rgba(242,193,78,0)); } }
+@keyframes rc-glow-bad { 0% { filter:drop-shadow(0 0 0 rgba(226,61,61,0)); }
+  20% { filter:drop-shadow(0 0 16px rgba(226,61,61,.95)) drop-shadow(0 0 34px rgba(226,61,61,.6)); }
+  100% { filter:drop-shadow(0 0 0 rgba(226,61,61,0)); } }
+@media (prefers-reduced-motion:reduce) { .rc-wrap.glow-good, .rc-wrap.glow-bad { animation-duration:.01s; } }
 @keyframes rc-crack { 0% { translate:0 0; } 25% { translate:-3px 1px; } 50% { translate:3px -1px; } 75% { translate:-1px 0; } 100% { translate:0 0; } }
 @media (prefers-reduced-motion:reduce) { .rc-piece { transition:none; } .rc.split .rc-piece:first-child { animation:none; } }
 .pf-badge { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin:0 0 10px;
@@ -4143,6 +4153,20 @@ COVER_JS = """
   document.addEventListener('input', busy, true);
   document.addEventListener('change', busy, true);
   document.addEventListener('pointerup', busy, true);
+  // Predecir: brillo de 2 s cuando la tarjeta cambia de puntaje (dorado = riesgo bajo, rojo = riesgo alto)
+  var rcLast = null;
+  function rcGlow() {
+    var w = document.querySelector('#pf-verdict .rc-wrap:not([data-seen])'); if (!w) return;
+    w.setAttribute('data-seen', '1');
+    var s = w.querySelector('.rc-score'), rc = w.querySelector('.rc');
+    var score = s ? s.textContent.trim() : null;
+    if (rcLast !== null && score !== null && score !== rcLast) {
+      w.classList.add(rc && rc.classList.contains('hi') ? 'glow-bad' : 'glow-good');
+      setTimeout(function () { w.classList.remove('glow-good', 'glow-bad'); }, 2100);
+    }
+    rcLast = score;
+  }
+  new MutationObserver(rcGlow).observe(document.documentElement, { childList: true, subtree: true });
   // Dash dibuja la página después de cargar: sincroniza cuando aparece un carrusel nuevo
   function scan() {
     document.querySelectorAll('.mc-track:not([data-ready])').forEach(function (t) {

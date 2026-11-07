@@ -225,7 +225,7 @@ predict_verdict <- function(values, score) {
     tx("No es una probabilidad calibrada: el modelo se entrenó con pesos de clase, que lo hacen sobrestimar el riesgo frente a la tasa real (22 %). Sirve para ordenar y clasificar clientes.",
        "It is not a calibrated probability: the model was trained with class weights, which make it overestimate the risk compared with the real rate (22%). It is useful to rank and classify clients."))
   tagList(
-    risk_card(score, UMBRAL),
+    div(class = "rc-wrap", risk_card(score, UMBRAL)),
     tags$ul(class = "pf-signals", lapply(signals, function(s) tags$li(icon_(s[[1]]), tags$span(s[[2]])))),
     tags$details(class = "pf-details", tags$summary(tx("¿Cómo leer el puntaje?", "How to read the score?")), tags$p(lectura)))
 }
