@@ -12,9 +12,15 @@ Cómo funciona
     5. El contexto importa: se da un pequeño impulso a las intenciones de la página abierta, y
        «explícame esta página» o «dame la versión técnica» usan la página y la última respuesta.
 """
+import hashlib
+import json
 import re
 import unicodedata
 from dataclasses import dataclass, field
+from pathlib import Path
+
+import joblib
+import sklearn
 
 import numpy as np
 from scipy.sparse import hstack
@@ -150,6 +156,30 @@ class Asistente:
                 for e in list(it.ejemplos) + [it.titulo]:
                     X.append(normalizar(e))
                     y.append(it.id)
+        # El entrenamiento usa ~220 MB de memoria por un momento (más de lo que cabe en el plan gratis de
+        # Render). Por eso Kyo se guarda entrenado en modelo_kyo.pkl y al arrancar solo se carga; si cambian
+        # sus preguntas o la versión de scikit-learn, se vuelve a entrenar y se guarda de nuevo.
+        firma = hashlib.sha256(json.dumps([X, y, sklearn.__version__], ensure_ascii=False).encode()).hexdigest()
+        cache = Path(__file__).with_name("modelo_kyo.pkl")
+        try:
+            d = joblib.load(cache)
+            if d.get("firma") != firma:
+                raise ValueError("conocimiento distinto")
+            self.vw, self.vc, self.Mw, self.Mc, self.clf = d["vw"], d["vc"], d["Mw"], d["Mc"], d["clf"]
+            self.M = hstack([self.Mw, self.Mc]).tocsr()
+            self.y = np.array(y)
+        except Exception:
+            self._entrenar(X, y)
+            try:
+                joblib.dump({"firma": firma, "vw": self.vw, "vc": self.vc, "Mw": self.Mw, "Mc": self.Mc,
+                             "clf": self.clf}, cache, compress=3)
+            except OSError:
+                pass   # disco de solo lectura: se usa el modelo recién entrenado
+        self.clases = list(self.clf.classes_)
+        self.n_ejemplos = len(X)
+        self.n_temas = len(self.I[self.idiomas[0]])
+
+    def _entrenar(self, X, y):
         self.vw = TfidfVectorizer(analyzer=_palabras, sublinear_tf=True)                  # palabras
         self.vc = TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), sublinear_tf=True,  # letras
                                   preprocessor=_contenido)
@@ -158,9 +188,6 @@ class Asistente:
         self.y = np.array(y)
         self.clf = LogisticRegression(C=25, max_iter=4000)
         self.clf.fit(self.M, self.y)
-        self.clases = list(self.clf.classes_)
-        self.n_ejemplos = len(X)
-        self.n_temas = len(self.I[self.idiomas[0]])
 
     def _lg(self, lang):
         return lang if lang in self.I else self.idiomas[0]
