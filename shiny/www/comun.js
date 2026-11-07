@@ -135,6 +135,20 @@
   document.addEventListener('input', busy, true);
   document.addEventListener('change', busy, true);
   document.addEventListener('pointerup', busy, true);
+  // Predecir: brillo de 2 s cuando la tarjeta cambia de puntaje (dorado = riesgo bajo, rojo = riesgo alto)
+  var rcLast = null;
+  function rcGlow() {
+    var w = document.querySelector('#pf-verdict .rc-wrap:not([data-seen])'); if (!w) return;
+    w.setAttribute('data-seen', '1');
+    var s = w.querySelector('.rc-score'), rc = w.querySelector('.rc');
+    var score = s ? s.textContent.trim() : null;
+    if (rcLast !== null && score !== null && score !== rcLast) {
+      w.classList.add(rc && rc.classList.contains('hi') ? 'glow-bad' : 'glow-good');
+      setTimeout(function () { w.classList.remove('glow-good', 'glow-bad'); }, 2100);
+    }
+    rcLast = score;
+  }
+  new MutationObserver(rcGlow).observe(document.documentElement, { childList: true, subtree: true });
   // Dash dibuja la página después de cargar: sincroniza cuando aparece un carrusel nuevo
   function scan() {
     document.querySelectorAll('.mc-track:not([data-ready])').forEach(function (t) {
