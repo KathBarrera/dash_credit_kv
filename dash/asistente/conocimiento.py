@@ -1064,17 +1064,21 @@ def _construir(A, EN):
           ["explain the models page", "what is in models", "models section", "which models did they use",
            "how many models did they compare", "which classifiers did they try", "112 combinations"]),
         t(f"**Modelos** resume {len(A.MR)} combinaciones: **7 clasificadores × 4 técnicas de balanceo × 4 métodos de "
-          "optimización**, con validación cruzada anidada.\n\n"
+          "optimización**, más **LightGBM**, **CatBoost** y el modelo original **CS-FOF**, con validación cruzada "
+          "anidada.\n\n"
           f"- **KPIs:** mejor F1 {B['f1_mean']:.3f} ({best_lbl}), mejora de +{B['f1_mean'] - BL:.3f} sobre la línea "
           f"base y {B['recall_mean']:.0%} de incumplimientos detectados.\n"
           "- **Carrusel:** la mejor combinación de cada modelo.\n"
+          "- **Modelo original CS-FOF:** sus pruebas frente a cada modelo y su consistencia en otros conjuntos.\n"
           "- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n"
           "- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
           f"**Models** summarizes {len(A.MR)} combinations: **7 classifiers × 4 balancing techniques × 4 optimization "
-          "methods**, with nested cross-validation.\n\n"
+          "methods**, plus **LightGBM**, **CatBoost** and the original model **CS-FOF**, with nested "
+          "cross-validation.\n\n"
           f"- **KPIs:** best F1 {B['f1_mean']:.3f} ({best_lbl}), +{B['f1_mean'] - BL:.3f} over the baseline and "
           f"{B['recall_mean']:.0%} of defaults detected.\n"
           "- **Carousel:** the best combination of each model.\n"
+          "- **Original model CS-FOF:** its tests against each model and its consistency on other datasets.\n"
           "- **F1 by model and technique** (heatmap) and **F1 vs. ROC-AUC** (scatter).\n"
           "- **Confusion matrix** of the best model and **SHAP summary**."),
         pagina="/modelos", sug=t(["¿Cuál es el mejor modelo?", "Explícame el carrusel de modelos",
@@ -1093,20 +1097,20 @@ def _construir(A, EN):
           f"- **F1:** {B['f1_mean']:.3f} ± {B['f1_std']:.3f} (línea base: {BL:.3f}, +{B['f1_mean'] - BL:.3f})\n"
           f"- **Recall:** {B['recall_mean']:.1%} · **Precisión:** {B['precision_mean']:.1%}\n"
           f"- **ROC-AUC:** {B['roc_auc_mean']:.3f} · **PR-AUC:** {B['pr_auc_mean']:.3f}\n\n"
-          "Ojo: está prácticamente **empatado** con Random Forest (a 0.0014) y SVM; la diferencia es menor que la "
-          "variación entre folds.",
+          "Ojo: está prácticamente **empatado** con el modelo original CS-FOF (a 0.0001), XGBoost, LightGBM y Random "
+          "Forest; la diferencia es menor que la variación entre folds.",
           f"The best is **{best_lbl}** with **{tech_b}** and **{meth_b}** optimization:\n\n"
           f"- **F1:** {B['f1_mean']:.3f} ± {B['f1_std']:.3f} (baseline: {BL:.3f}, +{B['f1_mean'] - BL:.3f})\n"
           f"- **Recall:** {B['recall_mean']:.1%} · **Precision:** {B['precision_mean']:.1%}\n"
           f"- **ROC-AUC:** {B['roc_auc_mean']:.3f} · **PR-AUC:** {B['pr_auc_mean']:.3f}\n\n"
-          "Note: it is practically **tied** with Random Forest (0.0014 behind) and SVM; the difference is smaller "
-          "than the variation between folds."),
-        tecnico=t("Validación cruzada anidada 5×5. En la comparación por modelo, Nemenyi no separa a XGBoost, Random "
-                  "Forest y SVM (p ≥ 0.85). 14 de las 112 combinaciones quedan a menos de una desviación estándar del "
-                  "mejor F1. Con el SVM reajustado en CPU, su mejor F1 sube a 0.545, a 0.002 de XGBoost.",
-                  "Nested 5×5 cross-validation. In the by-model comparison, Nemenyi does not separate XGBoost, Random "
-                  "Forest and SVM (p ≥ 0.85). 14 of the 112 combinations are within one standard deviation of the best "
-                  "F1. With SVM refitted on CPU, its best F1 rises to 0.545, 0.002 behind XGBoost."),
+          "Note: it is practically **tied** with the original model CS-FOF (0.0001 behind), XGBoost, LightGBM and "
+          "Random Forest; the difference is smaller than the variation between folds."),
+        tecnico=t("Validación cruzada anidada 5×5. Friedman sobre los 10 modelos: χ² = 40.3, p = 6.7·10⁻⁶; rangos "
+                  "medios CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 y LightGBM 3.8. Ni Nadeau–Bengio "
+                  "ni Wilcoxon ni DeLong separan a CS-FOF de CatBoost, XGBoost, LightGBM o Random Forest.",
+                  "Nested 5×5 cross-validation. Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks "
+                  "CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 and LightGBM 3.8. Neither Nadeau–Bengio "
+                  "nor Wilcoxon nor DeLong separates CS-FOF from CatBoost, XGBoost, LightGBM or Random Forest."),
         pagina="/modelos", sug=t(["Explícame la matriz de confusión", "¿Qué es el F1?", "¿Cómo le fue a Random Forest?"],
                                  ["Explain the confusion matrix", "What is F1?", "How did Random Forest do?"]),
         mood="proud"))
@@ -1139,9 +1143,9 @@ def _construir(A, EN):
           ["explain the F1 heatmap", "F1 by model and balancing technique", "which balancing technique is best",
            "does balancing help", "no balancing vs class weights", "models heatmap"]),
         t("Cada celda es el **mejor F1** de un modelo con una técnica de balanceo. Sin balanceo todos rinden peor "
-          "porque casi no detectan a quienes incumplen; con **pesos de clase**, Random Forest y XGBoost llegan a 0.55.",
+          "porque casi no detectan a quienes incumplen; con **pesos de clase**, los cinco mejores llegan a 0.55.",
           "Each cell is a model's **best F1** with a balancing technique. Without balancing all of them perform "
-          "worse because they barely detect defaulters; with **class weights**, Random Forest and XGBoost reach 0.55."),
+          "worse because they barely detect defaulters; with **class weights**, the top five reach 0.55."),
         tecnico=t("Friedman (28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. F1 medio: 0.455 sin balanceo, 0.526 "
                   "pesos de clase, 0.520 SMOTE y 0.513 ADASYN. «Sin balanceo» es peor que las tres (Nemenyi p ≤ 0.010); "
                   "pesos de clase supera a ADASYN (p < 10⁻⁴) y empata con SMOTE (p = 0.35). Naive Bayes casi no cambia.",
@@ -1426,7 +1430,11 @@ def _construir(A, EN):
                  "decision_tree": (["árbol de decisión", "decision tree", "árbol"], ["decision tree", "tree"]),
                  "logistic_regression": (["regresión logística", "línea base", "logistic regression"],
                                          ["logistic regression", "baseline"]),
-                 "naive_bayes": (["naive bayes", "bayes ingenuo"], ["naive bayes"])}[m]
+                 "naive_bayes": (["naive bayes", "bayes ingenuo"], ["naive bayes"]),
+                 "catboost": (["catboost"], ["catboost"]),
+                 "lightgbm": (["lightgbm", "light gbm"], ["lightgbm", "light gbm"]),
+                 "cs_fof": (["cs-fof", "modelo original", "bosque oblicuo", "modelo propio"],
+                            ["cs-fof", "original model", "oblique forest", "our own model"])}[m]
         al = t(*alias)
         if EN:
             ej = [q for a in al for q in (f"what is {a}", f"how did {a} do", f"{a} results", f"explain {a}")]
@@ -1437,11 +1445,11 @@ def _construir(A, EN):
         tech_m, meth_m = A.tech_lbl(r["technique"]).lower(), A.method_lbl(r["method"]).lower()
         add(Intencion(
             f"m_{m}", lbl, ej,
-            t(f"**{lbl}** · {A.minfo(m, 'family')} · puesto **#{rank}** de 7.\n\n{A.minfo(m, 'desc')}\n\n"
+            t(f"**{lbl}** · {A.minfo(m, 'family')} · puesto **#{rank}** de {len(A.BEST_BY_MODEL)}.\n\n{A.minfo(m, 'desc')}\n\n"
               f"Mejor combinación: {tech_m} + {meth_m} → **F1 {r['f1_mean']:.3f}** ± {r['f1_std']:.3f}, recall "
               f"{r['recall_mean']:.3f}, precisión {r['precision_mean']:.3f}, ROC-AUC {r['roc_auc_mean']:.3f}.\n\n"
               f"{A.minfo(m, 'note')}",
-              f"**{lbl}** · {A.minfo(m, 'family')} · rank **#{rank}** of 7.\n\n{A.minfo(m, 'desc')}\n\n"
+              f"**{lbl}** · {A.minfo(m, 'family')} · rank **#{rank}** of {len(A.BEST_BY_MODEL)}.\n\n{A.minfo(m, 'desc')}\n\n"
               f"Best combination: {tech_m} + {meth_m} → **F1 {r['f1_mean']:.3f}** ± {r['f1_std']:.3f}, recall "
               f"{r['recall_mean']:.3f}, precision {r['precision_mean']:.3f}, ROC-AUC {r['roc_auc_mean']:.3f}.\n\n"
               f"{A.minfo(m, 'note')}"),
