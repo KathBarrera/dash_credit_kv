@@ -2672,7 +2672,239 @@ CROSS_DATA = [  # (modelo, taiwan, german, australian, polish, rango medio)
 ]
 
 
-def csfof_card():
+
+# ----- Teoría visual de CS-FOF: corte recto frente a corte oblicuo con clientes reales -----
+# Dos variables de este conjunto (límite de crédito y monto pagado en septiembre, en log10). Se compara
+# el mejor corte recto (una variable), un árbol clásico de 3 niveles (hasta 7 cortes rectos) y un solo
+# corte en la dirección de Fisher ponderada por costo, que es lo que CS-FOF evalúa en cada nodo.
+def _csfof_toy():
+    from sklearn.tree import DecisionTreeClassifier
+    a = np.log10(df["LIMIT_BAL"].to_numpy(float))
+    b = np.log10(df["PAY_AMT1"].clip(lower=0).to_numpy(float) + 1)
+    y = df[TARGET].to_numpy(int)
+    X = np.column_stack([a, b])
+    c = (y == 0).sum() / (y == 1).sum()                 # costo del moroso, como en CS-FOF
+    w = np.where(y == 1, c, 1.0)
+
+    def gini(wt, pw):                                   # Gini ponderado
+        p = pw / wt
+        return 2 * p * (1 - p)
+
+    W, P = w.sum(), (w * y).sum()
+    g0 = gini(W, P)
+
+    def mejor_corte(z):
+        o = np.argsort(z, kind="stable"); zs, cw, cp = z[o], np.cumsum(w[o]), np.cumsum((w * y)[o])
+        best, thr = 0.0, None
+        for q in np.unique(np.quantile(zs, np.linspace(.02, .98, 97))):
+            i = np.searchsorted(zs, q, side="right")
+            if i < 50 or i > len(zs) - 50:
+                continue
+            wl, pl = cw[i - 1], cp[i - 1]
+            g = g0 - wl / W * gini(wl, pl) - (W - wl) / W * gini(W - wl, P - pl)
+            if g > best:
+                best, thr = g, q
+        return best, thr
+
+    g_axis = max(mejor_corte(a)[0], mejor_corte(b)[0])
+    mu, sd = X.mean(0), X.std(0)
+    Z = (X - mu) / sd
+    m1 = np.average(Z[y == 1], axis=0, weights=w[y == 1]); m0 = Z[y == 0].mean(0)
+    Sw = np.cov(Z[y == 1].T) + np.cov(Z[y == 0].T) + 0.1 * np.eye(2)
+    v = np.linalg.solve(Sw, m1 - m0)                    # dirección de Fisher
+    g_obl, t_obl = mejor_corte(Z @ v)
+
+    def fisher_en(idx):                                 # corte de Fisher dentro de un nodo (para 3 cortes)
+        yy, ww, zz = y[idx], w[idx], Z[idx]
+        mm1 = np.average(zz[yy == 1], axis=0, weights=ww[yy == 1])
+        vv = np.linalg.solve(np.cov(zz[yy == 1].T) + np.cov(zz[yy == 0].T) + 0.1 * np.eye(2), mm1 - zz[yy == 0].mean(0))
+        s = zz @ vv; Wn, Pn = ww.sum(), (ww * yy).sum(); best, th = 0.0, np.inf
+        for q in np.unique(np.quantile(s, np.linspace(.02, .98, 97))):
+            L_ = s <= q
+            if L_.sum() < 200 or (~L_).sum() < 200:
+                continue
+            g = (gini(Wn, Pn) - ww[L_].sum() / Wn * gini(ww[L_].sum(), (ww * yy)[L_].sum())
+                 - ww[~L_].sum() / Wn * gini(ww[~L_].sum(), (ww * yy)[~L_].sum()))
+            if g > best:
+                best, th = g, q
+        return s <= th
+
+    def ganancia(leaf):
+        return g0 - sum(w[leaf == L_].sum() / W * gini(w[leaf == L_].sum(), (w * y)[leaf == L_].sum())
+                        for L_ in np.unique(leaf))
+
+    hojas = np.zeros(len(y), int); izq = fisher_en(np.arange(len(y))); hojas[~izq] = 1
+    for k in (0, 1):
+        s_ = np.flatnonzero(hojas == k); hojas[s_[~fisher_en(s_)]] = 10 + k
+    g_obl3 = ganancia(hojas)
+    g_axis3 = ganancia(DecisionTreeClassifier(max_depth=2, min_samples_leaf=200, class_weight={0: 1.0, 1: c},
+                                              random_state=42).fit(X, y).apply(X))
+    tree = DecisionTreeClassifier(max_depth=3, min_samples_leaf=200, class_weight={0: 1.0, 1: c},
+                                  random_state=42).fit(X, y)
+    leaf = tree.apply(X)
+    g_tree = ganancia(leaf)
+    n_cuts = int((tree.tree_.children_left != -1).sum())
+    # segmentos de cada corte recto del árbol, dentro de la región de su nodo (la «escalera»)
+    tr, segs = tree.tree_, []
+
+    def recorrer(n, x0, x1, y0, y1):
+        if tr.children_left[n] == -1:
+            return
+        f, th = tr.feature[n], tr.threshold[n]
+        if f == 0:
+            segs.append(((th, th), (y0, y1))); recorrer(tr.children_left[n], x0, th, y0, y1)
+            recorrer(tr.children_right[n], th, x1, y0, y1)
+        else:
+            segs.append(((x0, x1), (th, th))); recorrer(tr.children_left[n], x0, x1, y0, th)
+            recorrer(tr.children_right[n], x0, x1, th, y1)
+    recorrer(0, a.min(), a.max(), 0.0, b.max())
+    gx = np.linspace(a.min(), a.max(), 220); gy = np.linspace(0, b.max(), 220)
+    GX, GY = np.meshgrid(gx, gy)
+    G = np.column_stack([GX.ravel(), GY.ravel()])
+    reg_tree = tree.predict(G).reshape(GX.shape)
+    reg_obl = ((((G - mu) / sd) @ v) > t_obl).astype(int).reshape(GX.shape)
+    rng = np.random.default_rng(42)
+    idx = np.concatenate([rng.choice(np.flatnonzero(y == k), 1300, replace=False) for k in (0, 1)])
+    jit = rng.normal(0, 0.03, (len(idx), 2))
+    return dict(a=a[idx] + jit[:, 0], b=b[idx] + jit[:, 1], y=y[idx], gx=gx, gy=gy, reg_tree=reg_tree,
+                reg_obl=reg_obl, segs=segs, g_axis=g_axis, g_tree=g_tree, g_obl=g_obl, g_axis3=g_axis3, g_obl3=g_obl3, n_cuts=n_cuts, c=c,
+                v=v / np.abs(v).max())
+
+
+CS_TOY = _csfof_toy()
+
+
+def fig_csfof_toy(kind):
+    """Clientes reales; región sombreada = donde el corte predice «incumple»."""
+    T = CS_TOY
+    reg = T["reg_tree"] if kind == "tree" else T["reg_obl"]
+    fig = go.Figure(go.Heatmap(x=T["gx"], y=T["gy"], z=reg, showscale=False, hoverinfo="skip", zsmooth=False,
+                               colorscale=[[0, "rgba(0,0,0,0)"], [1, f"{DEEP_RGBA}0.13)"]]))
+    for k, col, name in ((0, GREY_BLUE, tx("Paga", "Pays")), (1, WARM_GOLD, tx("Incumple", "Defaults"))):
+        m = T["y"] == k
+        fig.add_trace(go.Scattergl(x=T["a"][m], y=T["b"][m], mode="markers", name=name,
+                                   marker=dict(size=4, color=col, opacity=.55 if k == 0 else .75),
+                                   hoverinfo="skip"))
+    if kind == "tree":   # cada corte recto del árbol como un segmento
+        for sx, sy in T["segs"]:
+            fig.add_trace(go.Scatter(x=list(sx), y=list(sy), mode="lines", showlegend=False, hoverinfo="skip",
+                                     line=dict(color=DEEP_NAVY, width=2.2)))
+    else:
+        fig.add_trace(go.Contour(x=T["gx"], y=T["gy"], z=reg, showscale=False, hoverinfo="skip",
+                                 contours=dict(start=.5, end=.5, size=1, coloring="none"),
+                                 line=dict(color=DEEP_NAVY, width=2.4), showlegend=False))
+    style_fig(fig, 360)
+    fig.update_layout(margin=dict(l=70, r=16, t=40, b=55))
+    fig.update_xaxes(title=tx("Límite de crédito (NT$)", "Credit limit (NT$)"),
+                     tickvals=[4, np.log10(3e4), 5, np.log10(3e5), 6], ticktext=["10k", "30k", "100k", "300k", "1M"])
+    fig.update_yaxes(title=tx("Pagó en septiembre (NT$)", "Paid in September (NT$)"),
+                     tickvals=[0, 2, 3, 4, 5, 6], ticktext=["0", "100", "1k", "10k", "100k", "1M"])
+    return fig
+
+
+def _cs_step(n, title, body, formula=None):
+    return html.Div([html.Span(str(n), className="cs-num"), html.H4(title), html.P(body),
+                     dcc.Markdown(f"$${formula}$$", mathjax=True, className="formula") if formula else None],
+                    className="cs-step")
+
+
+def csfof_theory():
+    T = CS_TOY
+    rho_pay = CORR.loc["PAY_0", "PAY_2"]
+    bill = [f"BILL_AMT{i}" for i in range(1, 7)]
+    bmin = df[bill].corr(method="spearman").values[np.triu_indices(6, 1)].min()
+    gcfg = {"displaylogo": False, "displayModeBar": False}
+    mejora = T["g_obl"] / T["g_axis"] - 1
+    return [
+        html.H4(tx("La idea en una imagen", "The idea in one picture"), className="cs-h"),
+        html.P(tx("Cada punto es un cliente real. Un árbol clásico solo puede cortar en línea recta sobre una variable "
+                  "a la vez, así que para separar a quienes incumplen arma una escalera de cortes. Pero el riesgo no "
+                  "depende del límite o del pago por separado, sino de la combinación de ambos: es una frontera en "
+                  "diagonal. CS-FOF puede trazarla con un solo corte.",
+                  "Each point is a real client. A classic tree can only cut in a straight line on one variable at a "
+                  "time, so to separate defaulters it builds a staircase of cuts. But risk does not depend on the limit "
+                  "or the payment separately; it depends on their combination: a diagonal boundary. CS-FOF can draw it "
+                  "with a single cut.")),
+        html.Div([
+            html.Div([html.Div(tx(f"Árbol clásico: {T['n_cuts']} cortes rectos", f"Classic tree: {T['n_cuts']} straight cuts"),
+                              className="cs-fig-t"),
+                      dcc.Graph(id="cs-toy-tree", figure=fig_csfof_toy("tree"), config=gcfg)]),
+            html.Div([html.Div(tx("CS-FOF: 1 corte oblicuo", "CS-FOF: 1 oblique cut"), className="cs-fig-t on"),
+                      dcc.Graph(id="cs-toy-obl", figure=fig_csfof_toy("oblique"), config=gcfg)]),
+        ], className="grid g2"),
+        html.P(tx("¿Cuánto separa cada opción? Reducción de impureza (Gini ponderado) con el mismo número de cortes:",
+                  "How much does each option separate? Impurity reduction (weighted Gini) with the same number of cuts:"),
+               className="muted"),
+        html.Div([
+            kpi(tx("Con 1 corte", "With 1 cut"), f"+{mejora:.0%}",
+                tx(f"oblicuo {T['g_obl']:.4f} frente a recto {T['g_axis']:.4f}",
+                   f"oblique {T['g_obl']:.4f} vs straight {T['g_axis']:.4f}"), "target"),
+            kpi(tx("Con 3 cortes", "With 3 cuts"), f"+{T['g_obl3'] / T['g_axis3'] - 1:.0%}",
+                tx(f"oblicuos {T['g_obl3']:.4f} frente a rectos {T['g_axis3']:.4f}",
+                   f"oblique {T['g_obl3']:.4f} vs straight {T['g_axis3']:.4f}"), "layers"),
+            kpi(tx(f"{T['n_cuts']} cortes rectos", f"{T['n_cuts']} straight cuts"), f"{T['g_tree']:.4f}",
+                tx("la escalera ya alcanza a la diagonal", "the staircase catches up with the diagonal"), "bars"),
+        ], className="kpi-row k3"),
+        html.Div(tx("La ventaja del corte oblicuo es grande cuando hay pocos cortes y se achica a medida que la escalera "
+                    "de cortes rectos se acerca a la diagonal. Un bosque completo tiene miles de cortes; por eso, en los "
+                    "resultados, CS-FOF empata con los mejores modelos en vez de superarlos con amplitud.",
+                    "The oblique cut's advantage is large when there are few cuts and shrinks as the staircase of "
+                    "straight cuts approaches the diagonal. A full forest has thousands of cuts; that is why, in the "
+                    "results, CS-FOF ties with the best models instead of clearly beating them."), className="callout"),
+        interp_block(
+            tx("La zona sombreada es donde cada modelo diría «incumple». El árbol necesita varios escalones para "
+               "seguir la diagonal; el corte oblicuo la sigue de una vez: menos límite y menos pago, más riesgo.",
+               "The shaded area is where each model would say “defaults”. The tree needs several steps to follow the "
+               "diagonal; the oblique cut follows it at once: lower limit and lower payment, higher risk."),
+            tx(f"Variables en log10, 29 965 clientes; se muestran 2 600 al azar (mitad de cada clase). Dirección de "
+               f"Fisher (estandarizada) ∝ ({T['v'][0]:+.2f}, {T['v'][1]:+.2f}). Pesos de costo c = n₀/n₁ = {T['c']:.2f}. "
+               "El árbol clásico es CART con profundidad 3, hoja mínima 200 y los mismos pesos. Es una ilustración "
+               "en 2 variables; en el modelo real cada nodo usa √p variables al azar.",
+               f"Variables in log10, 29,965 clients; 2,600 shown at random (half of each class). Fisher direction "
+               f"(standardized) ∝ ({T['v'][0]:+.2f}, {T['v'][1]:+.2f}). Cost weights c = n₀/n₁ = {T['c']:.2f}. The "
+               "classic tree is CART with depth 3, minimum leaf 200 and the same weights. It is a 2-variable "
+               "illustration; in the real model each node uses √p random variables.")),
+        html.H4(tx("Cómo decide cada nodo", "How each node decides"), className="cs-h"),
+        html.Div([
+            _cs_step(1, tx("Cortes rectos", "Straight cuts"),
+                     tx("Como en Random Forest, prueba umbrales sobre √p variables elegidas al azar.",
+                        "As in Random Forest, it tries thresholds on √p randomly chosen variables.")),
+            _cs_step(2, tx("Dirección de Fisher con costo", "Cost-weighted Fisher direction"),
+                     tx("Con los clientes de ese nodo calcula la combinación de variables que mejor separa a las dos "
+                        "clases, pesando más a quienes incumplen.",
+                        "With the clients in that node it computes the combination of variables that best separates "
+                        "the two classes, giving more weight to defaulters."),
+                     r"\mathbf{v}=S_w^{-1}(\mu_1-\mu_0)"),
+            _cs_step(3, tx("Se queda con el mejor", "Keeps the best one"),
+                     tx("Compara todos los cortes con el Gini ponderado y elige el que más lo reduce. Por eso el corte "
+                        "elegido nunca es peor que el mejor corte recto (Proposición 1).",
+                        "It compares all cuts with the weighted Gini and picks the one that reduces it most. That is "
+                        "why the chosen cut is never worse than the best straight cut (Proposition 1)."),
+                     r"\Delta G(\text{elegido})\ \ge\ \max_j \Delta G(\text{recto}_j)"),
+        ], className="cs-steps"),
+        html.H4(tx("Por qué encaja con estos datos", "Why it fits this data"), className="cs-h"),
+        html.Div([
+            kpi(tx("Atrasos correlacionados", "Correlated delays"), f"ρ = {rho_pay:.2f}",
+                tx("PAY_0 con PAY_2: el riesgo vive en combinaciones", "PAY_0 with PAY_2: risk lives in combinations"), "layers"),
+            kpi(tx("Montos redundantes", "Redundant amounts"), f"ρ ≥ {bmin:.2f}",
+                tx("entre BILL_AMT1–6 (VIF > 20)", "among BILL_AMT1–6 (VIF > 20)"), "columns"),
+            kpi(tx("Desbalance", "Imbalance"), f"{GLOBAL_RATE:.1%}",
+                tx(f"incumple; cada moroso pesa {T['c']:.1f} veces más", f"default; each defaulter weighs {T['c']:.1f}× more"), "alert"),
+            kpi(tx("Cortes oblicuos usados", "Oblique cuts used"), "71 %",
+                tx("de los nodos del modelo final; quitarlos baja el F1", "of the final model's nodes; removing them lowers F1"), "target"),
+        ], className="kpi-row k4"),
+        html.Div(tx("Lo que la teoría no garantiza: la Proposición 1 asegura que cada corte es al menos tan bueno como "
+                    "el mejor corte recto en los datos de entrenamiento, no que el bosque completo prediga mejor en "
+                    "clientes nuevos que métodos como CatBoost o XGBoost. Eso solo lo dicen las pruebas estadísticas "
+                    "(pestaña 2).",
+                    "What the theory does not guarantee: Proposition 1 ensures each cut is at least as good as the best "
+                    "straight cut on the training data, not that the whole forest predicts new clients better than "
+                    "methods like CatBoost or XGBoost. Only the statistical tests can say that (tab 2)."),
+                 className="callout"),
+    ]
+
+
+def _csfof_results():
     c = CSFOF_CM
     pos = c["tp"] + c["fn"]
     sig = lambda p: html.B("< 0.001" if p < 0.001 else f"{p:.3f}") if p < 0.05 else f"{p:.3f}"
@@ -2685,15 +2917,11 @@ def csfof_card():
                   tx("Rango medio", "Mean rank")],
                  [((html.B if m == "cs_fof" else str)(minfo(m, "label")), f"{a:.3f}", f"{b:.3f}", f"{cc:.3f}", f"{d:.3f}", f"{r:.2f}")
                   for m, a, b, cc, d, r in CROSS_DATA])
-    return card(tx("Modelo original: CS-FOF", "Original model: CS-FOF"), [
-        html.P(tx("CS-FOF (Cost-Sensitive Fisher Oblique Forest) es el modelo propuesto en este proyecto. Cada árbol "
-                  "decide en cada nodo entre los cortes clásicos de una sola variable y un corte oblicuo que combina "
-                  "varias variables en la dirección de Fisher, calculada con los clientes de ese nodo y ponderada por "
-                  "el costo de no detectar a quien incumple. Está programado desde cero, sin redes neuronales.",
-                  "CS-FOF (Cost-Sensitive Fisher Oblique Forest) is the model proposed in this project. At each node, "
-                  "every tree chooses between classic single-variable splits and an oblique split that combines "
-                  "several variables along the Fisher direction, computed with that node's clients and weighted by "
-                  "the cost of missing a defaulter. It is programmed from scratch, without neural networks.")),
+    return [
+        html.P(tx("Validación cruzada anidada 5 × 5 con los mismos folds, preprocesamiento y presupuesto de búsqueda "
+                  "para los 10 modelos. Métrica principal: F1 de la clase default.",
+                  "Nested 5 × 5 cross-validation with the same folds, preprocessing and search budget for the 10 "
+                  "models. Main metric: F1 of the default class.")),
         html.Div([
             kpi("F1", "0.548 ± 0.005", tx("2.º de 10, a 0.0001 de CatBoost", "2nd of 10, 0.0001 behind CatBoost"), "trophy"),
             kpi("ROC-AUC", "0.785", tx("el mayor de los 10 modelos", "the highest of the 10 models"), "target"),
@@ -2727,6 +2955,17 @@ def csfof_card():
                "McNemar use out-of-fold predictions for the 29,965 clients; the LightGBM refit gave a lower AUC than "
                "its validation (0.773 vs 0.784), so its DeLong is not reported. Across the 4 datasets, "
                "Iman–Davenport F = 4.38, p = 0.0013, with no significant CS-FOF differences after Holm.")),
+    ]
+
+
+def csfof_card():
+    tab = lambda lbl, val, kids: dcc.Tab(label=lbl, value=val, children=html.Div(kids, className="cs-pane"),
+                                         className="cs-tab", selected_className="cs-tab--on")
+    return card(tx("Modelo original: CS-FOF", "Original model: CS-FOF"), [
+        dcc.Tabs(value="teoria", className="cs-tabs", parent_className="cs-tabs-wrap", mobile_breakpoint=0, children=[
+            tab(tx("1 · Teoría", "1 · Theory"), "teoria", csfof_theory()),
+            tab(tx("2 · Resultados", "2 · Results"), "resultados", _csfof_results()),
+        ]),
     ])
 
 
@@ -3935,6 +4174,26 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite:xor; mask-composite:exclude; animation:mc-spin 5s linear infinite; }
 @keyframes mc-spin { to { --mc-ang:360deg; } }
+/* Modelo original: pestañas Teoría / Resultados */
+.cs-tabs-wrap { margin:4px 0 6px; }
+.cs-tabs { display:flex; gap:6px; padding:4px; border-radius:999px; background:var(--surface-2);
+  border:1px solid var(--line); width:fit-content; max-width:100%; }
+.cs-tabs .cs-tab { border:0 !important; background:transparent !important; color:var(--muted) !important;
+  padding:8px 18px !important; border-radius:999px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.cs-tabs .cs-tab--on { background:var(--accent) !important; color:var(--on-accent) !important; }
+.cs-pane { padding-top:14px; }
+.cs-h { margin:22px 0 6px; font-size:15px; color:var(--text); }
+.cs-fig-t { font-weight:600; font-size:13px; color:var(--muted); margin:6px 0 2px; }
+.cs-fig-t.on { color:var(--accent-2); }
+.cs-steps { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; }
+.cs-step { position:relative; background:var(--surface-2); border:1px solid var(--line); border-radius:14px;
+  padding:16px 16px 10px 16px; }
+.cs-step h4 { margin:6px 0 4px; font-size:14px; }
+.cs-step p { margin:0 0 6px; font-size:13.5px; color:var(--muted); }
+.cs-num { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%;
+  background:var(--accent-2); color:var(--on-accent); font-weight:700; font-size:13px; }
+[data-theme="dark"] .cs-num { color:#1A233D; }
+@media (max-width:600px) { .cs-tabs .cs-tab { padding:7px 12px !important; } }
 @keyframes mc-glow {
   0%,100% { box-shadow:0 0 0 1px rgba(210,187,137,.45), 0 0 22px 0 rgba(210,187,137,.35), 0 26px 46px -26px rgba(8,12,30,.65); }
   50%     { box-shadow:0 0 0 1px rgba(210,187,137,.75), 0 0 38px 4px rgba(210,187,137,.55), 0 26px 46px -26px rgba(8,12,30,.65); } }
@@ -4757,6 +5016,16 @@ def cb_corr():
 @graph_cb(Output("mdl-heat", "figure"))
 def cb_models_heat():
     return fig_models_heat()
+
+
+@graph_cb(Output("cs-toy-tree", "figure"))
+def cb_cs_toy_tree():
+    return fig_csfof_toy("tree")
+
+
+@graph_cb(Output("cs-toy-obl", "figure"))
+def cb_cs_toy_obl():
+    return fig_csfof_toy("oblique")
 
 
 @graph_cb(Output("mdl-scatter", "figure"))
