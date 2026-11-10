@@ -50,17 +50,20 @@ shiny/
 │   ├── 02_utils.R             # Formato, estadísticos, componentes y tema de las figuras
 │   ├── 03_univariado.R        # EDA univariado
 │   ├── 04_multivariado.R      # EDA multivariado
-│   ├── 05_modelos.R           # Resultados de las 112 combinaciones de modelos
+│   ├── 05_modelos.R           # Resultados de las 141 combinaciones de modelos
 │   ├── 06_variables.R         # Variables del modelo (mismas transformaciones del proyecto)
 │   ├── 07_predecir.R          # Página Predecir
 │   ├── 08_paginas.R           # Páginas, menú y navegación
-│   └── 09_kyo.R               # Asistente Kyo (TF-IDF + regresión logística)
+│   ├── 09_kyo.R               # Asistente Kyo (TF-IDF + regresión logística)
+│   └── 10_modelo_original.R   # Modelo original CS-FOF: teoría, metodología, código y resultados
 ├── modelo/
+│   ├── cs_fof/                # Copia de original_model.py y sus pruebas (se muestran en la pestaña Código)
 │   ├── entrenar_modelo.R      # Entrena y serializa el Random Forest (Rscript modelo/entrenar_modelo.R)
 │   ├── modelo_credito.rds     # Modelo serializado con saveRDS
 │   └── modelo_credito.json    # Métricas, hiperparámetros y versiones
 ├── kyo/                       # Conocimiento de Kyo (exportado del Dash), pruebas y modelo entrenado
 ├── www/                       # estilos.css y comun.js (los mismos del Dash), shiny.css, app.js, fotos y Kyo
+│   └── vendor/                # MathJax 3.2.2 y highlight.js 11.9.0 incluidos (no dependen de una CDN)
 ├── data/                      # Dataset UCI (.xls)
 ├── results/                   # Los mismos CSV de dash/results: modelos (5 x 5), SHAP por fold, LIME vs SHAP y anytime
 └── herramientas/
@@ -99,7 +102,7 @@ Se evalúa con las mismas preguntas de prueba del Dash. Resultados del Dash con 
 | Preguntas nuevas en español | 81/81 |
 | Preguntas nuevas en inglés | 35/36 |
 | Preguntas ajenas al tablero rechazadas | 17/17 |
-| Sugerencias que llevan al mismo tema en ambos idiomas | 80/80 |
+| Sugerencias que llevan al mismo tema en ambos idiomas | 83/83 |
 
 ```bash
 cd shiny && Rscript herramientas/evaluar_kyo.R

@@ -12,11 +12,12 @@
 #     R/02_utils.R        formato, estadísticos, componentes y tema de las figuras
 #     R/03_univariado.R   figuras e interpretaciones del EDA univariado
 #     R/04_multivariado.R figuras e interpretaciones del EDA multivariado
-#     R/05_modelos.R      resultados de las 112 combinaciones de modelos
+#     R/05_modelos.R      resultados de las 141 combinaciones de modelos
 #     R/06_variables.R    variables del modelo (mismas transformaciones del proyecto)
 #     R/07_predecir.R     página Predecir (modelo serializado con saveRDS)
 #     R/08_paginas.R      páginas, menú y navegación
 #     R/09_kyo.R          asistente Kyo (TF-IDF + regresión logística)
+#     R/10_modelo_original.R  modelo original CS-FOF: teoría, metodología, código y resultados
 #     www/                estilos (los mismos del Dash), JavaScript, fotos y Kyo
 # =============================================================================
 
@@ -40,7 +41,11 @@ ui <- tagList(
     tags$link(rel = "stylesheet", href = "shiny.css"),
     tags$script(HTML("window.MathJax = { tex: { inlineMath: [['\\\\(', '\\\\)']], displayMath: [['$$', '$$']] },
                       chtml: { scale: 1 }, options: { skipHtmlTags: ['script', 'style', 'textarea', 'pre', 'code'] } };")),
-    tags$script(src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml.js", async = NA)
+    # MathJax y highlight.js van incluidos en www/vendor (no dependen de una CDN externa)
+    tags$script(src = "vendor/mathjax/tex-chtml.js", async = NA),
+    # colores de sintaxis del código de CS-FOF (pestaña Código del modelo original)
+    tags$script(src = "vendor/highlight/highlight.min.js"),
+    tags$script(src = "vendor/highlight/python.min.js")
   ),
   # interruptores de idioma y tema de la portada (solo visibles en la portada)
   div(class = "cover-toggle", lang_switch(), theme_toggle()),
@@ -106,6 +111,7 @@ server <- function(input, output, session) {
       "/multivariado" = page_multi(list(lim_scale = input$lim_scale, age_view = input$age_view, x_var = input$x_var,
                                         y_var = input$y_var, c_var = input$c_var, s_vars = input$s_vars)),
       "/modelos" = page_models(list(shap_model = input$shap_model, any_model = input$any_model)),
+      "/modelo-original" = page_original(list(csrf_scn = input$csrf_scn)),
       "/predecir" = page_predict(pf_actual() %||% PROFILES$tipico[[2]], input$pf_whatif_var %||% "PAY_0"),
       "/conclusiones" = page_conclusions(),
       "/enlaces" = page_links(),
@@ -149,6 +155,19 @@ server <- function(input, output, session) {
   })
 
   # ---------- Modelos ----------
+  # ---------- Modelo original (CS-FOF) ----------
+  output$cs_toy_tree <- fig(function() fig_csfof_toy("tree"))
+  output$cs_toy_obl <- fig(function() fig_csfof_toy("oblique"))
+  # un gráfico nuevo (id distinto) por escenario: así una animación en curso no sigue sobre el escenario nuevo
+  output$csrf_box <- renderUI({
+    set_lang(lang()); s <- input$csrf_scn %||% "folds"
+    tagList(grafica(paste0("csrf_graph_", s), 400), cs_vs_rf_interp(s))
+  })
+  for (s_ in c("folds", "size", "noise")) local({
+    s <- s_
+    output[[paste0("csrf_graph_", s)]] <- renderPlotly({ set_lang(lang()); themed(fig_cs_vs_rf(s), dark()) })
+  })
+
   output$mdl_heat <- fig(fig_models_heat)
   output$mdl_scatter <- fig(fig_models_scatter)
   output$mdl_cm <- fig(fig_best_cm)
