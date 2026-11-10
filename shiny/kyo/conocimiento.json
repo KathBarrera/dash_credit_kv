@@ -1146,7 +1146,7 @@
      "qué clasificadores probaron",
      "112 combinaciones"
     ],
-    "texto": "**Modelos** resume **112 combinaciones de modelos tradicionales** (diseño factorial: 7 clasificadores × 4 técnicas de balanceo × 4 métodos de optimización) y, aparte, **29 corridas** de LightGBM, CatBoost y el modelo original CS-FOF, que buscan superar el mejor F1 de esas 112. Todo con validación cruzada anidada.\n\n- **KPIs:** mejor F1 0.548 (CatBoost), mejora de +0.170 sobre la línea base y 63% de incumplimientos detectados.\n- **Carrusel:** la mejor combinación de cada modelo.\n- El modelo original **CS-FOF** tiene su propia página: **Modelo original**.\n- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
+    "texto": "**Modelos** resume **112 combinaciones de modelos tradicionales** (diseño factorial: 7 clasificadores × 4 técnicas de balanceo × 4 métodos de optimización) y, aparte, **36 corridas** de LightGBM, CatBoost y el modelo original CS-FOF, que buscan superar el mejor F1 de esas 112. Todo con validación cruzada anidada.\n\n- **KPIs:** mejor F1 0.548 (CatBoost), mejora de +0.170 sobre la línea base y 63% de incumplimientos detectados.\n- **Carrusel:** la mejor combinación de cada modelo.\n- El modelo original **CS-FOF** tiene su propia página: **Modelo original**.\n- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1487,7 +1487,7 @@
      "en qué puesto quedó catboost",
      "F1 de catboost"
     ],
-    "texto": "**CatBoost** · Boosting reciente (árboles simétricos) · puesto **#1** de 10.\n\nBoosting con árboles simétricos y un orden aleatorio de los datos que reduce el sobreajuste.\n\nMejor combinación: pesos de clase + random search → **F1 0.548** ± 0.009, recall 0.632, precisión 0.484, ROC-AUC 0.784.\n\nMétodo reciente del estado del arte (2018). Tiene el mayor F1 medio, pero solo 0.0001 por encima de CS-FOF; ninguna prueba los separa. Es el más consistente en los tres conjuntos adicionales. Se corrieron 9 de sus 16 combinaciones (sin ADASYN); pesos de clase es su mejor técnica.",
+    "texto": "**CatBoost** · Boosting reciente (árboles simétricos) · puesto **#1** de 10.\n\nBoosting con árboles simétricos y un orden aleatorio de los datos que reduce el sobreajuste.\n\nMejor combinación: pesos de clase + random search → **F1 0.548** ± 0.009, recall 0.632, precisión 0.484, ROC-AUC 0.784.\n\nMétodo reciente del estado del arte (2018). Tiene el mayor F1 medio, pero solo 0.0001 por encima de CS-FOF; ninguna prueba los separa. Es el más consistente en los tres conjuntos adicionales. Con sus 16 combinaciones, pesos de clase es su mejor técnica.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3257,7 +3257,7 @@
      "which classifiers did they try",
      "112 combinations"
     ],
-    "texto": "**Models** summarizes **112 traditional model combinations** (factorial design: 7 classifiers × 4 balancing techniques × 4 optimization methods) and, separately, **29 runs** of LightGBM, CatBoost and the original model CS-FOF, which try to beat the best F1 of those 112. All with nested cross-validation.\n\n- **KPIs:** best F1 0.548 (CatBoost), +0.170 over the baseline and 63% of defaults detected.\n- **Carousel:** the best combination of each model.\n- The original model **CS-FOF** has its own page: **Original model**.\n- **F1 by model and technique** (heatmap) and **F1 vs. ROC-AUC** (scatter).\n- **Confusion matrix** of the best model and **SHAP summary**.",
+    "texto": "**Models** summarizes **112 traditional model combinations** (factorial design: 7 classifiers × 4 balancing techniques × 4 optimization methods) and, separately, **36 runs** of LightGBM, CatBoost and the original model CS-FOF, which try to beat the best F1 of those 112. All with nested cross-validation.\n\n- **KPIs:** best F1 0.548 (CatBoost), +0.170 over the baseline and 63% of defaults detected.\n- **Carousel:** the best combination of each model.\n- The original model **CS-FOF** has its own page: **Original model**.\n- **F1 by model and technique** (heatmap) and **F1 vs. ROC-AUC** (scatter).\n- **Confusion matrix** of the best model and **SHAP summary**.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3599,7 +3599,7 @@
      "what rank did catboost get",
      "F1 of catboost"
     ],
-    "texto": "**CatBoost** · Recent boosting (symmetric trees) · rank **#1** of 10.\n\nBoosting with symmetric trees and a random ordering of the data that reduces overfitting.\n\nBest combination: class weights + random search → **F1 0.548** ± 0.009, recall 0.632, precision 0.484, ROC-AUC 0.784.\n\nRecent state-of-the-art method (2018). It has the highest mean F1, but only 0.0001 above CS-FOF; no test separates them. It is the most consistent across the three additional datasets. 9 of its 16 combinations were run (no ADASYN); class weights is its best technique.",
+    "texto": "**CatBoost** · Recent boosting (symmetric trees) · rank **#1** of 10.\n\nBoosting with symmetric trees and a random ordering of the data that reduces overfitting.\n\nBest combination: class weights + random search → **F1 0.548** ± 0.009, recall 0.632, precision 0.484, ROC-AUC 0.784.\n\nRecent state-of-the-art method (2018). It has the highest mean F1, but only 0.0001 above CS-FOF; no test separates them. It is the most consistent across the three additional datasets. Across its 16 combinations, class weights is its best technique.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
