@@ -172,7 +172,7 @@ csfof_theory <- function() {
       div(class = "kpi-row k4",
         kpi(tx("Atrasos correlacionados", "Correlated delays"), sprintf("ρ = %.2f", rho_pay),
             tx("PAY_0 con PAY_2: el riesgo vive en combinaciones", "PAY_0 with PAY_2: risk lives in combinations"), "layers"),
-        kpi(tx("Montos redundantes", "Redundant amounts"), sprintf("ρ ≥ %.2f", bmin), tx("entre BILL_AMT1–6 (VIF > 20)", "among BILL_AMT1–6 (VIF > 20)"), "columns"),
+        kpi(tx("Montos redundantes", "Redundant amounts"), sprintf("ρ ≥ %.2f", bmin), tx("entre BILL_AMT1 a BILL_AMT6 (VIF > 20)", "among BILL_AMT1 to BILL_AMT6 (VIF > 20)"), "columns"),
         kpi(tx("Desbalance", "Imbalance"), pct(GLOBAL_RATE),
             tx(sprintf("incumple; cada moroso pesa %.1f veces más", T_$c), sprintf("default; each defaulter weighs %.1f× more", T_$c)), "alert"),
         kpi(tx("Cortes oblicuos usados", "Oblique cuts used"), "71 %",
@@ -185,10 +185,10 @@ csfof_theory <- function() {
 METH_FLOW <- list(
   list(c("Formulación", "Formulation"), c("Clasificación binaria f: ℝ²⁰ → {0, 1}; 1 = incumple el pago del mes siguiente.", "Binary classification f: ℝ²⁰ → {0, 1}; 1 = defaults next month.")),
   list(c("Datos", "Data"), c("UCI Taiwán: 29 965 clientes, 20 variables, 22.1 % de incumplimiento. Preprocesamiento dentro de cada pliegue.", "UCI Taiwan: 29,965 clients, 20 variables, 22.1% default. Preprocessing inside each fold.")),
-  list(c("Modelo propuesto", "Proposed model"), c("Bosque con cortes oblicuos de Fisher ponderados por costo (ecuaciones 1–5).", "Forest with cost-weighted Fisher oblique cuts (equations 1–5).")),
+  list(c("Modelo propuesto", "Proposed model"), c("Bosque con cortes oblicuos de Fisher ponderados por costo (ecuaciones 1 a 5).", "Forest with cost-weighted Fisher oblique cuts (equations 1 to 5).")),
   list(c("Entrenamiento", "Training"), c("4 búsquedas de hiperparámetros (malla, aleatoria, Optuna, genético); semilla 42.", "4 hyperparameter searches (grid, random, Optuna, genetic); seed 42.")),
   list(c("Baselines", "Baselines"), c("9 modelos: 7 clásicos + LightGBM y CatBoost, con el mismo presupuesto de búsqueda.", "9 models: 7 classic + LightGBM and CatBoost, with the same search budget.")),
-  list(c("Evaluación", "Evaluation"), c("Validación anidada 5 × 5; F1, AUC-ROC, AUC-PR, MCC; Friedman, Nadeau–Bengio, Wilcoxon, DeLong.", "Nested 5 × 5 validation; F1, ROC-AUC, PR-AUC, MCC; Friedman, Nadeau–Bengio, Wilcoxon, DeLong.")),
+  list(c("Evaluación", "Evaluation"), c("Validación anidada 5 × 5; F1, AUC-ROC, AUC-PR, MCC; Friedman, Nadeau-Bengio, Wilcoxon, DeLong.", "Nested 5 × 5 validation; F1, ROC-AUC, PR-AUC, MCC; Friedman, Nadeau-Bengio, Wilcoxon, DeLong.")),
   list(c("Ablación", "Ablation"), c("Mismo bosque sin corte oblicuo y variantes del corte, con todo lo demás fijo.", "Same forest without the oblique cut and variants of the cut, all else fixed.")),
   list(c("Reproducibilidad", "Reproducibility"), c("Código en GitHub (MIT), 14 pruebas en GitHub Actions, datos de UCI.", "Code on GitHub (MIT), 14 tests on GitHub Actions, UCI data.")))
 
@@ -199,7 +199,7 @@ PSEUDO <- "Entrada: D = {(xᵢ, yᵢ)}, T árboles, profundidad d, hoja mínima 
 4      para cada nodo con ≥ 2h clientes, sin ser puro y con profundidad < d:
 5          F ← q variables al azar
 6          mejor ← el corte recto sobre F de menor G                ▷ ec. (2)
-7          v ← dirección de Fisher con los clientes del nodo        ▷ ec. (3)–(4)
+7          v ← dirección de Fisher con los clientes del nodo        ▷ ec. (3) y (4)
 8          si el mejor umbral sobre vᵀx tiene menor G: mejor ← oblicuo
 9          si mejor deja ≥ h clientes por lado: dividir; si no: hoja
 10 f(x) ← promedio de las probabilidades de hoja de los T árboles  ▷ ec. (5)"
@@ -218,7 +218,7 @@ CHECKLIST <- list(
   list("ok", c("El modelo tiene diagrama, ecuaciones, pseudocódigo y complejidad.", "The model has a diagram, equations, pseudocode and complexity.")),
   list("ok", c("Baselines recientes (LightGBM, CatBoost) con el mismo presupuesto de búsqueda.", "Recent baselines (LightGBM, CatBoost) with the same search budget.")),
   list("ok", c("Media y desviación estándar sobre 5 pliegues externos.", "Mean and standard deviation over 5 outer folds.")),
-  list("ok", c("Pruebas estadísticas: Friedman–Nemenyi, Nadeau–Bengio, Wilcoxon con Holm, DeLong y McNemar.", "Statistical tests: Friedman–Nemenyi, Nadeau–Bengio, Wilcoxon with Holm, DeLong and McNemar.")),
+  list("ok", c("Pruebas estadísticas: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon con Holm, DeLong y McNemar.", "Statistical tests: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon with Holm, DeLong and McNemar.")),
   list("mid", c("Ablación por componente: hecha solo en el pliegue 1 y sin la variante «sin costo».", "Ablation per component: done only on fold 1 and without the “no cost” variant.")),
   list("ok", c("Código, datos y versiones disponibles (GitHub, UCI, requirements.txt); DOI de Zenodo pendiente.", "Code, data and versions available (GitHub, UCI, requirements.txt); Zenodo DOI pending.")),
   list("ok", c("Figuras del artículo en PDF vectorial, en inglés, desde un solo script.", "Paper figures in vector PDF, in English, from one script.")))
@@ -249,9 +249,9 @@ csfof_method <- function() {
           tx("promediar árboles entrenados con muestras bootstrap distintas reduce la varianza, como en Random Forest.",
              "averaging trees trained on different bootstrap samples reduces variance, as in Random Forest.")))
   hp <- tbl_(c(tx("Hiperparámetro", "Hyperparameter"), tx("Rango buscado", "Search range"), tx("Modelo final", "Final model")),
-             list(list("n_estimators (T)", "100 – 500", "359"), list("max_depth (d)", "6 – 14", "11"),
-                  list("min_samples_leaf (h)", "10 – 60", "51"), list("max_features (q)", "sqrt, log2", "log2"),
-                  list("eps (ε)", tx("0.01 – 1 (escala log)", "0.01 – 1 (log scale)"), "0.324")))
+             list(list("n_estimators (T)", "100-500", "359"), list("max_depth (d)", "6-14", "11"),
+                  list("min_samples_leaf (h)", "10-60", "51"), list("max_features (q)", "sqrt, log2", "log2"),
+                  list("eps (ε)", tx("0.01 a 1 (escala log)", "0.01 to 1 (log scale)"), "0.324")))
   nuevo <- tbl_(c(tx("Se reutiliza", "Reused"), tx("Es nuevo en CS-FOF", "New in CS-FOF")), list(
     list(tx("Bosque aleatorio: bootstrap, q variables al azar por nodo y promedio de árboles (Breiman, 2001).", "Random forest: bootstrap, q random variables per node and averaging of trees (Breiman, 2001)."),
          tx("La regla de partición: una dirección de Fisher local, ponderada por costo, que compite con los cortes rectos.", "The split rule: a local, cost-weighted Fisher direction that competes with straight cuts.")),
@@ -265,7 +265,7 @@ csfof_method <- function() {
     tags$li(tags$span(class = paste("cs-chk", ck[[1]]), if (ck[[1]] == "ok") "✓" else "◐"), tags$span(L(ck[[2]])))))
   props <- tags$ul(class = "cs-props",
     tags$li(tags$b(tx("Proposición 1. ", "Proposition 1. ")), tx("El corte elegido nunca tiene más impureza que el mejor corte recto sobre las mismas variables.", "The chosen cut never has more impurity than the best straight cut on the same variables.")),
-    tags$li(tags$b(tx("Proposición 2. ", "Proposition 2. ")), tx("Con ε = 0, v maximiza el criterio de Fisher J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy–Schwarz).", "With ε = 0, v maximizes Fisher's criterion J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy–Schwarz).")),
+    tags$li(tags$b(tx("Proposición 2. ", "Proposition 2. ")), tx("Con ε = 0, v maximiza el criterio de Fisher J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy-Schwarz).", "With ε = 0, v maximizes Fisher's criterion J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy-Schwarz).")),
     tags$li(tags$b(tx("Proposición 3. ", "Proposition 3. ")), tx("Cada árbol termina y tiene a lo sumo ⌊n/h⌋ hojas.", "Each tree terminates and has at most ⌊n/h⌋ leaves.")),
     tags$li(tags$b(tx("Tiempo. ", "Time. ")), tx("Entrenar un árbol cuesta O(d·n(q log n + q²)); predecir un cliente, O(T·d·p).", "Training one tree costs O(d·n(q log n + q²)); predicting one client, O(T·d·p).")),
     tags$li(tags$b(tx("Memoria. ", "Memory. ")), tx("Cada nodo guarda q coeficientes y un umbral; el modelo final pesa 5 MB.", "Each node stores q coefficients and a threshold; the final model weighs 5 MB.")),
@@ -449,8 +449,8 @@ cs_vs_rf_interp <- function(scn) {
   if (scn == "folds") {
     interp_block(tx(sprintf("CS-FOF le gana a Random Forest en %d de 5 pliegues, pero por poco: 0.003 de F1 en promedio, menos que lo que cambia el F1 de un pliegue a otro.", gana),
                     sprintf("CS-FOF beats Random Forest in %d of 5 folds, but narrowly: 0.003 of F1 on average, less than F1 changes from one fold to another.", gana)),
-                 tx("Validación anidada 5 × 5, mejor combinación de cada uno (pesos de clase + búsqueda aleatoria). Nadeau–Bengio con Holm p = 1.000; δ de Cliff = 0.36 (efecto mediano); DeLong p = 0.171; McNemar p < 0.001 (313 errores exclusivos de CS-FOF frente a 615).",
-                    "Nested 5 × 5 validation, best combination of each (class weights + random search). Nadeau–Bengio with Holm p = 1.000; Cliff's δ = 0.36 (medium effect); DeLong p = 0.171; McNemar p < 0.001 (313 exclusive CS-FOF errors vs 615)."))
+                 tx("Validación anidada 5 × 5, mejor combinación de cada uno (pesos de clase + búsqueda aleatoria). Nadeau-Bengio con Holm p = 1.000; δ de Cliff = 0.36 (efecto mediano); DeLong p = 0.171; McNemar p < 0.001 (313 errores exclusivos de CS-FOF frente a 615).",
+                    "Nested 5 × 5 validation, best combination of each (class weights + random search). Nadeau-Bengio with Holm p = 1.000; Cliff's δ = 0.36 (medium effect); DeLong p = 0.171; McNemar p < 0.001 (313 exclusive CS-FOF errors vs 615)."))
   } else if (scn == "size") {
     interp_block(tx("Con 25 % de los datos o más, CS-FOF queda arriba y sigue mejorando al recibir más clientes; Random Forest se estanca. Con muy pocos datos (10 %), Random Forest queda apenas por encima: calcular la dirección de Fisher en cada nodo necesita suficientes clientes.",
                     "With 25% of the data or more, CS-FOF stays on top and keeps improving with more clients; Random Forest plateaus. With very little data (10%), Random Forest is slightly ahead: computing the Fisher direction at each node needs enough clients."),
@@ -466,7 +466,7 @@ cs_vs_rf_interp <- function(scn) {
 
 csfof_results <- function(scn = "folds") {
   sig <- function(p) if (p < 0.05) tags$b(if (p < 0.001) "< 0.001" else sprintf("%.3f", p)) else sprintf("%.3f", p)
-  tests <- tbl_(c(tx("Rival", "Rival"), tx("Dif. F1", "F1 diff."), tx("Gana en", "Wins in"), "p Nadeau–Bengio (Holm)",
+  tests <- tbl_(c(tx("Rival", "Rival"), tx("Dif. F1", "F1 diff."), tx("Gana en", "Wins in"), "p Nadeau-Bengio (Holm)",
                   tx("δ de Cliff", "Cliff's δ"), "p DeLong", tx("Errores exclusivos (CS-FOF / rival)", "Exclusive errors (CS-FOF / rival)")),
                 lapply(CSFOF_TESTS, function(r) list(minfo(r[[1]], "label"), sprintf("%+.4f", r[[2]]), sprintf("%d/5", r[[3]]),
                                                      sig(r[[4]]), sprintf("%+.2f", r[[5]]), r[[6]], r[[7]])))
@@ -501,8 +501,8 @@ csfof_results <- function(scn = "folds") {
       interp_block(
         tx("En el problema principal CS-FOF acierta tanto como los mejores modelos y es el más estable. Comete menos errores que solo él cometa, pero eso se debe a que marca menos clientes como riesgosos, no a que ordene mejor. En el conjunto polaco, con muy pocas quiebras (4 %), los métodos de boosting le sacan mucha ventaja.",
            "On the main problem CS-FOF is as accurate as the best models and is the most stable. It makes fewer errors that only it makes, but that is because it flags fewer clients as risky, not because it ranks them better. On the Polish dataset, with very few bankruptcies (4%), boosting methods are far ahead."),
-        tx("Friedman sobre los 10 modelos: χ² = 40.3, p = 6.7·10⁻⁶; rangos medios CatBoost 2.0 y CS-FOF 2.4; diferencia crítica de Nemenyi 6.06. Wilcoxon con 5 folds no puede bajar de p = 0.0625. DeLong y McNemar usan predicciones fuera de pliegue de los 29 965 clientes; el reajuste de LightGBM dio un AUC menor que el de su validación (0.773 frente a 0.784), por eso no se reporta su DeLong. Entre los 4 conjuntos, Iman–Davenport F = 4.38, p = 0.0013, sin diferencias significativas de CS-FOF tras Holm.",
-           "Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks CatBoost 2.0 and CS-FOF 2.4; Nemenyi critical difference 6.06. Wilcoxon with 5 folds cannot go below p = 0.0625. DeLong and McNemar use out-of-fold predictions for the 29,965 clients; the LightGBM refit gave a lower AUC than its validation (0.773 vs 0.784), so its DeLong is not reported. Across the 4 datasets, Iman–Davenport F = 4.38, p = 0.0013, with no significant CS-FOF differences after Holm."))))
+        tx("Friedman sobre los 10 modelos: χ² = 40.3, p = 6.7·10⁻⁶; rangos medios CatBoost 2.0 y CS-FOF 2.4; diferencia crítica de Nemenyi 6.06. Wilcoxon con 5 folds no puede bajar de p = 0.0625. DeLong y McNemar usan predicciones fuera de pliegue de los 29 965 clientes; el reajuste de LightGBM dio un AUC menor que el de su validación (0.773 frente a 0.784), por eso no se reporta su DeLong. Entre los 4 conjuntos, Iman-Davenport F = 4.38, p = 0.0013, sin diferencias significativas de CS-FOF tras Holm.",
+           "Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks CatBoost 2.0 and CS-FOF 2.4; Nemenyi critical difference 6.06. Wilcoxon with 5 folds cannot go below p = 0.0625. DeLong and McNemar use out-of-fold predictions for the 29,965 clients; the LightGBM refit gave a lower AUC than its validation (0.773 vs 0.784), so its DeLong is not reported. Across the 4 datasets, Iman-Davenport F = 4.38, p = 0.0013, with no significant CS-FOF differences after Holm."))))
 }
 
 # ---------- Página ----------

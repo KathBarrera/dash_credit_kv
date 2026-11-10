@@ -50,7 +50,7 @@ DATA_INFO <- .prep$info
 rm(.prep)
 
 # Grupos de edad (para el análisis AGE vs. PAY)
-AGE_LABELS <- c("21–25", "26–30", "31–35", "36–40", "41–45", "46–50", "51–55", "56–60", "61+")
+AGE_LABELS <- c("21-25", "26-30", "31-35", "36-40", "41-45", "46-50", "51-55", "56-60", "61+")
 df$AGE_GRP <- cut(df$AGE, breaks = c(20, 25, 30, 35, 40, 45, 50, 55, 60, 80), labels = AGE_LABELS)
 
 GLOBAL_RATE <- mean(df[[TARGET]])

@@ -119,6 +119,13 @@ BEST_BY_MODEL <- do.call(rbind, lapply(split(MR, MR$model), function(s) s[which.
 BEST_BY_MODEL <- BEST_BY_MODEL[order(-BEST_BY_MODEL$f1_mean), ]
 rownames(BEST_BY_MODEL) <- NULL
 BEST <- BEST_BY_MODEL[1, ]
+# Las 112 combinaciones del diseño factorial (7 modelos base) y, aparte, las corridas de LightGBM, CatBoost y
+# CS-FOF que buscan superar el mejor F1 de esas 112.
+BASE_MODELS <- c("random_forest", "xgboost", "svm", "knn", "decision_tree", "logistic_regression", "naive_bayes")
+N_BASE <- sum(MR$model %in% BASE_MODELS)
+N_EXTRA <- nrow(MR) - N_BASE
+BEST_BASE <- BEST_BY_MODEL[BEST_BY_MODEL$model %in% BASE_MODELS, ][1, ]
+TWD_PER_USD_2005 <- 32.2   # tasa promedio de 2005 (Banco Central de la República de China)
 BASELINE <- max(MR$f1_mean[MR$model == "logistic_regression" & MR$technique == "none"])
 F1_MAX <- max(MR$f1_mean)
 # Matrices de confusión fuera de pliegue (umbral 0.5) de CatBoost (la mejor combinación) y de CS-FOF,
@@ -420,14 +427,17 @@ page_models <- function(sel = list()) {
   tagList(
     page_title(tx("Modelos", "Models")),
     div(class = "kpi-row k4",
-        kpi(tx("Combinaciones evaluadas", "Combinations evaluated"), nrow(MR),
-            tx("7 modelos × 4 × 4, más LightGBM, CatBoost y CS-FOF", "7 models × 4 × 4, plus LightGBM, CatBoost and CS-FOF"), "layers"),
-        kpi(tx("Mejor F1 (clase default)", "Best F1 (default class)"), sprintf("%.3f", b$f1_mean),
-            paste(best_lbl, "·", tech_lbl(b$technique)), "trophy"),
+        kpi(tx("Combinaciones evaluadas", "Combinations evaluated"), sprintf("%d + %d", N_BASE, N_EXTRA),
+            tx(sprintf("%d del diseño factorial (7 × 4 × 4) y, aparte, %d corridas de LightGBM, CatBoost y CS-FOF", N_BASE, N_EXTRA),
+               sprintf("%d from the factorial design (7 × 4 × 4) and, separately, %d runs of LightGBM, CatBoost and CS-FOF", N_BASE, N_EXTRA)), "layers"),
+        kpi(tx("Mejor F1 (clase default)", "Best F1 (default class)"), sprintf("%.3f · %.3f", BEST_BASE$f1_mean, b$f1_mean),
+            tx(sprintf("Mejor de las %d: %s · mejor global: %s, empatado con CS-FOF. Diferencia menor que 0.002; ninguna prueba las separa.", N_BASE, minfo(BEST_BASE$model, "label"), best_lbl),
+               sprintf("Best of the %d: %s · best overall: %s, tied with CS-FOF. Difference below 0.002; no test separates them.", N_BASE, minfo(BEST_BASE$model, "label"), best_lbl)), "trophy"),
         kpi(tx("Mejora sobre la línea base", "Improvement over baseline"), sprintf("+%.3f", b$f1_mean - BASELINE),
             tx(sprintf("Regresión logística sin balanceo: %.3f", BASELINE), sprintf("Logistic regression without balancing: %.3f", BASELINE)), "bars"),
-        kpi(tx("Incumplimientos detectados", "Defaults detected"), pct(b$recall_mean, 0),
-            tx("Recall del mejor modelo (umbral 0.5)", "Recall of the best model (threshold 0.5)"), "target")),
+        kpi(tx("Incumplimientos detectados", "Defaults detected"), pct(c$tp / pos, 0),
+            tx(sprintf("%s de %s · %s, predicciones fuera de pliegue (umbral 0.5)", num(c$tp), num(pos), best_lbl),
+               sprintf("%s of %s · %s, out-of-fold predictions (threshold 0.5)", num(c$tp), num(pos), best_lbl)), "target")),
     card(tx("Comparación de modelos", "Model comparison"), models_carousel()),
     div(class = "grid g2",
         card(tx("F1 por modelo y técnica de balanceo", "F1 by model and balancing technique"),
@@ -440,8 +450,8 @@ page_models <- function(sel = list()) {
         card(tx("Balancear mueve el umbral, no la capacidad de ordenar", "Balancing moves the threshold, not the ranking ability"),
              grafica("mdl_scatter", 420),
              interp_block(
-               tx(sprintf("Cada punto es una de las %d combinaciones (rombos: CS-FOF). Las que no balancean (gris) quedan abajo: aciertan poco con quienes incumplen. Pero no quedan más a la izquierda: ordenan a los clientes casi igual de bien; lo que cambia es dónde se pone el corte entre «paga» e «incumple».", nrow(MR)),
-                  sprintf("Each point is one of the %d combinations (diamonds: CS-FOF). Those without balancing (grey) sit at the bottom: they rarely get defaulters right. But they are not further to the left: they rank clients almost equally well; what changes is where the cut between “pays” and “defaults” is placed.", nrow(MR))),
+               tx(sprintf("Cada punto es una combinación: las 112 del diseño factorial y las 29 corridas de LightGBM, CatBoost y CS-FOF (rombos: CS-FOF; %d en total). Las que no balancean (gris) quedan abajo: aciertan poco con quienes incumplen. Pero no quedan más a la izquierda: ordenan a los clientes casi igual de bien; lo que cambia es dónde se pone el corte entre «paga» e «incumple».", nrow(MR)),
+                  sprintf("Each point is one combination: the 112 from the factorial design and the 29 runs of LightGBM, CatBoost and CS-FOF (diamonds: CS-FOF; %d in total). Those without balancing (grey) sit at the bottom: they rarely get defaulters right. But they are not further to the left: they rank clients almost equally well; what changes is where the cut between “pays” and “defaults” is placed.", nrow(MR))),
                tx("ROC-AUC medio por técnica (96 combinaciones sin SVM): 0.759 sin balanceo, 0.762 con pesos de clase, 0.754 con SMOTE y 0.750 con ADASYN. Al umbral de 0.5 el recall pasa de 0.378 a 0.607 y la precisión baja de 0.621 a 0.464, así que la ganancia de F1 (0.458 → 0.524) viene en gran parte del umbral y no de un modelo que discrimine mejor.",
                   "Mean ROC-AUC by technique (96 combinations without SVM): 0.759 without balancing, 0.762 with class weights, 0.754 with SMOTE and 0.750 with ADASYN. At the 0.5 threshold recall goes from 0.378 to 0.607 and precision drops from 0.621 to 0.464, so the F1 gain (0.458 → 0.524) comes largely from the threshold rather than from a model that discriminates better.")))),
     div(class = "grid g2",

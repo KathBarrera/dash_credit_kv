@@ -25,9 +25,9 @@ interp_corr <- function() {
   tgt_txt <- paste(sprintf("%s (%s)", names(tgt), sprintf("%+.2f", tgt)), collapse = ", ")
   basic <- tx(paste0("Las seis facturas mensuales (BILL_AMT) se mueven casi igual: quien debe mucho un mes suele deber mucho al siguiente, por eso aparece un gran bloque dorado. Los estados de pago (PAY) también se parecen entre sí. En cambio, lo que realmente se pagó (PAY_AMT) casi no se relaciona con nada. La variable más ligada al incumplimiento es ", names(tgt)[1], "."),
               paste0("The six monthly bills (BILL_AMT) move almost identically: whoever owes a lot one month usually owes a lot the next, which is why a large gold block appears. The repayment statuses (PAY) are also similar to each other. In contrast, what was actually paid (PAY_AMT) is barely related to anything. The variable most linked to default is ", names(tgt)[1], "."))
-  tech <- tx(sprintf("Spearman (ρ): correlación entre BILL_AMT1–6 de %.2f a %.2f (multicolinealidad severa; el VIF del notebook supera 20 en BILL_AMT2–5); entre PAY_x de %.2f a %.2f; entre PAY_AMT de %.2f a %.2f. Mayor asociación con default (|ρ|): %s. Se usa Spearman y no Pearson porque las variables monetarias son muy asimétricas y con colas extremas, PAY_x es ordinal y la variable objetivo es binaria; los rangos no exigen linealidad ni normalidad. Recomendación: no usar las seis BILL_AMT por separado en modelos lineales (usar nivel promedio + tendencia, solo la más reciente o PCA).",
+  tech <- tx(sprintf("Spearman (ρ): correlación entre BILL_AMT1 a BILL_AMT6 de %.2f a %.2f (multicolinealidad severa; el VIF del notebook supera 20 en BILL_AMT2 a BILL_AMT5); entre PAY_x de %.2f a %.2f; entre PAY_AMT de %.2f a %.2f. Mayor asociación con default (|ρ|): %s. Se usa Spearman y no Pearson porque las variables monetarias son muy asimétricas y con colas extremas, PAY_x es ordinal y la variable objetivo es binaria; los rangos no exigen linealidad ni normalidad. Recomendación: no usar las seis BILL_AMT por separado en modelos lineales (usar nivel promedio + tendencia, solo la más reciente o PCA).",
                      min(bill), max(bill), min(pay), max(pay), min(pamt), max(pamt), tgt_txt),
-             sprintf("Spearman (ρ): correlation among BILL_AMT1–6 from %.2f to %.2f (severe multicollinearity; the notebook's VIF exceeds 20 for BILL_AMT2–5); among PAY_x from %.2f to %.2f; among PAY_AMT from %.2f to %.2f. Strongest association with default (|ρ|): %s. Spearman is used instead of Pearson because the monetary variables are highly skewed with extreme tails, PAY_x is ordinal and the target is binary; ranks require neither linearity nor normality. Recommendation: do not use the six BILL_AMT separately in linear models (use average level + trend, only the most recent one, or PCA).",
+             sprintf("Spearman (ρ): correlation among BILL_AMT1 to BILL_AMT6 from %.2f to %.2f (severe multicollinearity; the notebook's VIF exceeds 20 for BILL_AMT2 to BILL_AMT5); among PAY_x from %.2f to %.2f; among PAY_AMT from %.2f to %.2f. Strongest association with default (|ρ|): %s. Spearman is used instead of Pearson because the monetary variables are highly skewed with extreme tails, PAY_x is ordinal and the target is binary; ranks require neither linearity nor normality. Recommendation: do not use the six BILL_AMT separately in linear models (use average level + trend, only the most recent one, or PCA).",
                      min(bill), max(bill), min(pay), max(pay), min(pamt), max(pamt), tgt_txt))
   list(basic, tech)
 }
@@ -177,15 +177,15 @@ interp_age <- function(view) {
                         names(pay0)[which.max(pay0)], max(pay0), names(pay0)[which.min(pay0)], min(pay0)),
                 sprintf("All ages follow a similar shape: the average delay rises toward the last months (September). The group with the highest delay in the most recent month is %s years (%.2f) and the lowest is %s (%.2f).",
                         names(pay0)[which.max(pay0)], max(pay0), names(pay0)[which.min(pay0)], min(pay0)))
-    tech <- tx(sprintf("Correlación de Spearman AGE–PAY_0: ρ = %+.3f (%s), relación muy débil. Los promedios de PAY mezclan los códigos −2/−1/0 (sin atraso) con atrasos ≥1, por lo que se complementan con la vista de %% con atraso.", rho, sig(p)),
-               sprintf("Spearman correlation AGE–PAY_0: ρ = %+.3f (%s), a very weak relationship. PAY averages mix the codes −2/−1/0 (no delay) with delays ≥1, so they are complemented by the %% late view.", rho, sig(p)))
+    tech <- tx(sprintf("Correlación de Spearman AGE-PAY_0: ρ = %+.3f (%s), relación muy débil. Los promedios de PAY mezclan los códigos −2/−1/0 (sin atraso) con atrasos ≥1, por lo que se complementan con la vista de %% con atraso.", rho, sig(p)),
+               sprintf("Spearman correlation AGE-PAY_0: ρ = %+.3f (%s), a very weak relationship. PAY averages mix the codes −2/−1/0 (no delay) with delays ≥1, so they are complemented by the %% late view.", rho, sig(p)))
   } else if (view == "heat") {
     mx <- which(gp == max(gp), arr.ind = TRUE)[1, ]
     mes <- month_lbl()[mx[2]]; grp <- rownames(gp)[mx[1]]; v <- gp[mx[1], mx[2]] * 100
     basic <- tx(sprintf("Cada celda indica qué porcentaje de ese grupo de edad llevaba al menos un mes de atraso. El valor más alto aparece en %s años, mes de %s (%.1f%%). Las diferencias entre edades son pequeñas comparadas con las diferencias entre meses.", grp, mes, v),
                 sprintf("Each cell shows what percentage of that age group was at least one month late. The highest value is at %s years, in %s (%.1f%%). Differences between ages are small compared with differences between months.", grp, mes, v))
-    tech <- tx(sprintf("Proporción con PAY ≥ 1 entre %s y %s. Spearman AGE–PAY_0: ρ = %+.3f (%s). La edad aporta información marginal; el estado de pago de meses previos es el predictor dominante (ver SHAP en el notebook).", pct(min(gp)), pct(max(gp)), rho, sig(p)),
-               sprintf("Share with PAY ≥ 1 between %s and %s. Spearman AGE–PAY_0: ρ = %+.3f (%s). Age adds marginal information; the repayment status of previous months is the dominant predictor (see SHAP in the notebook).", pct(min(gp)), pct(max(gp)), rho, sig(p)))
+    tech <- tx(sprintf("Proporción con PAY ≥ 1 entre %s y %s. Spearman AGE-PAY_0: ρ = %+.3f (%s). La edad aporta información marginal; el estado de pago de meses previos es el predictor dominante (ver SHAP en el notebook).", pct(min(gp)), pct(max(gp)), rho, sig(p)),
+               sprintf("Share with PAY ≥ 1 between %s and %s. Spearman AGE-PAY_0: ρ = %+.3f (%s). Age adds marginal information; the repayment status of previous months is the dominant predictor (see SHAP in the notebook).", pct(min(gp)), pct(max(gp)), rho, sig(p)))
   } else {
     basic <- tx(sprintf("El riesgo es más alto en el grupo de %s años (%s) y más bajo en el de %s (%s). La relación con la edad es suave y no tan marcada como la del historial de pagos.", hi, pct(max(gd)), lo, pct(min(gd))),
                 sprintf("Risk is highest in the %s age group (%s) and lowest in the %s group (%s). The relationship with age is mild and not as strong as that of payment history.", hi, pct(max(gd)), lo, pct(min(gd))))
@@ -391,7 +391,7 @@ interp_splom <- function(vars_) {
               sprintf("Among the chosen variables, the most similar are %s and %s (%s relationship). If the gold points (default) cluster in one area, that combination of variables separates the risky clients.",
                       a, b, if (r > 0) "direct" else "inverse"))
   top <- head(pairs, 4)
-  pares <- paste(sprintf("%s–%s ρ = %+.2f", top$a, top$b, top$r), collapse = "; ")
+  pares <- paste(sprintf("%s-%s ρ = %+.2f", top$a, top$b, top$r), collapse = "; ")
   tech <- tx(sprintf("Spearman de los pares más fuertes: %s. Útil para detectar colinealidad entre predictores y regiones del espacio donde se concentra la clase 1.", pares),
              sprintf("Spearman of the strongest pairs: %s. Useful to detect collinearity between predictors and regions of the space where class 1 concentrates.", pares))
   list(basic, tech)

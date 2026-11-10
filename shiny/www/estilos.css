@@ -117,6 +117,9 @@ a { color:inherit; }
 .kpi-row { display:grid; gap:16px; margin-bottom:20px; } .k4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .k3 { grid-template-columns:repeat(3,minmax(0,1fr)); margin:12px 0; }
 .k2 { grid-template-columns:repeat(2,minmax(0,1fr)); margin:10px 0 14px; }
+.kpi-money .kpi-value { white-space:nowrap; font-size:clamp(20px, 2vw, 26px); }
+.kpi-usd { font-weight:700; color:var(--accent-2); font-size:14px; margin:2px 0 4px; white-space:nowrap; }
+.kpi-fx { font-size:12.5px; margin-top:-6px; }
 .kpi-compact .kpi-value { font-size:24px; }
 .kpi { background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent-2); border-radius:10px; padding:14px 16px; }
 .kpi-head { display:flex; align-items:center; gap:8px; color:var(--muted); }

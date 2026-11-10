@@ -185,7 +185,7 @@ fig_quant <- function(family, kind) {
     p <- layout(p, xaxis = list(title = family), yaxis = list(title = tx("Densidad", "Density")))
     ttl <- tx("Densidad (KDE)", "Density (KDE)")
   }
-  sub <- if (kind == "box" && !family %in% c("BILL_AMT", "PAY_AMT")) "" else tx(" · vista P1–P99", " · P1–P99 view")
+  sub <- if (kind == "box" && !family %in% c("BILL_AMT", "PAY_AMT")) "" else tx(" · vista P1 a P99", " · P1 to P99 view")
   style_fig(p, 480, legend_top = multi,
             title = tx(sprintf("%s de %s%s", ttl, family, sub), sprintf("%s of %s%s", ttl, family, sub)))
 }
@@ -198,9 +198,9 @@ interp_quant <- function(family) {
   if (family == "BILL_AMT") {
     neg <- mean(apply(df[cols] < 0, 1, any))
     o <- vapply(df[cols], tukey_outliers_pct, 0)
-    basic <- tx(sprintf("Los seis meses de facturación se parecen mucho entre sí: la mediana ronda %s–%s y casi todos los meses tienen unos pocos clientes con saldos muy altos. Además, %s de los clientes tuvo saldo a favor (negativo) en algún mes.",
+    basic <- tx(sprintf("Los seis meses de facturación se parecen mucho entre sí: la mediana ronda %s a %s y casi todos los meses tienen unos pocos clientes con saldos muy altos. Además, %s de los clientes tuvo saldo a favor (negativo) en algún mes.",
                         nt(min(med)), nt(max(med)), pct(neg)),
-                sprintf("The six billing months look very much alike: the median is around %s–%s and almost every month has a few clients with very high balances. Also, %s of clients had a credit (negative) balance in some month.",
+                sprintf("The six billing months look very much alike: the median is around %s to %s and almost every month has a few clients with very high balances. Also, %s of clients had a credit (negative) balance in some month.",
                         nt(min(med)), nt(max(med)), pct(neg)))
     tech <- tx(sprintf("Asimetría entre %.2f y %.2f; outliers de Tukey entre %.1f%% y %.1f%%. Distribuciones casi idénticas mes a mes (alta autocorrelación del saldo). Los montos negativos son económicamente válidos (pago en exceso) y no se eliminan. Esta redundancia anticipa multicolinealidad severa (ver VIF en el notebook / pestaña Multivariado).",
                        min(sk), max(sk), min(o), max(o)),
