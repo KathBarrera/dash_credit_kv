@@ -74,3 +74,19 @@
 .formula { overflow-x:auto; overflow-y:hidden; }
 /* en Kyo solo se enmarca la fórmula, no su párrafo (evita un doble borde) */
 .bm-bubble p:has(> mjx-container:only-child) { border:0 !important; background:none !important; padding:0 !important; }
+
+/* Modelo original: pestañas como botones y código con colores de sintaxis (highlight.js) */
+.cs-tabs .cs-tab { font: inherit; }
+.cs-code code.hljs { background: none; padding: 0; color: var(--text); }
+.cs-code .hljs-keyword, .cs-code .hljs-built_in { color: #8A3FA0; font-weight: 600; }
+.cs-code .hljs-title { color: #1F5FA8; font-weight: 700; }
+.cs-code .hljs-string { color: #2E7D4F; }
+.cs-code .hljs-comment { color: #7A8094; font-style: italic; }
+.cs-code .hljs-number { color: #B5591E; }
+.cs-code .hljs-literal, .cs-code .hljs-params { color: #9A7A33; }
+[data-theme="dark"] .cs-code .hljs-keyword, [data-theme="dark"] .cs-code .hljs-built_in { color: #D49BE8; }
+[data-theme="dark"] .cs-code .hljs-title { color: #8EC1FF; }
+[data-theme="dark"] .cs-code .hljs-string { color: #9AD7A8; }
+[data-theme="dark"] .cs-code .hljs-comment { color: #9AA3BA; }
+[data-theme="dark"] .cs-code .hljs-number { color: #F2B37A; }
+[data-theme="dark"] .cs-code .hljs-literal, [data-theme="dark"] .cs-code .hljs-params { color: #D2BB89; }

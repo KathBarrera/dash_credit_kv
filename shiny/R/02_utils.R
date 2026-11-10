@@ -58,6 +58,7 @@ control <- function(label, comp) div(class = "control", tags$label(class = "ctl-
 PAGE_ICONS <- c("Introducción" = "info", "Problema y Objetivos" = "target", "Marco Teórico" = "book",
                 "EDA Univariado" = "bars", "EDA Multivariado" = "scatter", "Modelos" = "layers",
                 "Predecir" = "gauge", "Conclusiones" = "flag", "Enlaces" = "link", "Equipo" = "users",
+                "Modelo original" = "tree", "Original model" = "tree",
                 "Introduction" = "info", "Problem and Objectives" = "target", "Theoretical Framework" = "book",
                 "Univariate EDA" = "bars", "Multivariate EDA" = "scatter", "Models" = "layers",
                 "Predict" = "gauge", "Conclusions" = "flag", "Links" = "link", "Team" = "users")
@@ -129,6 +130,7 @@ themed <- function(p, dark = FALSE, mono = FALSE) {
   }
   b$x$data <- rapply(b$x$data, rep_, classes = "character", how = "replace")
   b$x$layout <- rapply(b$x$layout, rep_, classes = "character", how = "replace")
+  if (!is.null(b$x$frames)) b$x$frames <- rapply(b$x$frames, rep_, classes = "character", how = "replace")   # gráficas animadas
   lay <- b$x$layout
   lay$paper_bgcolor <- DARK_CARD; lay$plot_bgcolor <- DARK_PLOT
   lay$font$color <- CREAM

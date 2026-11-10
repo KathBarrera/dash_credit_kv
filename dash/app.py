@@ -282,8 +282,8 @@ df, DATA_INFO = prepare(load_raw())
 
 # Grupos de edad (para el análisis AGE vs. PAY)
 AGE_BINS = [20, 25, 30, 35, 40, 45, 50, 55, 60, 80]
-AGE_LABELS = ["21–25", "26–30", "31–35", "36–40", "41–45",
-              "46–50", "51–55", "56–60", "61+"]
+AGE_LABELS = ["21-25", "26-30", "31-35", "36-40", "41-45",
+              "46-50", "51-55", "56-60", "61+"]
 df["AGE_GRP"] = pd.cut(df["AGE"], bins=AGE_BINS, labels=AGE_LABELS)
 
 # Etiquetas de categorías (es, en)
@@ -635,7 +635,7 @@ def fig_quant(family, kind):
     """LIMIT_BAL y AGE: un solo color. BILL_AMT y PAY_AMT: un color por mes (con leyenda)."""
     cols = FAMILIES[family]
     allv = df[cols].values.ravel()
-    lo, hi = np.percentile(allv, 1), np.percentile(allv, 99)   # vista P1–P99
+    lo, hi = np.percentile(allv, 1), np.percentile(allv, 99)   # vista P1 a P99
     fig = go.Figure()
     for i, c in enumerate(cols):
         color = SERIES6[i % 6] if len(cols) > 1 else MONO
@@ -666,7 +666,7 @@ def fig_quant(family, kind):
     else:
         fig.update_layout(xaxis_title=family, yaxis_title=tx("Densidad", "Density"))
         ttl = tx("Densidad (KDE)", "Density (KDE)")
-    sub = "" if kind == "box" and family not in ("BILL_AMT", "PAY_AMT") else tx(" · vista P1–P99", " · P1–P99 view")
+    sub = "" if kind == "box" and family not in ("BILL_AMT", "PAY_AMT") else tx(" · vista P1 a P99", " · P1 to P99 view")
     fig.update_layout(title=tx(f"{ttl} de {family}{sub}", f"{ttl} of {family}{sub}"))
     return style_fig(fig, 480, legend_top=len(cols) > 1)
 
@@ -684,10 +684,10 @@ def interp_quant(family):
         o_lo = min(tukey_outliers_pct(df[c]) for c in cols)
         o_hi = max(tukey_outliers_pct(df[c]) for c in cols)
         basic = tx(f"Los seis meses de facturación se parecen mucho entre sí: la mediana ronda "
-                   f"{nt(med.min())}–{nt(med.max())} y casi todos los meses tienen unos pocos clientes con "
+                   f"{nt(med.min())} a {nt(med.max())} y casi todos los meses tienen unos pocos clientes con "
                    f"saldos muy altos. Además, {neg:.1%} de los clientes tuvo saldo a favor (negativo) en algún mes.",
                    f"The six billing months look very much alike: the median is around "
-                   f"{nt(med.min())}–{nt(med.max())} and almost every month has a few clients with very high "
+                   f"{nt(med.min())} to {nt(med.max())} and almost every month has a few clients with very high "
                    f"balances. Also, {neg:.1%} of clients had a credit (negative) balance in some month.")
         tech = tx(f"Asimetría entre {sk.min():.2f} y {sk.max():.2f}; outliers de Tukey entre "
                   f"{o_lo:.1f}% y {o_hi:.1f}%. Distribuciones casi idénticas mes "
@@ -760,15 +760,15 @@ def interp_corr():
         "also similar to each other. In contrast, what was actually paid (PAY_AMT) is barely related to "
         f"anything. The variable most linked to default is {tgt.index[0]}.")
     tech = tx(
-        f"Spearman (ρ): correlación entre BILL_AMT1–6 de {bill.min():.2f} a {bill.max():.2f} "
-        f"(multicolinealidad severa; el VIF del notebook supera 20 en BILL_AMT2–5); entre PAY_x "
+        f"Spearman (ρ): correlación entre BILL_AMT1 a BILL_AMT6 de {bill.min():.2f} a {bill.max():.2f} "
+        f"(multicolinealidad severa; el VIF del notebook supera 20 en BILL_AMT2 a BILL_AMT5); entre PAY_x "
         f"de {pay.min():.2f} a {pay.max():.2f}; entre PAY_AMT de {pamt.min():.2f} a {pamt.max():.2f}. "
         f"Mayor asociación con default (|ρ|): {tgt_txt}. Se usa Spearman y no Pearson porque las variables "
         "monetarias son muy asimétricas y con colas extremas, PAY_x es ordinal y la variable objetivo es "
         "binaria; los rangos no exigen linealidad ni normalidad. Recomendación: no usar las seis BILL_AMT "
         "por separado en modelos lineales (usar nivel promedio + tendencia, solo la más reciente o PCA).",
-        f"Spearman (ρ): correlation among BILL_AMT1–6 from {bill.min():.2f} to {bill.max():.2f} "
-        f"(severe multicollinearity; the notebook's VIF exceeds 20 for BILL_AMT2–5); among PAY_x "
+        f"Spearman (ρ): correlation among BILL_AMT1 to BILL_AMT6 from {bill.min():.2f} to {bill.max():.2f} "
+        f"(severe multicollinearity; the notebook's VIF exceeds 20 for BILL_AMT2 to BILL_AMT5); among PAY_x "
         f"from {pay.min():.2f} to {pay.max():.2f}; among PAY_AMT from {pamt.min():.2f} to {pamt.max():.2f}. "
         f"Strongest association with default (|ρ|): {tgt_txt}. Spearman is used instead of Pearson because the "
         "monetary variables are highly skewed with extreme tails, PAY_x is ordinal and the target is binary; "
@@ -945,10 +945,10 @@ def interp_age(view):
                    f"(September). The group with the highest delay in the most recent month is "
                    f"{gm['PAY_0'].idxmax()} years ({gm['PAY_0'].max():.2f}) and the lowest is "
                    f"{gm['PAY_0'].idxmin()} ({gm['PAY_0'].min():.2f}).")
-        tech = tx(f"Correlación de Spearman AGE–PAY_0: ρ = {rho:+.3f} ({sig(p)}), relación muy débil. "
+        tech = tx(f"Correlación de Spearman AGE-PAY_0: ρ = {rho:+.3f} ({sig(p)}), relación muy débil. "
                   "Los promedios de PAY mezclan los códigos −2/−1/0 (sin atraso) con atrasos ≥1, por lo que "
                   "se complementan con la vista de % con atraso.",
-                  f"Spearman correlation AGE–PAY_0: ρ = {rho:+.3f} ({sig(p)}), a very weak relationship. "
+                  f"Spearman correlation AGE-PAY_0: ρ = {rho:+.3f} ({sig(p)}), a very weak relationship. "
                   "PAY averages mix the codes −2/−1/0 (no delay) with delays ≥1, so they are complemented by "
                   "the % late view.")
     elif view == "heat":
@@ -962,10 +962,10 @@ def interp_age(view):
                    f"The highest value is at {gp.index[mx[0]]} years, in {mes} ({gp.values[mx] * 100:.1f}%). "
                    "Differences between ages are small compared with differences between months.")
         tech = tx(f"Proporción con PAY ≥ 1 entre {gp.values.min():.1%} y {gp.values.max():.1%}. "
-                  f"Spearman AGE–PAY_0: ρ = {rho:+.3f} ({sig(p)}). La edad aporta información marginal; el "
+                  f"Spearman AGE-PAY_0: ρ = {rho:+.3f} ({sig(p)}). La edad aporta información marginal; el "
                   "estado de pago de meses previos es el predictor dominante (ver SHAP en el notebook).",
                   f"Share with PAY ≥ 1 between {gp.values.min():.1%} and {gp.values.max():.1%}. "
-                  f"Spearman AGE–PAY_0: ρ = {rho:+.3f} ({sig(p)}). Age adds marginal information; the "
+                  f"Spearman AGE-PAY_0: ρ = {rho:+.3f} ({sig(p)}). Age adds marginal information; the "
                   "repayment status of previous months is the dominant predictor (see SHAP in the notebook).")
     else:
         basic = tx(f"El riesgo es más alto en el grupo de {hi} años ({gd.max():.1%}) y más bajo en el de "
@@ -1190,7 +1190,7 @@ def interp_splom(vars_):
                f"Among the chosen variables, the most similar are {a} and {b} "
                f"({'direct' if r > 0 else 'inverse'} relationship). If the gold points (default) cluster in one "
                "area, that combination of variables separates the risky clients.")
-    pares = "; ".join(f"{p[0]}–{p[1]} ρ = {p[2]:+.2f}" for p in pairs[:4])
+    pares = "; ".join(f"{p[0]}-{p[1]} ρ = {p[2]:+.2f}" for p in pairs[:4])
     tech = tx(f"Spearman de los pares más fuertes: {pares}. Útil para detectar colinealidad entre predictores "
               "y regiones del espacio donde se concentra la clase 1.",
               f"Spearman of the strongest pairs: {pares}. Useful to detect collinearity between predictors and "
@@ -1288,10 +1288,10 @@ MODEL_INFO = {   # textos bilingües (es, en): se leen con minfo(modelo, campo)
                  "Boosting with symmetric trees and a random ordering of the data that reduces overfitting."),
         "note": ("Método reciente del estado del arte (2018). Tiene el mayor F1 medio, pero solo 0.0001 por "
                  "encima de CS-FOF; ninguna prueba los separa. Es el más consistente en los tres conjuntos "
-                 "adicionales. Se corrieron 9 de sus 16 combinaciones (sin ADASYN); pesos de clase es su mejor técnica.",
+                 "adicionales. Con sus 16 combinaciones, pesos de clase es su mejor técnica.",
                  "Recent state-of-the-art method (2018). It has the highest mean F1, but only 0.0001 above CS-FOF; "
-                 "no test separates them. It is the most consistent across the three additional datasets. 9 of its "
-                 "16 combinations were run (no ADASYN); class weights is its best technique.")},
+                 "no test separates them. It is the most consistent across the three additional datasets. Across its "
+                 "16 combinations, class weights is its best technique.")},
     "cs_fof": {
         "label": ("CS-FOF (original)", "CS-FOF (original)"),
         "family": ("Modelo original · bosque oblicuo con costo", "Original model · cost-sensitive oblique forest"),
@@ -1388,6 +1388,14 @@ def method_lbl(m):
 BEST_BY_MODEL = (MR.loc[MR.groupby("model")["f1_mean"].idxmax()]
                  .sort_values("f1_mean", ascending=False).reset_index(drop=True))
 BEST = BEST_BY_MODEL.iloc[0]
+# Las 112 combinaciones del diseño factorial (7 modelos base) y, aparte, las corridas de LightGBM, CatBoost y
+# CS-FOF que buscan superar el mejor F1 de esas 112.
+BASE_MODELS = ["random_forest", "xgboost", "svm", "knn", "decision_tree", "logistic_regression", "naive_bayes"]
+N_BASE = int(MR["model"].isin(BASE_MODELS).sum())
+N_EXTRA = len(MR) - N_BASE
+BEST_BASE = BEST_BY_MODEL[BEST_BY_MODEL["model"].isin(BASE_MODELS)].iloc[0]
+# Tasa de cambio promedio de 2005 (Banco Central de la República de China): 32.2 NT$ por US$
+TWD_PER_USD_2005 = 32.2
 BASELINE = MR[(MR["model"] == "logistic_regression") & (MR["technique"] == "none")]["f1_mean"].max()
 # Matrices de confusión fuera de pliegue (umbral 0.5) de CatBoost (la mejor combinación) y de CS-FOF,
 # reajustadas con los hiperparámetros de cada fold (experiments/comparacion_final/probabilidades_oof.npz).
@@ -2014,7 +2022,7 @@ def page_uni():
                  control(tx("Variable / familia", "Variable / family"), dcc.RadioItems(
                      id="q-family", value="LIMIT_BAL", className="radio",
                      options=[{"label": "LIMIT_BAL", "value": "LIMIT_BAL"}, {"label": "AGE", "value": "AGE"},
-                              {"label": "BILL_AMT (1–6)", "value": "BILL_AMT"}, {"label": "PAY_AMT (1–6)", "value": "PAY_AMT"}])),
+                              {"label": "BILL_AMT (1-6)", "value": "BILL_AMT"}, {"label": "PAY_AMT (1-6)", "value": "PAY_AMT"}])),
                  control(tx("Tipo de gráfico", "Chart type"), dcc.RadioItems(
                      id="q-kind", value="hist", className="radio",
                      options=[{"label": tx("Histograma", "Histogram"), "value": "hist"}, {"label": "Boxplot", "value": "box"},
@@ -2099,10 +2107,11 @@ def page_intro():
         html.Div([
             kpi(tx("Clientes analizados", "Clients analyzed"), f"{len(df):,}", tx("tras la limpieza", "after cleaning"),
                 ico="users"),
-            kpi("Variables", "24", tx("23 predictoras + 1 objetivo", "23 predictors + 1 target"), ico="columns"),
+            kpi("Variables", "24", tx("23 predictoras + 1 objetivo · 21 columnas al modelar",
+                                      "23 predictors + 1 target · 21 columns for modeling"), ico="columns"),
             kpi(tx("Tasa de default", "Default rate"), f"{GLOBAL_RATE:.1%}", f"{n_def:,} {tx('clientes', 'clients')}",
                 ico="alert"),
-            kpi(tx("Periodo", "Period"), tx("Abr–Sep 2005", "Apr–Sep 2005"), tx("banco de Taiwán", "Taiwanese bank"),
+            kpi(tx("Periodo", "Period"), tx("Abr a Sep 2005", "Apr to Sep 2005"), tx("banco de Taiwán", "Taiwanese bank"),
                 ico="calendar"),
         ], className="kpi-row k4"),
         html.Div([
@@ -2122,21 +2131,28 @@ def page_intro():
                           f"dataset (UCI): {I['filas_originales']:,} clients observed between April and September 2005, "
                           "with their credit limit, demographics, six-month payment history, billed and paid amounts, "
                           "and whether they defaulted the following month.")),
+                html.P(tx("Tras la limpieza quedan 24 variables (23 predictoras y 1 objetivo); el conjunto final de "
+                          "modelado tiene 21 columnas porque las 6 BILL_AMT se resumen en 3 variables derivadas.",
+                          "After cleaning there are 24 variables (23 predictors and 1 target); the final modeling set has "
+                          "21 columns because the 6 BILL_AMT are summarized into 3 derived variables.")),
                 html.P(tx("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables "
-                          f"anticipan el incumplimiento. Luego se entrenan y comparan {len(MR)} combinaciones de modelos "
-                          "(7 algoritmos × 4 técnicas de balanceo × 4 optimizadores, más dos métodos recientes y un "
-                          "modelo original, CS-FOF). La mejor, "
-                          f"{best_lbl} con {tech_lbl(BEST['technique']).lower()}, logra un F1 de {BEST['f1_mean']:.3f} y "
-                          f"detecta el {BEST['recall_mean']:.0%} de los incumplimientos. Por último, la página Predecir "
-                          "usa un Random Forest con pesos de clase (estadísticamente empatado con el mejor) para "
-                          "estimar el riesgo de un cliente nuevo.",
+                          f"anticipan el incumplimiento. Luego se comparan {N_BASE} combinaciones de modelos tradicionales "
+                          "(diseño factorial: 7 algoritmos × 4 técnicas de balanceo × 4 optimizadores) y, aparte, "
+                          f"{N_EXTRA} corridas de LightGBM, CatBoost y CS-FOF, el modelo original del proyecto, que buscan "
+                          f"superar el mejor F1 de esas {N_BASE}. La mejor de las {N_BASE} es "
+                          f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}); la mejor en total es "
+                          f"{best_lbl} (F1 {BEST['f1_mean']:.3f}), empatada con CS-FOF: la diferencia es menor que 0.002 y "
+                          "ninguna prueba estadística las separa. Por último, la página Predecir usa un Random Forest con "
+                          "pesos de clase (estadísticamente empatado con el mejor) para estimar el riesgo de un cliente nuevo.",
                           "First the data is explored (univariate and multivariate EDA) to see which variables "
-                          f"anticipate default. Then {len(MR)} model combinations are trained and compared "
-                          "(7 algorithms × 4 balancing techniques × 4 optimizers, plus two recent methods and an "
-                          "original model, CS-FOF). The best one, "
-                          f"{best_lbl} with {tech_lbl(BEST['technique']).lower()}, reaches an F1 of {BEST['f1_mean']:.3f} "
-                          f"and detects {BEST['recall_mean']:.0%} of defaults. Finally, the Predict page uses a Random Forest "
-                          "with class weights (statistically tied with the best) to estimate the risk of a new client.")),
+                          f"anticipate default. Then {N_BASE} traditional model combinations are compared (factorial "
+                          "design: 7 algorithms × 4 balancing techniques × 4 optimizers) and, separately, "
+                          f"{N_EXTRA} runs of LightGBM, CatBoost and CS-FOF, the project's original model, which try to "
+                          f"beat the best F1 of those {N_BASE}. The best of the {N_BASE} is "
+                          f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}); the best overall is "
+                          f"{best_lbl} (F1 {BEST['f1_mean']:.3f}), tied with CS-FOF: the difference is below 0.002 and no "
+                          "statistical test separates them. Finally, the Predict page uses a Random Forest with class "
+                          "weights (statistically tied with the best) to estimate the risk of a new client.")),
                 html.P(tx("Cada gráfico trae una interpretación básica (lenguaje cotidiano) y una técnica "
                           "(estadísticos y recomendaciones de modelado).",
                           "Each chart comes with a basic interpretation (everyday language) and a technical one "
@@ -2145,7 +2161,7 @@ def page_intro():
             card(tx("Fuentes", "Sources"), [
                 html.P("Yeh, I-C. & Lien, C. (2009). The comparisons of data mining techniques for the predictive "
                        "accuracy of probability of default of credit card clients. Expert Systems with Applications, "
-                       "36(2), 2473–2480."),
+                       "36(2), 2473-2480."),
                 html.P([tx("Datos: ", "Data: "),
                         html.A("UCI Machine Learning Repository",
                                href="https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients",
@@ -2157,6 +2173,14 @@ def page_intro():
             ]),
         ], className="grid g3 intro-grid"),
     ])
+
+
+def money_kpi(label, amount, note):
+    """KPI de un monto en millones de NT$ con su equivalente en dólares debajo (el valor no se parte en dos líneas)."""
+    return html.Div([html.Div(html.Div(label, className="kpi-label"), className="kpi-head"),
+                     html.Div(f"NT$\u00a0{amount / 1e6:,.0f}\u00a0M", className="kpi-value"),
+                     html.Div(f"≈ US$\u00a0{amount / TWD_PER_USD_2005 / 1e6:,.1f}\u00a0M", className="kpi-usd"),
+                     html.Div(note, className="kpi-note")], className="kpi kpi-money")
 
 
 def page_problem():
@@ -2175,33 +2199,41 @@ def page_problem():
                   "Demographic variables (sex, education, marital status, age) are associated with default, but with "
                   "a small effect size."),
          tx("Multivariado · Tasas por perfil y edad", "Multivariate · Rates by profile and age")),
-        ("H4", tx("Los montos facturados mensuales (BILL_AMT1–6) están fuertemente correlacionados entre sí "
+        ("H4", tx("Los montos facturados mensuales (BILL_AMT1 a BILL_AMT6) están fuertemente correlacionados entre sí "
                   "(multicolinealidad).",
-                  "Monthly bill amounts (BILL_AMT1–6) are strongly correlated with each other (multicollinearity)."),
+                  "Monthly bill amounts (BILL_AMT1 to BILL_AMT6) are strongly correlated with each other (multicollinearity)."),
          tx("Univariado y Multivariado", "Univariate and Multivariate")),
         ("H5", tx("La clase «default» es minoritaria, por lo que el problema presenta desbalance de clases.",
                   "The “default” class is the minority, so the problem has class imbalance."),
          tx("Univariado · Variable objetivo", "Univariate · Target variable")),
     ]
+    # Objetivos específicos: los mismos 7 del libro del proyecto (introduccion.md), con modelado incluido
     objs = [
-        (tx("Describir la calidad de los datos y documentar la limpieza aplicada (duplicados, categorías no "
-            "documentadas, saldos negativos).",
-            "Describe data quality and document the cleaning applied (duplicates, undocumented categories, "
-            "negative balances)."), tx("Introducción", "Introduction")),
-        (tx("Caracterizar la distribución de cada variable, su asimetría y la presencia de valores atípicos.",
-            "Characterize the distribution of each variable, its skewness and the presence of outliers."),
-         tx("EDA Univariado", "Univariate EDA")),
-        (tx("Cuantificar el desbalance de clases de la variable objetivo.",
-            "Quantify the class imbalance of the target variable."), tx("EDA Univariado", "Univariate EDA")),
-        (tx("Comparar a los clientes con y sin default según variables demográficas, de crédito y de pagos.",
-            "Compare clients with and without default by demographic, credit and payment variables."),
-         tx("EDA Multivariado", "Multivariate EDA")),
-        (tx("Identificar relaciones entre variables y detectar multicolinealidad (correlaciones, VIF).",
-            "Identify relationships between variables and detect multicollinearity (correlations, VIF)."),
-         tx("EDA Multivariado", "Multivariate EDA")),
-        (tx("Definir lineamientos de preprocesamiento para una futura etapa de modelado predictivo.",
-            "Define preprocessing guidelines for a future predictive modeling stage."),
-         tx("Hallazgos clave", "Key findings")),
+        (tx("Describir el problema y el conjunto de datos, incluida la variable objetivo y su nivel de desbalance.",
+            "Describe the problem and the dataset, including the target variable and its level of imbalance."),
+         tx("Introducción y EDA Univariado", "Introduction and Univariate EDA")),
+        (tx("Documentar de forma reproducible el proceso ETL, justificando cada decisión de limpieza.",
+            "Document the ETL process reproducibly, justifying each cleaning decision."), tx("Introducción", "Introduction")),
+        (tx("Caracterizar estadísticamente las variables mediante un EDA univariado y bivariado, y evaluar la "
+            "multicolinealidad.",
+            "Statistically characterize the variables through a univariate and bivariate EDA, and assess "
+            "multicollinearity."), tx("EDA Univariado y Multivariado", "Univariate and Multivariate EDA")),
+        (tx("Entrenar un modelo base (regresión logística) sobre una partición train/test aislada de fuga de "
+            "información, y cuantificar su margen de mejora, en especial en falsos negativos y falsos positivos.",
+            "Train a baseline model (logistic regression) on a train/test split free of information leakage, and "
+            "quantify its room for improvement, especially in false negatives and false positives."),
+         tx("Modelos", "Models")),
+        (tx("Comparar 112 configuraciones (7 modelos × 4 técnicas de balanceo × 4 métodos de optimización) con "
+            "validación cruzada anidada y el F1 de la clase default como métrica principal.",
+            "Compare 112 configurations (7 models × 4 balancing techniques × 4 optimization methods) with nested "
+            "cross-validation and the default-class F1 as the main metric."), tx("Modelos", "Models")),
+        (tx("Contrastar estadísticamente las configuraciones y analizar la calibración de probabilidades y el costo "
+            "computacional.",
+            "Statistically compare the configurations and analyze probability calibration and computational cost."),
+         tx("Modelos y Modelo original", "Models and Original model")),
+        (tx("Interpretar los modelos con SHAP y LIME para identificar las variables que más influyen en la predicción.",
+            "Interpret the models with SHAP and LIME to identify the variables that most influence the prediction."),
+         tx("Modelos", "Models")),
     ]
     return html.Div([
         page_title(tx("Problema y Objetivos", "Problem and Objectives"), ""),
@@ -2225,11 +2257,14 @@ def page_problem():
                 html.Div([
                     kpi(tx("Clientes en default", "Clients in default"), f"{n_def:,}",
                         tx(f"{GLOBAL_RATE:.1%} de la muestra", f"{GLOBAL_RATE:.1%} of the sample")),
-                    kpi(tx("Límite expuesto", "Exposed limit"), f"NT${exposure / 1e6:,.0f} M",
-                        tx("suma de LIMIT_BAL de quienes incumplen", "sum of LIMIT_BAL of defaulters")),
-                    kpi(tx("Saldo facturado (Sep)", "Billed balance (Sep)"), f"NT${bill_def / 1e6:,.0f} M",
-                        tx("BILL_AMT1 positivo de quienes incumplen", "positive BILL_AMT1 of defaulters")),
+                    money_kpi(tx("Límite expuesto", "Exposed limit"), exposure,
+                              tx("suma de LIMIT_BAL de quienes incumplen", "sum of LIMIT_BAL of defaulters")),
+                    money_kpi(tx("Saldo facturado (Sep)", "Billed balance (Sep)"), bill_def,
+                              tx("BILL_AMT1 positivo de quienes incumplen", "positive BILL_AMT1 of defaulters")),
                 ], className="kpi-row k3"),
+                html.P(tx(f"Conversión a dólares estadounidenses con la tasa promedio de 2005: {TWD_PER_USD_2005} NT$ por US$.",
+                          f"Conversion to US dollars at the 2005 average rate: {TWD_PER_USD_2005} NT$ per US$."),
+                       className="muted kpi-fx"),
                 html.P(tx("Los errores no son simétricos: no detectar a quien incumplirá (falso negativo) suele costar "
                           "más que revisar de más a quien sí pagaría (falso positivo).",
                           "Errors are not symmetric: failing to detect someone who will default (false negative) "
@@ -2248,7 +2283,11 @@ def page_problem():
                      tx("¿Qué variables separan mejor a los clientes que incumplen?",
                         "Which variables best separate the clients who default?"),
                      tx("¿Existe redundancia entre las variables predictoras?",
-                        "Is there redundancy among the predictor variables?")]),
+                        "Is there redundancy among the predictor variables?"),
+                     tx("¿Qué combinación de algoritmo, técnica de balanceo y método de optimización detecta mejor a los "
+                        "clientes en riesgo de incumplimiento, y qué parte de la mejora se debe a cada decisión?",
+                        "Which combination of algorithm, balancing technique and optimization method best detects "
+                        "clients at risk of default, and how much of the improvement is due to each decision?")]),
             ]),
         ], className="grid g3"),
         html.Div([
@@ -2263,16 +2302,12 @@ def page_problem():
                           "management) which signals precede default, with visual and statistical evidence.")),
             ]),
             card(tx("Alcance y limitaciones", "Scope and limitations"), _ul([
-                tx("Datos de un solo banco de Taiwán y de un periodo corto (abril–septiembre de 2005): no se generalizan "
+                tx("Datos de un solo banco de Taiwán y de un periodo corto (abril a septiembre de 2005): no se generalizan "
                    "sin cautela a otros mercados o épocas.",
-                   "Data from a single Taiwanese bank over a short period (April–September 2005): they should not be "
+                   "Data from a single Taiwanese bank over a short period (April to September 2005): they should not be "
                    "generalized to other markets or times without caution."),
                 tx("El análisis es asociativo; una correlación no implica causalidad.",
                    "The analysis is associative; correlation does not imply causation."),
-                tx("El EDA no construye modelos: deriva lineamientos para hacerlo. Los modelos se entrenan en el "
-                   "repositorio del proyecto y sus resultados se resumen en la sección Modelos.",
-                   "The EDA does not build models: it derives guidelines for doing so. The models are trained in the "
-                   "project repository and their results are summarized in the Models section."),
                 tx("Los códigos −2 y 0 de PAY_x no están documentados con precisión en la fuente; se conservan sin recodificar.",
                    "Codes −2 and 0 of PAY_x are not precisely documented in the source; they are kept without recoding."),
             ])),
@@ -2282,10 +2317,12 @@ def page_problem():
                   [(html.B(a), b, c) for a, b, c in hip])),
         card(tx("Objetivos", "Objectives"), [
             html.Div(tx("Objetivo general", "General objective"), className="obj-label"),
-            html.Div(tx("Analizar los factores que se asocian con el incumplimiento de pago (default) de los clientes "
-                        "de tarjetas de crédito mediante un análisis exploratorio de datos univariado y multivariado.",
-                        "Analyze the factors associated with payment default among credit card clients through a "
-                        "univariate and multivariate exploratory data analysis."),
+            html.Div(tx("Evaluar de forma sistemática el efecto del preprocesamiento, el algoritmo, la técnica de "
+                        "balanceo y el método de optimización de hiperparámetros sobre la capacidad de predecir el "
+                        "incumplimiento de pago de clientes de tarjetas de crédito.",
+                        "Systematically evaluate the effect of preprocessing, the algorithm, the balancing technique and "
+                        "the hyperparameter optimization method on the ability to predict payment default among credit "
+                        "card clients."),
                      className="callout"),
             html.Div(tx("Objetivos específicos", "Specific objectives"), className="obj-label"),
             html.Ol([html.Li([t, html.Span(s, className="tag")]) for t, s in objs], className="obj-list"),
@@ -2334,17 +2371,17 @@ def page_marco():
          tx("Estado civil: 1 = casado, 2 = soltero, 3 = otros (el código 0 se reagrupa en «Otros»).",
             "Marital status: 1 = married, 2 = single, 3 = others (code 0 is grouped into “Others”).")),
         ("AGE", tx("Numérica discreta", "Discrete numeric"), tx("Edad en años.", "Age in years.")),
-        ("PAY_0, PAY_2–PAY_6", "Ordinal",
+        ("PAY_0, PAY_2-PAY_6", "Ordinal",
          tx("Estado de pago mensual de septiembre (PAY_0) hacia abril (PAY_6). −2/−1/0 = sin atraso; 1 = un mes de "
-            "atraso; …; 8–9 = ≥8–9 meses.",
+            "atraso; …; 8 = 8 meses; 9 = 9 meses o más.",
             "Monthly repayment status from September (PAY_0) back to April (PAY_6). −2/−1/0 = no delay; "
-            "1 = one month late; …; 8–9 = ≥8–9 months.")),
-        ("BILL_AMT1–6", tx("Numérica continua", "Continuous numeric"),
+            "1 = one month late; …; 8 = 8 months; 9 = 9 months or more.")),
+        ("BILL_AMT1-6", tx("Numérica continua", "Continuous numeric"),
          tx("Monto facturado en el estado de cuenta de septiembre (1) a abril (6), en NT$. Puede ser negativo "
             "(saldo a favor).",
             "Amount on the bill statement from September (1) to April (6), in NT$. It can be negative "
             "(credit balance).")),
-        ("PAY_AMT1–6", tx("Numérica continua", "Continuous numeric"),
+        ("PAY_AMT1-6", tx("Numérica continua", "Continuous numeric"),
          tx("Monto efectivamente pagado de septiembre (1) a abril (6), en NT$.",
             "Amount actually paid from September (1) to April (6), in NT$.")),
         ("default_payment_next_month", tx("Binaria (objetivo)", "Binary (target)"),
@@ -2406,9 +2443,9 @@ def page_marco():
                           "are. Money amounts are usually highly skewed.")),
                 F(r"\begin{gathered} x < Q_1 - 1.5\,\mathrm{IQR} \quad \text{" + tx("ó", "or")
                   + r"} \quad x > Q_3 + 1.5\,\mathrm{IQR} \\ \mathrm{IQR} = Q_3 - Q_1 \end{gathered}"),
-                html.P(tx("La winsorización recorta los extremos a percentiles (por ejemplo P1–P99) sin eliminar clientes. "
+                html.P(tx("La winsorización recorta los extremos a percentiles (por ejemplo P1 a P99) sin eliminar clientes. "
                           "La transformación logarítmica con signo suaviza colas largas cuando hay ceros o negativos.",
-                          "Winsorization caps the extremes at percentiles (e.g. P1–P99) without removing clients. "
+                          "Winsorization caps the extremes at percentiles (e.g. P1 to P99) without removing clients. "
                           "The signed log transformation smooths long tails when there are zeros or negatives.")),
             ]),
             card(tx("5. Desbalance de clases", "5. Class imbalance"), [
@@ -2451,10 +2488,10 @@ def page_marco():
                           "As a rule of thumb, V < 0.1 is a small effect and V ≈ 0.3 a moderate one.")),
             ]),
             card(tx("8. Comparación de grupos y tamaño del efecto", "8. Group comparison and effect size"), [
-                _ul([tx("Mann–Whitney U: compara dos grupos sin suponer normalidad.",
-                        "Mann–Whitney U: compares two groups without assuming normality."),
-                     tx("Kruskal–Wallis H: extiende la comparación a tres o más grupos.",
-                        "Kruskal–Wallis H: extends the comparison to three or more groups."),
+                _ul([tx("Mann-Whitney U: compara dos grupos sin suponer normalidad.",
+                        "Mann-Whitney U: compares two groups without assuming normality."),
+                     tx("Kruskal-Wallis H: extiende la comparación a tres o más grupos.",
+                        "Kruskal-Wallis H: extends the comparison to three or more groups."),
                      tx("t de Welch: compara medias con varianzas distintas.",
                         "Welch's t: compares means with unequal variances.")]),
                 F(r"U_1 = R_1 - \frac{n_1 (n_1 + 1)}{2}"),
@@ -2464,6 +2501,25 @@ def page_marco():
                           "efecto y la relevancia práctica, no solo el p-value.",
                           "With n ≈ 30,000 almost any difference is significant; that is why the effect size and "
                           "practical relevance are reported, not just the p-value.")),
+            ]),
+            card(tx("9. Calibración de probabilidades", "9. Probability calibration"), [
+                html.P(tx("Un modelo está calibrado si, entre los clientes a los que asigna 30 % de riesgo, cerca del 30 % "
+                          "incumple. Ordenar bien (AUC) no basta: los pesos de clase y el sobremuestreo inflan las "
+                          "probabilidades de la clase minoritaria. Se miden con el puntaje de Brier y el error de "
+                          "calibración esperado (ECE):",
+                          "A model is calibrated if, among the clients it assigns a 30% risk, about 30% default. Ranking "
+                          "well (AUC) is not enough: class weights and oversampling inflate the minority-class "
+                          "probabilities. Calibration is measured with the Brier score and the expected calibration "
+                          "error (ECE):")),
+                F(r"\mathrm{Brier} = \frac{1}{n} \sum_{i=1}^{n} (\hat p_i - y_i)^2"),
+                F(r"\mathrm{ECE} = \sum_{b=1}^{B} \frac{n_b}{n} \,\big|\, \bar y_b - \bar p_b \,\big|"),
+                html.P(tx("En el ECE las probabilidades se agrupan en B intervalos (10 en este proyecto); ȳ_b es la tasa "
+                          "real de incumplimiento y p̄_b la probabilidad media en el intervalo b. En ambos, menor es mejor. "
+                          "La página Modelos reporta el ECE del mejor modelo y la página Modelo original compara el Brier "
+                          "de los cinco mejores.",
+                          "In the ECE, probabilities are grouped into B bins (10 in this project); ȳ_b is the real default "
+                          "rate and p̄_b the mean probability in bin b. For both, lower is better. The Models page reports "
+                          "the best model's ECE and the Original model page compares the Brier score of the top five.")),
             ]),
         ], className="masonry"),
         html.Div([
@@ -2557,7 +2613,7 @@ def page_home():
             html.Div([html.Span(tx("Titulares", "Cardholders"), className="cc-lbl"),
                       *[html.Div(a["name"], className="cc-name") for a in AUTHORS]]),
             html.Div([html.Span(tx("Periodo de datos", "Data period"), className="cc-lbl"),
-                      html.Div(tx("ABR 2005 – SEP 2005", "APR 2005 – SEP 2005"), className="cc-name")],
+                      html.Div(tx("ABR 2005 A SEP 2005", "APR 2005 to SEP 2005"), className="cc-name")],
                      className="cc-valid"),
         ], className="cc-bottom"),
     ], className="cc-face cc-front")
@@ -2565,7 +2621,7 @@ def page_home():
         html.Div(className="cc-gloss"),
         html.Div(className="cc-mag"),
         html.Div([_stat(tx("Clientes", "Clients"), f"{len(df):,}"), _stat("Default", f"{GLOBAL_RATE:.1%}"),
-                  _stat(tx("Periodo", "Period"), tx("Abr–Sep 2005", "Apr–Sep 2005"))], className="cc-sig"),
+                  _stat(tx("Periodo", "Period"), tx("Abr a Sep 2005", "Apr to Sep 2005"))], className="cc-sig"),
         html.P(tx("Datos: UCI · Banco de Taiwán · Yeh & Lien (2009)", "Data: UCI · Taiwanese bank · Yeh & Lien (2009)"),
                className="cc-fine"),
     ], className="cc-face cc-back")
@@ -2886,7 +2942,7 @@ def csfof_theory():
             kpi(tx("Atrasos correlacionados", "Correlated delays"), f"ρ = {rho_pay:.2f}",
                 tx("PAY_0 con PAY_2: el riesgo vive en combinaciones", "PAY_0 with PAY_2: risk lives in combinations"), "layers"),
             kpi(tx("Montos redundantes", "Redundant amounts"), f"ρ ≥ {bmin:.2f}",
-                tx("entre BILL_AMT1–6 (VIF > 20)", "among BILL_AMT1–6 (VIF > 20)"), "columns"),
+                tx("entre BILL_AMT1 a BILL_AMT6 (VIF > 20)", "among BILL_AMT1 to BILL_AMT6 (VIF > 20)"), "columns"),
             kpi(tx("Desbalance", "Imbalance"), f"{GLOBAL_RATE:.1%}",
                 tx(f"incumple; cada moroso pesa {T['c']:.1f} veces más", f"default; each defaulter weighs {T['c']:.1f}× more"), "alert"),
             kpi(tx("Cortes oblicuos usados", "Oblique cuts used"), "71 %",
@@ -2987,9 +3043,9 @@ def cs_vs_rf_interp(scn):
                    f"CS-FOF beats Random Forest in {gana} of 5 folds, but narrowly: 0.003 of F1 on average, less "
                    "than F1 changes from one fold to another.")
         tech = tx("Validación anidada 5 × 5, mejor combinación de cada uno (pesos de clase + búsqueda aleatoria). "
-                  "Nadeau–Bengio con Holm p = 1.000; δ de Cliff = 0.36 (efecto mediano); DeLong p = 0.171; McNemar "
+                  "Nadeau-Bengio con Holm p = 1.000; δ de Cliff = 0.36 (efecto mediano); DeLong p = 0.171; McNemar "
                   "p < 0.001 (313 errores exclusivos de CS-FOF frente a 615).",
-                  "Nested 5 × 5 validation, best combination of each (class weights + random search). Nadeau–Bengio "
+                  "Nested 5 × 5 validation, best combination of each (class weights + random search). Nadeau-Bengio "
                   "with Holm p = 1.000; Cliff's δ = 0.36 (medium effect); DeLong p = 0.171; McNemar p < 0.001 (313 "
                   "exclusive CS-FOF errors vs 615).")
     elif scn == "size":
@@ -3103,14 +3159,14 @@ METH_FLOW = [  # (título, texto) — los 8 pasos de la guía, aplicados a este 
                                       "Binary classification f: ℝ²⁰ → {0, 1}; 1 = defaults next month.")),
     (("Datos", "Data"), ("UCI Taiwán: 29 965 clientes, 20 variables, 22.1 % de incumplimiento. Preprocesamiento dentro de cada pliegue.",
                          "UCI Taiwan: 29,965 clients, 20 variables, 22.1% default. Preprocessing inside each fold.")),
-    (("Modelo propuesto", "Proposed model"), ("Bosque con cortes oblicuos de Fisher ponderados por costo (ecuaciones 1–5).",
-                                              "Forest with cost-weighted Fisher oblique cuts (equations 1–5).")),
+    (("Modelo propuesto", "Proposed model"), ("Bosque con cortes oblicuos de Fisher ponderados por costo (ecuaciones 1 a 5).",
+                                              "Forest with cost-weighted Fisher oblique cuts (equations 1 to 5).")),
     (("Entrenamiento", "Training"), ("4 búsquedas de hiperparámetros (malla, aleatoria, Optuna, genético); semilla 42.",
                                      "4 hyperparameter searches (grid, random, Optuna, genetic); seed 42.")),
     (("Baselines", "Baselines"), ("9 modelos: 7 clásicos + LightGBM y CatBoost, con el mismo presupuesto de búsqueda.",
                                   "9 models: 7 classic + LightGBM and CatBoost, with the same search budget.")),
-    (("Evaluación", "Evaluation"), ("Validación anidada 5 × 5; F1, AUC-ROC, AUC-PR, MCC; Friedman, Nadeau–Bengio, Wilcoxon, DeLong.",
-                                    "Nested 5 × 5 validation; F1, ROC-AUC, PR-AUC, MCC; Friedman, Nadeau–Bengio, Wilcoxon, DeLong.")),
+    (("Evaluación", "Evaluation"), ("Validación anidada 5 × 5; F1, AUC-ROC, AUC-PR, MCC; Friedman, Nadeau-Bengio, Wilcoxon, DeLong.",
+                                    "Nested 5 × 5 validation; F1, ROC-AUC, PR-AUC, MCC; Friedman, Nadeau-Bengio, Wilcoxon, DeLong.")),
     (("Ablación", "Ablation"), ("Mismo bosque sin corte oblicuo y variantes del corte, con todo lo demás fijo.",
                                 "Same forest without the oblique cut and variants of the cut, all else fixed.")),
     (("Reproducibilidad", "Reproducibility"), ("Código en GitHub (MIT), 14 pruebas en GitHub Actions, datos de UCI.",
@@ -3124,7 +3180,7 @@ PSEUDO = """Entrada: D = {(xᵢ, yᵢ)}, T árboles, profundidad d, hoja mínima
 4      para cada nodo con ≥ 2h clientes, sin ser puro y con profundidad < d:
 5          F ← q variables al azar
 6          mejor ← el corte recto sobre F de menor G                ▷ ec. (2)
-7          v ← dirección de Fisher con los clientes del nodo        ▷ ec. (3)–(4)
+7          v ← dirección de Fisher con los clientes del nodo        ▷ ec. (3) y (4)
 8          si el mejor umbral sobre vᵀx tiene menor G: mejor ← oblicuo
 9          si mejor deja ≥ h clientes por lado: dividir; si no: hoja
 10 f(x) ← promedio de las probabilidades de hoja de los T árboles  ▷ ec. (5)"""
@@ -3146,8 +3202,8 @@ CHECKLIST = [  # lista de verificación de la guía; estado honesto
     ("ok", ("Baselines recientes (LightGBM, CatBoost) con el mismo presupuesto de búsqueda.",
             "Recent baselines (LightGBM, CatBoost) with the same search budget.")),
     ("ok", ("Media y desviación estándar sobre 5 pliegues externos.", "Mean and standard deviation over 5 outer folds.")),
-    ("ok", ("Pruebas estadísticas: Friedman–Nemenyi, Nadeau–Bengio, Wilcoxon con Holm, DeLong y McNemar.",
-            "Statistical tests: Friedman–Nemenyi, Nadeau–Bengio, Wilcoxon with Holm, DeLong and McNemar.")),
+    ("ok", ("Pruebas estadísticas: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon con Holm, DeLong y McNemar.",
+            "Statistical tests: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon with Holm, DeLong and McNemar.")),
     ("mid", ("Ablación por componente: hecha solo en el pliegue 1 y sin la variante «sin costo».",
              "Ablation per component: done only on fold 1 and without the “no cost” variant.")),
     ("ok", ("Código, datos y versiones disponibles (GitHub, UCI, requirements.txt); DOI de Zenodo pendiente.",
@@ -3177,9 +3233,9 @@ def csfof_method():
                "averaging trees trained on different bootstrap samples reduces variance, as in Random Forest.")),
     ]
     hp = _tbl([tx("Hiperparámetro", "Hyperparameter"), tx("Rango buscado", "Search range"), tx("Modelo final", "Final model")],
-              [("n_estimators (T)", "100 – 500", "359"), ("max_depth (d)", "6 – 14", "11"),
-               ("min_samples_leaf (h)", "10 – 60", "51"), ("max_features (q)", "sqrt, log2", "log2"),
-               ("eps (ε)", tx("0.01 – 1 (escala log)", "0.01 – 1 (log scale)"), "0.324")])
+              [("n_estimators (T)", "100-500", "359"), ("max_depth (d)", "6-14", "11"),
+               ("min_samples_leaf (h)", "10-60", "51"), ("max_features (q)", "sqrt, log2", "log2"),
+               ("eps (ε)", tx("0.01 a 1 (escala log)", "0.01 to 1 (log scale)"), "0.324")])
     nuevo = _tbl([tx("Se reutiliza", "Reused"), tx("Es nuevo en CS-FOF", "New in CS-FOF")], [
         (tx("Bosque aleatorio: bootstrap, q variables al azar por nodo y promedio de árboles (Breiman, 2001).",
             "Random forest: bootstrap, q random variables per node and averaging of trees (Breiman, 2001)."),
@@ -3215,8 +3271,8 @@ def csfof_method():
                          tx("El corte elegido nunca tiene más impureza que el mejor corte recto sobre las mismas variables.",
                             "The chosen cut never has more impurity than the best straight cut on the same variables.")]),
                 html.Li([html.B(tx("Proposición 2. ", "Proposition 2. ")),
-                         tx("Con ε = 0, v maximiza el criterio de Fisher J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy–Schwarz).",
-                            "With ε = 0, v maximizes Fisher's criterion J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy–Schwarz).")]),
+                         tx("Con ε = 0, v maximiza el criterio de Fisher J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy-Schwarz).",
+                            "With ε = 0, v maximizes Fisher's criterion J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy-Schwarz).")]),
                 html.Li([html.B(tx("Proposición 3. ", "Proposition 3. ")),
                          tx("Cada árbol termina y tiene a lo sumo ⌊n/h⌋ hojas.", "Each tree terminates and has at most ⌊n/h⌋ leaves.")]),
                 html.Li([html.B(tx("Tiempo. ", "Time. ")),
@@ -3321,7 +3377,7 @@ print(modelo[-1].fraccion_cortes_oblicuos())        # 0.71 en el modelo final"""
 def _csfof_results():
     sig = lambda p: html.B("< 0.001" if p < 0.001 else f"{p:.3f}") if p < 0.05 else f"{p:.3f}"
     tests = _tbl([tx("Rival", "Rival"), tx("Dif. F1", "F1 diff."), tx("Gana en", "Wins in"),
-                  "p Nadeau–Bengio (Holm)", tx("δ de Cliff", "Cliff's δ"), "p DeLong",
+                  "p Nadeau-Bengio (Holm)", tx("δ de Cliff", "Cliff's δ"), "p DeLong",
                   tx("Errores exclusivos (CS-FOF / rival)", "Exclusive errors (CS-FOF / rival)")],
                  [(minfo(m, "label"), f"{d:+.4f}", f"{g}/5", sig(p), f"{dc:+.2f}", dl, mc)
                   for m, d, g, p, dc, dl, mc in CSFOF_TESTS])
@@ -3385,12 +3441,12 @@ def _csfof_results():
                "diferencia crítica de Nemenyi 6.06. Wilcoxon con 5 folds no puede bajar de p = 0.0625. DeLong y "
                "McNemar usan predicciones fuera de pliegue de los 29 965 clientes; el reajuste de LightGBM dio un AUC "
                "menor que el de su validación (0.773 frente a 0.784), por eso no se reporta su DeLong. Entre los 4 "
-               "conjuntos, Iman–Davenport F = 4.38, p = 0.0013, sin diferencias significativas de CS-FOF tras Holm.",
+               "conjuntos, Iman-Davenport F = 4.38, p = 0.0013, sin diferencias significativas de CS-FOF tras Holm.",
                "Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks CatBoost 2.0 and CS-FOF 2.4; "
                "Nemenyi critical difference 6.06. Wilcoxon with 5 folds cannot go below p = 0.0625. DeLong and "
                "McNemar use out-of-fold predictions for the 29,965 clients; the LightGBM refit gave a lower AUC than "
                "its validation (0.773 vs 0.784), so its DeLong is not reported. Across the 4 datasets, "
-               "Iman–Davenport F = 4.38, p = 0.0013, with no significant CS-FOF differences after Holm.")),
+               "Iman-Davenport F = 4.38, p = 0.0013, with no significant CS-FOF differences after Holm.")),
         ]),
     ]
 
@@ -3467,16 +3523,22 @@ def page_models():
     return html.Div([
         page_title(tx("Modelos", "Models"), ""),
         html.Div([
-            kpi(tx("Combinaciones evaluadas", "Combinations evaluated"), f"{len(MR)}",
-                tx("7 modelos × 4 × 4, más LightGBM, CatBoost y CS-FOF", "7 models × 4 × 4, plus LightGBM, CatBoost and CS-FOF"),
+            kpi(tx("Combinaciones evaluadas", "Combinations evaluated"), f"{N_BASE} + {N_EXTRA}",
+                tx(f"{N_BASE} del diseño factorial (7 × 4 × 4) y, aparte, {N_EXTRA} corridas de LightGBM, CatBoost y CS-FOF",
+                   f"{N_BASE} from the factorial design (7 × 4 × 4) and, separately, {N_EXTRA} runs of LightGBM, CatBoost and CS-FOF"),
                 "layers"),
-            kpi(tx("Mejor F1 (clase default)", "Best F1 (default class)"), f"{b['f1_mean']:.3f}",
-                f"{best_lbl} · {tech_lbl(b['technique'])}", "trophy"),
+            kpi(tx("Mejor F1 (clase default)", "Best F1 (default class)"),
+                f"{BEST_BASE['f1_mean']:.3f} · {b['f1_mean']:.3f}",
+                tx(f"Mejor de las {N_BASE}: {minfo(BEST_BASE['model'], 'label')} · mejor global: {best_lbl}, empatado con "
+                   "CS-FOF. Diferencia menor que 0.002; ninguna prueba las separa.",
+                   f"Best of the {N_BASE}: {minfo(BEST_BASE['model'], 'label')} · best overall: {best_lbl}, tied with "
+                   "CS-FOF. Difference below 0.002; no test separates them."), "trophy"),
             kpi(tx("Mejora sobre la línea base", "Improvement over baseline"), f"+{b['f1_mean'] - BASELINE:.3f}",
                 tx(f"Regresión logística sin balanceo: {BASELINE:.3f}", f"Logistic regression without balancing: {BASELINE:.3f}"),
                 "bars"),
-            kpi(tx("Incumplimientos detectados", "Defaults detected"), f"{b['recall_mean']:.0%}",
-                tx("Recall del mejor modelo (umbral 0.5)", "Recall of the best model (threshold 0.5)"), "target"),
+            kpi(tx("Incumplimientos detectados", "Defaults detected"), f"{c['tp'] / pos:.0%}",
+                tx(f"{c['tp']:,} de {pos:,} · {best_lbl}, predicciones fuera de pliegue (umbral 0.5)",
+                   f"{c['tp']:,} of {pos:,} · {best_lbl}, out-of-fold predictions (threshold 0.5)"), "target"),
         ], className="kpi-row k4"),
         card(tx("Comparación de modelos", "Model comparison"), models_carousel()),
         html.Div([
@@ -3485,10 +3547,10 @@ def page_models():
                 interp_block(
                     tx("Cada celda es el mejor F1 que logró el modelo con esa técnica. Sin balanceo todos rinden peor, "
                        "porque casi no detectan a quienes incumplen; con pesos de clase, los cinco mejores llegan a "
-                       "0.55. CS-FOF solo se corrió con pesos de clase y a CatBoost le falta ADASYN (celdas vacías).",
+                       "0.55. CS-FOF solo se corrió con pesos de clase (celdas vacías).",
                        "Each cell is the best F1 the model achieved with that technique. Without balancing all of them "
                        "perform worse, because they barely detect defaulters; with class weights, the top five reach "
-                       "0.55. CS-FOF was only run with class weights and CatBoost lacks ADASYN (empty cells)."),
+                       "0.55. CS-FOF was only run with class weights (empty cells)."),
                     tx("Comparación por factor sobre las 112 combinaciones base (Friedman con 28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. "
                        "Sin balanceo el F1 medio es 0.455, frente a 0.526 (pesos de clase), 0.520 (SMOTE) y 0.513 "
                        "(ADASYN); «sin balanceo» es peor que las tres (Nemenyi, p ≤ 0.010). Pesos de clase supera a "
@@ -3504,10 +3566,10 @@ def page_models():
                     "Balancing moves the threshold, not the ranking ability"), [
                 dcc.Graph(id="mdl-scatter", figure=fig_models_scatter(), config=gcfg),
                 interp_block(
-                    tx(f"Cada punto es una de las {len(MR)} combinaciones (rombos: CS-FOF). Las que no balancean (gris) quedan abajo: "
+                    tx(f"Cada punto es una combinación: las {N_BASE} del diseño factorial y las {N_EXTRA} corridas de LightGBM, CatBoost y CS-FOF (rombos: CS-FOF). Las que no balancean (gris) quedan abajo: "
                        "aciertan poco con quienes incumplen. Pero no quedan más a la izquierda: ordenan a los clientes "
                        "casi igual de bien; lo que cambia es dónde se pone el corte entre «paga» e «incumple».",
-                       f"Each point is one of the {len(MR)} combinations (diamonds: CS-FOF). Those without balancing (grey) sit at the bottom: "
+                       f"Each point is one combination: the {N_BASE} from the factorial design and the {N_EXTRA} runs of LightGBM, CatBoost and CS-FOF (diamonds: CS-FOF). Those without balancing (grey) sit at the bottom: "
                        "they rarely get defaulters right. But they are not further to the left: they rank clients "
                        "almost equally well; what changes is where the cut between “pays” and “defaults” is placed."),
                     tx("ROC-AUC medio por técnica (96 combinaciones sin SVM): 0.759 sin balanceo, 0.762 con pesos de "
@@ -4028,9 +4090,9 @@ def page_conclusions():
     hyp = [
         ("H1", tx("El historial reciente de pagos es el factor más asociado al default.",
                   "Recent payment history is the factor most associated with default."), yes,
-         tx(f"PAY_0 tiene la correlación más alta con el default (ρ = {rho['PAY_0']:.2f}), seguida de PAY_2–PAY_4. "
+         tx(f"PAY_0 tiene la correlación más alta con el default (ρ = {rho['PAY_0']:.2f}), seguida de PAY_2 a PAY_4. "
             f"Con 2 o más meses de atraso en septiembre, el {r_late:.0%} incumple.",
-            f"PAY_0 has the highest correlation with default (ρ = {rho['PAY_0']:.2f}), followed by PAY_2–PAY_4. "
+            f"PAY_0 has the highest correlation with default (ρ = {rho['PAY_0']:.2f}), followed by PAY_2 to PAY_4. "
             f"With 2 or more months late in September, {r_late:.0%} default.")),
         ("H2", tx("A menor límite de crédito, mayor tasa de default.",
                   "The lower the credit limit, the higher the default rate."), yes,
@@ -4044,11 +4106,11 @@ def page_conclusions():
             f"sexo {cv['SEX']:.2f}, estado civil {cv['MARRIAGE']:.2f}). La edad casi no influye (ρ = {rho['AGE']:.3f}).",
             f"Significant differences, but Cramér's V ≤ {max(cv.values()):.2f} (education {cv['EDUCATION']:.2f}, "
             f"sex {cv['SEX']:.2f}, marital status {cv['MARRIAGE']:.2f}). Age barely matters (ρ = {rho['AGE']:.3f}).")),
-        ("H4", tx("Los montos facturados BILL_AMT1–6 son muy redundantes entre sí.",
-                  "Bill amounts BILL_AMT1–6 are highly redundant with each other."), yes,
-         tx(f"Correlaciones entre {bc.min():.2f} y {bc.max():.2f} entre meses y VIF mayor a 20 en BILL_AMT2–5: "
+        ("H4", tx("Los montos facturados BILL_AMT1 a BILL_AMT6 son muy redundantes entre sí.",
+                  "Bill amounts BILL_AMT1 to BILL_AMT6 are highly redundant with each other."), yes,
+         tx(f"Correlaciones entre {bc.min():.2f} y {bc.max():.2f} entre meses y VIF mayor a 20 en BILL_AMT2 a BILL_AMT5: "
             "multicolinealidad severa.",
-            f"Correlations between {bc.min():.2f} and {bc.max():.2f} across months and VIF above 20 for BILL_AMT2–5: "
+            f"Correlations between {bc.min():.2f} and {bc.max():.2f} across months and VIF above 20 for BILL_AMT2 to BILL_AMT5: "
             "severe multicollinearity.")),
         ("H5", tx("La clase default es minoritaria (desbalance).", "The default class is the minority (imbalance)."),
          yes,
@@ -4069,14 +4131,15 @@ def page_conclusions():
                         "late the client is, especially in September. It is followed, less strongly, by the credit "
                         "limit (the lower the limit, the higher the risk). Demographics add very little."),
                      className="callout"),
-            html.P(tx(f"Con esas señales, el mejor modelo ({best_lbl} con {tech}) logra un F1 de "
-                      f"{BEST['f1_mean']:.3f} y un ROC-AUC de {BEST['roc_auc_mean']:.2f}: detecta el "
-                      f"{c['tp'] / pos:.0%} de los incumplimientos y, de cada dos clientes que marca como riesgo, "
-                      "uno realmente incumple.",
-                      f"With those signals, the best model ({best_lbl} with {tech}) reaches an F1 of "
-                      f"{BEST['f1_mean']:.3f} and a ROC-AUC of {BEST['roc_auc_mean']:.2f}: it detects "
-                      f"{c['tp'] / pos:.0%} of defaults and, out of every two clients it flags as risky, one "
-                      "actually defaults.")),
+            html.P(tx(f"Con esas señales, el mejor modelo ({best_lbl} con {tech}) logra un F1 medio de "
+                      f"{BEST['f1_mean']:.3f} en la validación anidada 5 × 5. En sus predicciones fuera de pliegue "
+                      f"(una sola corrida, umbral 0.5) detecta {c['tp']:,} de los {pos:,} incumplimientos "
+                      f"({c['tp'] / pos:.0%}) y, de cada dos clientes que marca como riesgo, uno realmente incumple "
+                      f"({c['tp'] / flagged:.0%}).",
+                      f"With those signals, the best model ({best_lbl} with {tech}) reaches a mean F1 of "
+                      f"{BEST['f1_mean']:.3f} in the nested 5 × 5 validation. In its out-of-fold predictions (a single "
+                      f"run, threshold 0.5) it detects {c['tp']:,} of the {pos:,} defaults ({c['tp'] / pos:.0%}) and, "
+                      f"out of every two clients it flags as risky, one actually defaults ({c['tp'] / flagged:.0%}).")),
             html.Div([
                 kpi(tx("Señal más fuerte", "Strongest signal"), "PAY_0",
                     tx(f"ρ = {rho['PAY_0']:.2f} con el default", f"ρ = {rho['PAY_0']:.2f} with default"), "alert"),
@@ -4088,6 +4151,33 @@ def page_conclusions():
         card(tx("Veredicto de las hipótesis", "Hypothesis verdicts"),
              _tbl(["#", tx("Hipótesis", "Hypothesis"), tx("Veredicto", "Verdict"), tx("Evidencia", "Evidence")],
                   [(html.B(a), b, v, e) for a, b, v, e in hyp])),
+        card(tx(f"¿Superó CS-FOF a las {N_BASE} combinaciones?", f"Did CS-FOF beat the {N_BASE} combinations?"), [
+            html.Div(tx("Respuesta honesta: no de forma significativa. CS-FOF empata con los mejores modelos; no los supera.",
+                        "Honest answer: not significantly. CS-FOF ties with the best models; it does not beat them."),
+                     className="callout"),
+            html.Div([
+                kpi(tx(f"Mejor de las {N_BASE}", f"Best of the {N_BASE}"), f"F1 {BEST_BASE['f1_mean']:.3f}",
+                    minfo(BEST_BASE["model"], "label") + " · " + tech_lbl(BEST_BASE["technique"]).lower(), "layers"),
+                kpi("CS-FOF", "F1 0.548", tx("+0.0014 sobre XGBoost; gana en 4 de 5 pliegues", "+0.0014 over XGBoost; wins in 4 of 5 folds"),
+                    "tree"),
+                kpi(tx("Mejor global", "Best overall"), f"F1 {BEST['f1_mean']:.3f}",
+                    tx(f"{best_lbl}: solo 0.0001 por encima de CS-FOF", f"{best_lbl}: only 0.0001 above CS-FOF"), "trophy"),
+            ], className="kpi-row k3"),
+            _ul([tx("Frente a XGBoost, Random Forest, LightGBM y CatBoost, ni Nadeau-Bengio (p = 1.000 con Holm), ni "
+                    "Wilcoxon, ni DeLong encuentran diferencias significativas; la diferencia de F1 es menor que 0.002.",
+                    "Against XGBoost, Random Forest, LightGBM and CatBoost, neither Nadeau-Bengio (p = 1.000 with Holm), "
+                    "nor Wilcoxon, nor DeLong finds significant differences; the F1 difference is below 0.002."),
+                 tx("Sí es significativamente mejor que SVM, el árbol de decisión, la regresión logística y Naive Bayes, "
+                    "con tamaños de efecto grandes.",
+                    "It is significantly better than SVM, the decision tree, logistic regression and Naive Bayes, with "
+                    "large effect sizes."),
+                 tx("Aporta estabilidad (la menor variación entre pliegues) y las probabilidades mejor calibradas de los "
+                    "cinco mejores, pero en los otros conjuntos de crédito queda por detrás de CatBoost.",
+                    "It brings stability (the lowest variation between folds) and the best-calibrated probabilities of "
+                    "the top five, but on the other credit datasets it falls behind CatBoost.")]),
+            dcc.Link([tx("Ver el detalle en Modelo original", "See the details in Original model"), icon("arrow")],
+                     href="/modelo-original", className="btn"),
+        ]),
         html.Div([
             card(tx("Qué significa para el banco", "What it means for the bank"), _ul([
                 tx("Vigilar el atraso reciente como alerta temprana: un cliente con 2 o más meses de atraso merece "
@@ -4340,6 +4430,9 @@ a { color:inherit; }
 .kpi-row { display:grid; gap:16px; margin-bottom:20px; } .k4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .k3 { grid-template-columns:repeat(3,minmax(0,1fr)); margin:12px 0; }
 .k2 { grid-template-columns:repeat(2,minmax(0,1fr)); margin:10px 0 14px; }
+.kpi-money .kpi-value { white-space:nowrap; font-size:clamp(20px, 2vw, 26px); }
+.kpi-usd { font-weight:700; color:var(--accent-2); font-size:14px; margin:2px 0 4px; white-space:nowrap; }
+.kpi-fx { font-size:12.5px; margin-top:-6px; }
 .kpi-compact .kpi-value { font-size:24px; }
 .kpi { background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent-2); border-radius:10px; padding:14px 16px; }
 .kpi-head { display:flex; align-items:center; gap:8px; color:var(--muted); }

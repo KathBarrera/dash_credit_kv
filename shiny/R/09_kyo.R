@@ -108,7 +108,7 @@ kyo_logreg <- function(M, y, C = 25, maxit = 4000) {
   cache <- new.env()
   f_ <- function(th) { r <- fg(th); cache$g <- r$g; cache$th <- th; r$f }
   g_ <- function(th) if (identical(th, cache$th)) cache$g else fg(th)$g
-  opt <- stats::optim(rep(0, p * K + K), f_, g_, method = "L-BFGS-B", control = list(maxit = maxit, factr = 1e5))
+  opt <- stats::optim(rep(0, p * K + K), f_, g_, method = "L-BFGS-B", control = list(maxit = maxit, factr = 10, pgtol = 1e-6))
   u <- unpack(opt$par)
   list(W = Matrix(u$W, sparse = FALSE), b = u$b, clases = clases, convergencia = opt$convergence, iter = opt$counts)
 }
@@ -171,7 +171,7 @@ kyo_entiende <- function(texto, pagina = NULL) {
   if (is.null(r$id)) return(NULL)
   ok <- if (r$cob >= 0.75) r$prob >= KYO_UMBRAL_PROB || r$sim >= KYO_UMBRAL_SIM else
     if (r$cob >= 0.4) r$prob >= KYO_UMBRAL_PROB && r$sim >= KYO_UMBRAL_SIM else
-      r$sc >= KYO_UMBRAL_LETRAS && r$prob >= 0.12
+      r$sc >= KYO_UMBRAL_LETRAS && r$prob >= 0.13
   if (ok) r$id else NULL
 }
 

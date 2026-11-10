@@ -61,7 +61,9 @@
   function typeset() {
     clearTimeout(mjT);
     mjT = setTimeout(function () {
-      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise().catch(function () {});
+      // si MathJax aún no terminó de cargar (abre directo en una página con fórmulas), reintenta
+      if (!(window.MathJax && MathJax.typesetPromise)) { mjT = setTimeout(typeset, 300); return; }
+      MathJax.typesetPromise().catch(function () {});
     }, 60);
   }
   $(document).on('shiny:value', function (e) {
@@ -89,4 +91,24 @@
   });
 
   // Correo del equipo: el botón no debe voltear la tarjeta (comun.js lo maneja)
+
+  // Modelo original: pestañas Teoría / Metodología / Código / Resultados.
+  // Shiny pausa las gráficas ocultas; al mostrar una pestaña se avisa con 'shown' y un resize.
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.cs-tab'); if (!b) return;
+    var v = b.getAttribute('data-tab');
+    document.querySelectorAll('.cs-tab').forEach(function (x) { x.classList.toggle('cs-tab--on', x === b); });
+    document.querySelectorAll('.cs-pane').forEach(function (p) {
+      var on = p.getAttribute('data-pane') === v;
+      p.style.display = on ? '' : 'none';
+      if (on) $(p).trigger('shown');
+    });
+    setTimeout(function () { window.dispatchEvent(new Event('resize')); typeset(); resaltar(); }, 60);
+  });
+  // Código de CS-FOF con colores de sintaxis (highlight.js)
+  function resaltar() {
+    if (!window.hljs) return;
+    document.querySelectorAll('pre.cs-code code:not(.hljs)').forEach(function (c) { hljs.highlightElement(c); });
+  }
+  $(document).on('shiny:value', function (e) { if (e.name === 'page') setTimeout(resaltar, 80); });
 })();

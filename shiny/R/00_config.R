@@ -112,6 +112,7 @@ NAV <- list(
   list("/univariado", c("EDA Univariado", "Univariate EDA"), "bars"),
   list("/multivariado", c("EDA Multivariado", "Multivariate EDA"), "scatter"),
   list("/modelos", c("Modelos", "Models"), "layers"),
+  list("/modelo-original", c("Modelo original", "Original model"), "tree"),
   list("/predecir", c("Predecir", "Predict"), "gauge"),
   list("/conclusiones", c("Conclusiones", "Conclusions"), "flag"),
   list("/enlaces", c("Enlaces", "Links"), "link"),
