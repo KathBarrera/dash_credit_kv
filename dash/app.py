@@ -1238,9 +1238,12 @@ def key_findings():
 # =============================================================================
 # 4a. MODELOS (resultados del repositorio Credit_Card_Project, notebooks 04, 05 y 07)
 # =============================================================================
-# results/model_results.csv resume las 112 combinaciones (7 modelos x 4 técnicas de
-# balanceo x 4 métodos de optimización, validación cruzada anidada 5 x 5). Sale de
-# results/master_table_112.csv del proyecto (notebook 08_tabla_maestra_svm):
+# results/model_results.csv resume 122 combinaciones con validación cruzada anidada 5 x 5:
+#   - 112 de los 7 modelos base (4 técnicas de balanceo x 4 métodos de optimización);
+#   - 6 de LightGBM y CatBoost (pesos de clase con malla, aleatoria y Optuna);
+#   - 4 del modelo original CS-FOF (pesos de clase con los 4 métodos).
+# Sale de results/master_table_e3.csv del proyecto (src/build_master_table_e3.py). Las 112 base vienen de
+# results/master_table_112.csv (notebook 08_tabla_maestra_svm):
 #   - 80 filas en CPU local y 16 de KNN en Colab con GPU (cuML); métricas complementarias
 #     de posthoc_metrics. Todas las desviaciones usan ddof=1.
 #   - 16 filas de SVM corridas en Colab con GPU (cuML), con el F1 tal como se reportó.
@@ -1252,6 +1255,8 @@ def key_findings():
 #   - anytime_curves.csv / anytime_summary.csv: curvas anytime y costo de los optimizadores.
 MODEL_RESULTS_PATH = BASE_DIR / "results" / "model_results.csv"
 MR = pd.read_csv(MODEL_RESULTS_PATH)
+# El PR-AUC de CS-FOF y CatBoost (búsqueda aleatoria) sale del reajuste fuera de pliegue
+# (experiments/comparacion_final/delong.py); el de las demás combinaciones nuevas no se calculó (n/d).
 
 MODEL_INFO = {   # textos bilingües (es, en): se leen con minfo(modelo, campo)
     "random_forest": {
@@ -1261,21 +1266,52 @@ MODEL_INFO = {   # textos bilingües (es, en): se leen con minfo(modelo, campo)
                  "lineales entre el historial de pagos y el riesgo.",
                  "Averages many trees trained on different samples of clients; captures non-linear "
                  "relationships between payment history and risk."),
-        "note": ("Segundo, a solo 0.0014 de XGBoost: una diferencia mucho menor que la variación entre folds. "
-                 "Con sus 16 combinaciones tiene el mejor rango medio de los siete modelos, y es el que usa la "
-                 "página Predecir.",
-                 "Second, only 0.0014 behind XGBoost: a difference much smaller than the variation between folds. "
-                 "Across its 16 combinations it has the best mean rank of the seven models, and it is the one used "
-                 "by the Predict page.")},
+        "note": ("A solo 0.0028 del mejor: una diferencia menor que la variación entre folds. Con sus 16 "
+                 "combinaciones tiene el mejor rango medio de los siete modelos base, y es el que usa la página "
+                 "Predecir. CS-FOF parte de él y le agrega cortes oblicuos.",
+                 "Only 0.0028 behind the best: a difference smaller than the variation between folds. Across its "
+                 "16 combinations it has the best mean rank of the seven base models, and it is the one used by the "
+                 "Predict page. CS-FOF starts from it and adds oblique splits.")},
     "xgboost": {
         "label": ("XGBoost", "XGBoost"),
         "family": ("Ensamble de árboles (boosting)", "Tree ensemble (boosting)"),
         "desc": ("Construye árboles en secuencia: cada uno corrige los errores del anterior.",
                  "Builds trees in sequence: each one corrects the errors of the previous one."),
-        "note": ("Mayor F1 medio de las 112 combinaciones. Forma el grupo superior con Random Forest y SVM, y la "
-                 "prueba de Nemenyi no separa a los tres (p ≥ 0.85): en la práctica empatan.",
-                 "Highest mean F1 of the 112 combinations. It forms the top group with Random Forest and SVM, and "
-                 "the Nemenyi test does not separate the three (p ≥ 0.85): in practice they tie.")},
+        "note": ("Mayor F1 de los siete modelos base. Con CatBoost, LightGBM, CS-FOF y Random Forest forma un "
+                 "grupo de cinco que las pruebas no separan: en la práctica empatan.",
+                 "Highest F1 of the seven base models. With CatBoost, LightGBM, CS-FOF and Random Forest it forms a "
+                 "group of five that the tests do not separate: in practice they tie.")},
+    "catboost": {
+        "label": ("CatBoost", "CatBoost"),
+        "family": ("Boosting reciente (árboles simétricos)", "Recent boosting (symmetric trees)"),
+        "desc": ("Boosting con árboles simétricos y un orden aleatorio de los datos que reduce el sobreajuste.",
+                 "Boosting with symmetric trees and a random ordering of the data that reduces overfitting."),
+        "note": ("Método reciente del estado del arte (2018). Tiene el mayor F1 medio, pero solo 0.0001 por "
+                 "encima de CS-FOF; ninguna prueba los separa. Es el más consistente en los tres conjuntos "
+                 "adicionales. Se corrieron 9 de sus 16 combinaciones (sin ADASYN); pesos de clase es su mejor técnica.",
+                 "Recent state-of-the-art method (2018). It has the highest mean F1, but only 0.0001 above CS-FOF; "
+                 "no test separates them. It is the most consistent across the three additional datasets. 9 of its "
+                 "16 combinations were run (no ADASYN); class weights is its best technique.")},
+    "cs_fof": {
+        "label": ("CS-FOF (original)", "CS-FOF (original)"),
+        "family": ("Modelo original · bosque oblicuo con costo", "Original model · cost-sensitive oblique forest"),
+        "desc": ("Bosque aleatorio propio: en cada nodo compara los cortes de una variable con un corte oblicuo "
+                 "en la dirección de Fisher, ponderada por el costo de no detectar a quien incumple.",
+                 "Our own random forest: at each node it compares single-variable splits with an oblique split "
+                 "along the Fisher direction, weighted by the cost of missing a defaulter."),
+        "note": ("Programado desde cero con numpy. Empata con CatBoost en F1 (−0.0001), con el mayor ROC-AUC y "
+                 "la menor variación entre folds (± 0.005). No es superior de forma significativa.",
+                 "Programmed from scratch with numpy. It ties with CatBoost in F1 (−0.0001), with the highest "
+                 "ROC-AUC and the lowest variation between folds (± 0.005). It is not significantly superior.")},
+    "lightgbm": {
+        "label": ("LightGBM", "LightGBM"),
+        "family": ("Boosting reciente (por hojas)", "Recent boosting (leaf-wise)"),
+        "desc": ("Boosting que hace crecer cada árbol por la hoja que más reduce el error; muy rápido.",
+                 "Boosting that grows each tree from the leaf that most reduces the error; very fast."),
+        "note": ("Método reciente del estado del arte (2017). Queda a 0.0018 del mejor. Con sus 16 combinaciones, "
+                 "pesos de clase es su mejor técnica; su PR-AUC no se calculó.",
+                 "Recent state-of-the-art method (2017). It is 0.0018 behind the best. Across its 16 combinations, "
+                 "class weights is its best technique; its PR-AUC was not computed.")},
     "svm": {
         "label": ("SVM", "SVM"),
         "family": ("Máquina de vectores de soporte (kernel RBF)", "Support vector machine (RBF kernel)"),
@@ -1353,9 +1389,10 @@ BEST_BY_MODEL = (MR.loc[MR.groupby("model")["f1_mean"].idxmax()]
                  .sort_values("f1_mean", ascending=False).reset_index(drop=True))
 BEST = BEST_BY_MODEL.iloc[0]
 BASELINE = MR[(MR["model"] == "logistic_regression") & (MR["technique"] == "none")]["f1_mean"].max()
-# Matriz de confusión out-of-fold de la mejor combinación (05_results_analysis.ipynb, corrida 5 x 5:
-# XGBoost, class_weight, bayesian_optuna; figura results/figures/confusion_roc_xgboost.png)
-BEST_CM = {"tn": 19126, "fp": 4209, "fn": 2553, "tp": 4077}
+# Matrices de confusión fuera de pliegue (umbral 0.5) de CatBoost (la mejor combinación) y de CS-FOF,
+# reajustadas con los hiperparámetros de cada fold (experiments/comparacion_final/probabilidades_oof.npz).
+BEST_CM = {"tn": 18868, "fp": 4467, "fn": 2452, "tp": 4178}
+CSFOF_CM = {"tn": 19660, "fp": 3675, "fn": 2737, "tp": 3893}
 TECH_COLORS = {"none": GREY_BLUE, "class_weight": WARM_GOLD, "smote": DEEP_NAVY, "adasyn": MID_BLUE}
 
 
@@ -1368,7 +1405,7 @@ def fig_models_heat():
         colorscale=SEQ_GOLD, texttemplate="%{z:.3f}", textfont=dict(size=13), xgap=3, ygap=3,
         colorbar=dict(title="F1", thickness=12),
         hovertemplate="%{y} · %{x}<br>" + tx("Mejor F1", "Best F1") + ": %{z:.4f}<extra></extra>"))
-    style_fig(fig, 400, legend_top=False)
+    style_fig(fig, 480, legend_top=False)
     fig.update_layout(margin=dict(l=130, r=20, t=24, b=40))
     fig.update_yaxes(autorange="reversed", showgrid=False)
     fig.update_xaxes(side="top", showgrid=False)
@@ -1376,7 +1413,7 @@ def fig_models_heat():
 
 
 def fig_models_scatter():
-    """Las 112 combinaciones: F1 frente a ROC-AUC, coloreadas por técnica de balanceo."""
+    """Todas las combinaciones: F1 frente a ROC-AUC, coloreadas por técnica de balanceo."""
     fig = go.Figure()
     for t in TECH_ORDER:
         d = MR[MR["technique"] == t]
@@ -1387,6 +1424,13 @@ def fig_models_scatter():
                                  d["method"].map(method_lbl), d["recall_mean"]], axis=-1),
             hovertemplate="<b>%{customdata[0]}</b> · " + tech_lbl(t) + "<br>%{customdata[1]}"
                           "<br>F1: %{y:.4f}<br>ROC-AUC: %{x:.4f}<br>Recall: %{customdata[2]:.3f}<extra></extra>"))
+    # Modelo original: rombos con borde oscuro
+    d = MR[MR["model"] == "cs_fof"]
+    fig.add_trace(go.Scatter(
+        x=d["roc_auc_mean"], y=d["f1_mean"], mode="markers", name="CS-FOF",
+        marker=dict(symbol="diamond", size=12, color=WARM_GOLD, line=dict(width=1.6, color=NAVY)),
+        customdata=d["method"].map(method_lbl),
+        hovertemplate="<b>CS-FOF</b> · %{customdata}<br>F1: %{y:.4f}<br>ROC-AUC: %{x:.4f}<extra></extra>"))
     # Mejor modelo: punto dorado brillante con un halo suave (en vez de estrella)
     fig.add_trace(go.Scatter(
         x=[BEST["roc_auc_mean"]], y=[BEST["f1_mean"]], mode="markers", showlegend=False, hoverinfo="skip",
@@ -2080,14 +2124,16 @@ def page_intro():
                           "and whether they defaulted the following month.")),
                 html.P(tx("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables "
                           f"anticipan el incumplimiento. Luego se entrenan y comparan {len(MR)} combinaciones de modelos "
-                          "(7 algoritmos × 4 técnicas de balanceo × 4 optimizadores). La mejor, "
+                          "(7 algoritmos × 4 técnicas de balanceo × 4 optimizadores, más dos métodos recientes y un "
+                          "modelo original, CS-FOF). La mejor, "
                           f"{best_lbl} con {tech_lbl(BEST['technique']).lower()}, logra un F1 de {BEST['f1_mean']:.3f} y "
                           f"detecta el {BEST['recall_mean']:.0%} de los incumplimientos. Por último, la página Predecir "
                           "usa un Random Forest con pesos de clase (estadísticamente empatado con el mejor) para "
                           "estimar el riesgo de un cliente nuevo.",
                           "First the data is explored (univariate and multivariate EDA) to see which variables "
                           f"anticipate default. Then {len(MR)} model combinations are trained and compared "
-                          "(7 algorithms × 4 balancing techniques × 4 optimizers). The best one, "
+                          "(7 algorithms × 4 balancing techniques × 4 optimizers, plus two recent methods and an "
+                          "original model, CS-FOF). The best one, "
                           f"{best_lbl} with {tech_lbl(BEST['technique']).lower()}, reaches an F1 of {BEST['f1_mean']:.3f} "
                           f"and detects {BEST['recall_mean']:.0%} of defaults. Finally, the Predict page uses a Random Forest "
                           "with class weights (statistically tied with the best) to estimate the risk of a new client.")),
@@ -2431,9 +2477,11 @@ def page_marco():
                           "predict default with this same data, and proposed the Sorting Smoothing Method to estimate "
                           "the real probability of default.")),
                 html.P(tx("La sección Modelos retoma esa comparación con siete clasificadores, cuatro técnicas de "
-                          "balanceo y cuatro métodos de optimización de hiperparámetros.",
+                          "balanceo y cuatro métodos de optimización de hiperparámetros, y la amplía con LightGBM, "
+                          "CatBoost y un modelo original propuesto en este proyecto (CS-FOF).",
                           "The Models section revisits that comparison with seven classifiers, four balancing "
-                          "techniques and four hyperparameter optimization methods.")),
+                          "techniques and four hyperparameter optimization methods, and extends it with LightGBM, "
+                          "CatBoost and an original model proposed in this project (CS-FOF).")),
             ]),
         ], className="grid"),
         card(tx("Diccionario de variables", "Variable dictionary"),
@@ -2595,12 +2643,458 @@ def model_slide(row, rank):
                     for t in TECH_ORDER]], className="mc-metrics mc-tech"),
         html.P(minfo(m, "desc"), className="mc-desc"),
         html.P(minfo(m, "note"), className="mc-note"),
-        html.Div(tx(f"16 combinaciones · F1 de {sub['f1_mean'].min():.3f} a {sub['f1_mean'].max():.3f}",
-                    f"16 combinations · F1 from {sub['f1_mean'].min():.3f} to {sub['f1_mean'].max():.3f}"),
+        html.Div(tx(f"{len(sub)} combinaciones · F1 de {sub['f1_mean'].min():.3f} a {sub['f1_mean'].max():.3f}",
+                    f"{len(sub)} combinations · F1 from {sub['f1_mean'].min():.3f} to {sub['f1_mean'].max():.3f}"),
                  className="mc-foot"),
     ], className="mc-slide" + (" best" if best else ""),
         **{"aria-label": tx(f"Puesto {rank}: {minfo(m, 'label')}, F1 {row['f1_mean']:.3f}",
                             f"Rank {rank}: {minfo(m, 'label')}, F1 {row['f1_mean']:.3f}")})
+
+
+# ----- Modelo original CS-FOF (experiments/comparacion_final del proyecto) -----
+# Pruebas de CS-FOF frente a la mejor combinación de cada rival (5 folds externos; Holm sobre 9 comparaciones)
+CSFOF_TESTS = [  # (rival, diferencia F1, folds ganados, p Nadeau-Bengio Holm, delta de Cliff, p DeLong, McNemar)
+    ("catboost", -0.0001, 2, 1.000, -0.04, "0.273", "429 / 936"),
+    ("xgboost", 0.0014, 4, 1.000, 0.36, "0.561", "434 / 827"),
+    ("lightgbm", 0.0018, 3, 1.000, 0.12, "—", "345 / 782"),
+    ("random_forest", 0.0027, 4, 1.000, 0.36, "0.171", "313 / 615"),
+    ("svm", 0.0092, 5, 0.014, 0.76, "—", "—"),
+    ("knn", 0.0216, 5, 0.056, 0.92, "—", "—"),
+    ("decision_tree", 0.0225, 5, 0.003, 1.00, "—", "—"),
+    ("logistic_regression", 0.0297, 5, 0.014, 1.00, "—", "—"),
+    ("naive_bayes", 0.0493, 5, 0.0003, 1.00, "—", "—"),
+]
+# F1 de la mejor configuración en Taiwán y en los tres conjuntos adicionales (pesos de clase, búsqueda aleatoria)
+CROSS_DATA = [  # (modelo, taiwan, german, australian, polish, rango medio)
+    ("catboost", 0.548, 0.605, 0.878, 0.733, 1.25), ("xgboost", 0.547, 0.599, 0.880, 0.682, 2.75),
+    ("cs_fof", 0.548, 0.589, 0.874, 0.430, 4.75), ("random_forest", 0.545, 0.600, 0.874, 0.446, 4.75),
+    ("lightgbm", 0.546, 0.575, 0.874, 0.658, 4.75),
+]
+
+
+
+# ----- Teoría visual de CS-FOF: corte recto frente a corte oblicuo con clientes reales -----
+# Dos variables de este conjunto (límite de crédito y monto pagado en septiembre, en log10). Se compara
+# el mejor corte recto (una variable), un árbol clásico de 3 niveles (hasta 7 cortes rectos) y un solo
+# corte en la dirección de Fisher ponderada por costo, que es lo que CS-FOF evalúa en cada nodo.
+def _csfof_toy():
+    from sklearn.tree import DecisionTreeClassifier
+    a = np.log10(df["LIMIT_BAL"].to_numpy(float))
+    b = np.log10(df["PAY_AMT1"].clip(lower=0).to_numpy(float) + 1)
+    y = df[TARGET].to_numpy(int)
+    X = np.column_stack([a, b])
+    c = (y == 0).sum() / (y == 1).sum()                 # costo del moroso, como en CS-FOF
+    w = np.where(y == 1, c, 1.0)
+
+    def gini(wt, pw):                                   # Gini ponderado
+        p = pw / wt
+        return 2 * p * (1 - p)
+
+    W, P = w.sum(), (w * y).sum()
+    g0 = gini(W, P)
+
+    def mejor_corte(z):
+        o = np.argsort(z, kind="stable"); zs, cw, cp = z[o], np.cumsum(w[o]), np.cumsum((w * y)[o])
+        best, thr = 0.0, None
+        for q in np.unique(np.quantile(zs, np.linspace(.02, .98, 97))):
+            i = np.searchsorted(zs, q, side="right")
+            if i < 50 or i > len(zs) - 50:
+                continue
+            wl, pl = cw[i - 1], cp[i - 1]
+            g = g0 - wl / W * gini(wl, pl) - (W - wl) / W * gini(W - wl, P - pl)
+            if g > best:
+                best, thr = g, q
+        return best, thr
+
+    g_axis = max(mejor_corte(a)[0], mejor_corte(b)[0])
+    mu, sd = X.mean(0), X.std(0)
+    Z = (X - mu) / sd
+    m1 = np.average(Z[y == 1], axis=0, weights=w[y == 1]); m0 = Z[y == 0].mean(0)
+    Sw = np.cov(Z[y == 1].T) + np.cov(Z[y == 0].T) + 0.1 * np.eye(2)
+    v = np.linalg.solve(Sw, m1 - m0)                    # dirección de Fisher
+    g_obl, t_obl = mejor_corte(Z @ v)
+
+    def fisher_en(idx):                                 # corte de Fisher dentro de un nodo (para 3 cortes)
+        yy, ww, zz = y[idx], w[idx], Z[idx]
+        mm1 = np.average(zz[yy == 1], axis=0, weights=ww[yy == 1])
+        vv = np.linalg.solve(np.cov(zz[yy == 1].T) + np.cov(zz[yy == 0].T) + 0.1 * np.eye(2), mm1 - zz[yy == 0].mean(0))
+        s = zz @ vv; Wn, Pn = ww.sum(), (ww * yy).sum(); best, th = 0.0, np.inf
+        for q in np.unique(np.quantile(s, np.linspace(.02, .98, 97))):
+            L_ = s <= q
+            if L_.sum() < 200 or (~L_).sum() < 200:
+                continue
+            g = (gini(Wn, Pn) - ww[L_].sum() / Wn * gini(ww[L_].sum(), (ww * yy)[L_].sum())
+                 - ww[~L_].sum() / Wn * gini(ww[~L_].sum(), (ww * yy)[~L_].sum()))
+            if g > best:
+                best, th = g, q
+        return s <= th
+
+    def ganancia(leaf):
+        return g0 - sum(w[leaf == L_].sum() / W * gini(w[leaf == L_].sum(), (w * y)[leaf == L_].sum())
+                        for L_ in np.unique(leaf))
+
+    hojas = np.zeros(len(y), int); izq = fisher_en(np.arange(len(y))); hojas[~izq] = 1
+    for k in (0, 1):
+        s_ = np.flatnonzero(hojas == k); hojas[s_[~fisher_en(s_)]] = 10 + k
+    g_obl3 = ganancia(hojas)
+    g_axis3 = ganancia(DecisionTreeClassifier(max_depth=2, min_samples_leaf=200, class_weight={0: 1.0, 1: c},
+                                              random_state=42).fit(X, y).apply(X))
+    tree = DecisionTreeClassifier(max_depth=3, min_samples_leaf=200, class_weight={0: 1.0, 1: c},
+                                  random_state=42).fit(X, y)
+    leaf = tree.apply(X)
+    g_tree = ganancia(leaf)
+    n_cuts = int((tree.tree_.children_left != -1).sum())
+    # segmentos de cada corte recto del árbol, dentro de la región de su nodo (la «escalera»)
+    tr, segs = tree.tree_, []
+
+    def recorrer(n, x0, x1, y0, y1):
+        if tr.children_left[n] == -1:
+            return
+        f, th = tr.feature[n], tr.threshold[n]
+        if f == 0:
+            segs.append(((th, th), (y0, y1))); recorrer(tr.children_left[n], x0, th, y0, y1)
+            recorrer(tr.children_right[n], th, x1, y0, y1)
+        else:
+            segs.append(((x0, x1), (th, th))); recorrer(tr.children_left[n], x0, x1, y0, th)
+            recorrer(tr.children_right[n], x0, x1, th, y1)
+    recorrer(0, a.min(), a.max(), 0.0, b.max())
+    gx = np.linspace(a.min(), a.max(), 220); gy = np.linspace(0, b.max(), 220)
+    GX, GY = np.meshgrid(gx, gy)
+    G = np.column_stack([GX.ravel(), GY.ravel()])
+    reg_tree = tree.predict(G).reshape(GX.shape)
+    reg_obl = ((((G - mu) / sd) @ v) > t_obl).astype(int).reshape(GX.shape)
+    rng = np.random.default_rng(42)
+    idx = np.concatenate([rng.choice(np.flatnonzero(y == k), 1300, replace=False) for k in (0, 1)])
+    jit = rng.normal(0, 0.03, (len(idx), 2))
+    return dict(a=a[idx] + jit[:, 0], b=b[idx] + jit[:, 1], y=y[idx], gx=gx, gy=gy, reg_tree=reg_tree,
+                reg_obl=reg_obl, segs=segs, g_axis=g_axis, g_tree=g_tree, g_obl=g_obl, g_axis3=g_axis3, g_obl3=g_obl3, n_cuts=n_cuts, c=c,
+                v=v / np.abs(v).max())
+
+
+CS_TOY = _csfof_toy()
+
+
+def fig_csfof_toy(kind):
+    """Clientes reales; región sombreada = donde el corte predice «incumple»."""
+    T = CS_TOY
+    reg = T["reg_tree"] if kind == "tree" else T["reg_obl"]
+    fig = go.Figure(go.Heatmap(x=T["gx"], y=T["gy"], z=reg, showscale=False, hoverinfo="skip", zsmooth=False,
+                               colorscale=[[0, "rgba(0,0,0,0)"], [1, f"{DEEP_RGBA}0.13)"]]))
+    for k, col, name in ((0, GREY_BLUE, tx("Paga", "Pays")), (1, WARM_GOLD, tx("Incumple", "Defaults"))):
+        m = T["y"] == k
+        fig.add_trace(go.Scattergl(x=T["a"][m], y=T["b"][m], mode="markers", name=name,
+                                   marker=dict(size=4, color=col, opacity=.55 if k == 0 else .75),
+                                   hoverinfo="skip"))
+    if kind == "tree":   # cada corte recto del árbol como un segmento
+        for sx, sy in T["segs"]:
+            fig.add_trace(go.Scatter(x=list(sx), y=list(sy), mode="lines", showlegend=False, hoverinfo="skip",
+                                     line=dict(color=DEEP_NAVY, width=2.2)))
+    else:
+        fig.add_trace(go.Contour(x=T["gx"], y=T["gy"], z=reg, showscale=False, hoverinfo="skip",
+                                 contours=dict(start=.5, end=.5, size=1, coloring="none"),
+                                 line=dict(color=DEEP_NAVY, width=2.4), showlegend=False))
+    style_fig(fig, 360)
+    fig.update_layout(margin=dict(l=70, r=16, t=40, b=55))
+    fig.update_xaxes(title=tx("Límite de crédito (NT$)", "Credit limit (NT$)"),
+                     tickvals=[4, np.log10(3e4), 5, np.log10(3e5), 6], ticktext=["10k", "30k", "100k", "300k", "1M"])
+    fig.update_yaxes(title=tx("Pagó en septiembre (NT$)", "Paid in September (NT$)"),
+                     tickvals=[0, 2, 3, 4, 5, 6], ticktext=["0", "100", "1k", "10k", "100k", "1M"])
+    return fig
+
+
+def _cs_step(n, title, body, formula=None):
+    return html.Div([html.Span(str(n), className="cs-num"), html.H4(title), html.P(body),
+                     dcc.Markdown(f"$${formula}$$", mathjax=True, className="formula") if formula else None],
+                    className="cs-step")
+
+
+def csfof_theory():
+    T = CS_TOY
+    rho_pay = CORR.loc["PAY_0", "PAY_2"]
+    bill = [f"BILL_AMT{i}" for i in range(1, 7)]
+    bmin = df[bill].corr(method="spearman").values[np.triu_indices(6, 1)].min()
+    gcfg = {"displaylogo": False, "displayModeBar": False}
+    mejora = T["g_obl"] / T["g_axis"] - 1
+    return [
+        html.H4(tx("La idea en una imagen", "The idea in one picture"), className="cs-h"),
+        html.P(tx("Cada punto es un cliente real. Un árbol clásico solo puede cortar en línea recta sobre una variable "
+                  "a la vez, así que para separar a quienes incumplen arma una escalera de cortes. Pero el riesgo no "
+                  "depende del límite o del pago por separado, sino de la combinación de ambos: es una frontera en "
+                  "diagonal. CS-FOF puede trazarla con un solo corte.",
+                  "Each point is a real client. A classic tree can only cut in a straight line on one variable at a "
+                  "time, so to separate defaulters it builds a staircase of cuts. But risk does not depend on the limit "
+                  "or the payment separately; it depends on their combination: a diagonal boundary. CS-FOF can draw it "
+                  "with a single cut.")),
+        html.Div([
+            html.Div([html.Div(tx(f"Árbol clásico: {T['n_cuts']} cortes rectos", f"Classic tree: {T['n_cuts']} straight cuts"),
+                              className="cs-fig-t"),
+                      dcc.Graph(id="cs-toy-tree", figure=fig_csfof_toy("tree"), config=gcfg)]),
+            html.Div([html.Div(tx("CS-FOF: 1 corte oblicuo", "CS-FOF: 1 oblique cut"), className="cs-fig-t on"),
+                      dcc.Graph(id="cs-toy-obl", figure=fig_csfof_toy("oblique"), config=gcfg)]),
+        ], className="grid g2"),
+        html.P(tx("¿Cuánto separa cada opción? Reducción de impureza (Gini ponderado) con el mismo número de cortes:",
+                  "How much does each option separate? Impurity reduction (weighted Gini) with the same number of cuts:"),
+               className="muted"),
+        html.Div([
+            kpi(tx("Con 1 corte", "With 1 cut"), f"+{mejora:.0%}",
+                tx(f"oblicuo {T['g_obl']:.4f} frente a recto {T['g_axis']:.4f}",
+                   f"oblique {T['g_obl']:.4f} vs straight {T['g_axis']:.4f}"), "target"),
+            kpi(tx("Con 3 cortes", "With 3 cuts"), f"+{T['g_obl3'] / T['g_axis3'] - 1:.0%}",
+                tx(f"oblicuos {T['g_obl3']:.4f} frente a rectos {T['g_axis3']:.4f}",
+                   f"oblique {T['g_obl3']:.4f} vs straight {T['g_axis3']:.4f}"), "layers"),
+            kpi(tx(f"{T['n_cuts']} cortes rectos", f"{T['n_cuts']} straight cuts"), f"{T['g_tree']:.4f}",
+                tx("la escalera ya alcanza a la diagonal", "the staircase catches up with the diagonal"), "bars"),
+        ], className="kpi-row k3"),
+        html.Div(tx("La ventaja del corte oblicuo es grande cuando hay pocos cortes y se achica a medida que la escalera "
+                    "de cortes rectos se acerca a la diagonal. Un bosque completo tiene miles de cortes; por eso, en los "
+                    "resultados, CS-FOF empata con los mejores modelos en vez de superarlos con amplitud.",
+                    "The oblique cut's advantage is large when there are few cuts and shrinks as the staircase of "
+                    "straight cuts approaches the diagonal. A full forest has thousands of cuts; that is why, in the "
+                    "results, CS-FOF ties with the best models instead of clearly beating them."), className="callout"),
+        interp_block(
+            tx("La zona sombreada es donde cada modelo diría «incumple». El árbol necesita varios escalones para "
+               "seguir la diagonal; el corte oblicuo la sigue de una vez: menos límite y menos pago, más riesgo.",
+               "The shaded area is where each model would say “defaults”. The tree needs several steps to follow the "
+               "diagonal; the oblique cut follows it at once: lower limit and lower payment, higher risk."),
+            tx(f"Variables en log10, 29 965 clientes; se muestran 2 600 al azar (mitad de cada clase). Dirección de "
+               f"Fisher (estandarizada) ∝ ({T['v'][0]:+.2f}, {T['v'][1]:+.2f}). Pesos de costo c = n₀/n₁ = {T['c']:.2f}. "
+               "El árbol clásico es CART con profundidad 3, hoja mínima 200 y los mismos pesos. Es una ilustración "
+               "en 2 variables; en el modelo real cada nodo usa √p variables al azar.",
+               f"Variables in log10, 29,965 clients; 2,600 shown at random (half of each class). Fisher direction "
+               f"(standardized) ∝ ({T['v'][0]:+.2f}, {T['v'][1]:+.2f}). Cost weights c = n₀/n₁ = {T['c']:.2f}. The "
+               "classic tree is CART with depth 3, minimum leaf 200 and the same weights. It is a 2-variable "
+               "illustration; in the real model each node uses √p random variables.")),
+        html.H4(tx("Cómo decide cada nodo", "How each node decides"), className="cs-h"),
+        html.Div([
+            _cs_step(1, tx("Cortes rectos", "Straight cuts"),
+                     tx("Como en Random Forest, prueba umbrales sobre √p variables elegidas al azar.",
+                        "As in Random Forest, it tries thresholds on √p randomly chosen variables.")),
+            _cs_step(2, tx("Dirección de Fisher con costo", "Cost-weighted Fisher direction"),
+                     tx("Con los clientes de ese nodo calcula la combinación de variables que mejor separa a las dos "
+                        "clases, pesando más a quienes incumplen.",
+                        "With the clients in that node it computes the combination of variables that best separates "
+                        "the two classes, giving more weight to defaulters."),
+                     r"\mathbf{v}=S_w^{-1}(\mu_1-\mu_0)"),
+            _cs_step(3, tx("Se queda con el mejor", "Keeps the best one"),
+                     tx("Compara todos los cortes con el Gini ponderado y elige el que más lo reduce. Por eso el corte "
+                        "elegido nunca es peor que el mejor corte recto (Proposición 1).",
+                        "It compares all cuts with the weighted Gini and picks the one that reduces it most. That is "
+                        "why the chosen cut is never worse than the best straight cut (Proposition 1)."),
+                     r"\Delta G(\text{elegido})\ \ge\ \max_j \Delta G(\text{recto}_j)"),
+        ], className="cs-steps"),
+        html.H4(tx("Por qué encaja con estos datos", "Why it fits this data"), className="cs-h"),
+        html.Div([
+            kpi(tx("Atrasos correlacionados", "Correlated delays"), f"ρ = {rho_pay:.2f}",
+                tx("PAY_0 con PAY_2: el riesgo vive en combinaciones", "PAY_0 with PAY_2: risk lives in combinations"), "layers"),
+            kpi(tx("Montos redundantes", "Redundant amounts"), f"ρ ≥ {bmin:.2f}",
+                tx("entre BILL_AMT1–6 (VIF > 20)", "among BILL_AMT1–6 (VIF > 20)"), "columns"),
+            kpi(tx("Desbalance", "Imbalance"), f"{GLOBAL_RATE:.1%}",
+                tx(f"incumple; cada moroso pesa {T['c']:.1f} veces más", f"default; each defaulter weighs {T['c']:.1f}× more"), "alert"),
+            kpi(tx("Cortes oblicuos usados", "Oblique cuts used"), "71 %",
+                tx("de los nodos del modelo final; quitarlos baja el F1", "of the final model's nodes; removing them lowers F1"), "target"),
+        ], className="kpi-row k4"),
+        html.Div(tx("Lo que la teoría no garantiza: la Proposición 1 asegura que cada corte es al menos tan bueno como "
+                    "el mejor corte recto en los datos de entrenamiento, no que el bosque completo prediga mejor en "
+                    "clientes nuevos que métodos como CatBoost o XGBoost. Eso solo lo dicen las pruebas estadísticas "
+                    "(pestaña 2).",
+                    "What the theory does not guarantee: Proposition 1 ensures each cut is at least as good as the best "
+                    "straight cut on the training data, not that the whole forest predicts new clients better than "
+                    "methods like CatBoost or XGBoost. Only the statistical tests can say that (tab 2)."),
+                 className="callout"),
+    ]
+
+
+
+# ----- CS-FOF frente a Random Forest (su versión sin cortes oblicuos ni costo por nodo) -----
+# Pliegues: validación anidada 5 x 5 (pesos de clase + búsqueda aleatoria, results/master_table_e3.csv).
+# Datos y ruido: experiments/robustez/ del proyecto (exploratorio; hiperparámetros fijos por pliegue).
+CS_VS_RF = {
+    "folds": dict(x=["1", "2", "3", "4", "5"],
+                  cs=[0.5484, 0.5447, 0.5441, 0.5572, 0.5453], rf=[0.5510, 0.5404, 0.5375, 0.5556, 0.5417],
+                  cs_sd=None, rf_sd=None),
+    "size": dict(x=["10 %", "25 %", "50 %", "100 %"],
+                 cs=[0.5356, 0.5429, 0.5473, 0.5483], rf=[0.5375, 0.5415, 0.5405, 0.5434],
+                 cs_sd=[0.0073, 0.0065, 0.0073, 0.0078], rf_sd=[0.0091, 0.0084, 0.0093, 0.0076]),
+    "noise": dict(x=["0 %", "5 %", "10 %", "20 %"],
+                  cs=[0.5483, 0.5455, 0.5455, 0.5336], rf=[0.5434, 0.5423, 0.5414, 0.5303],
+                  cs_sd=[0.0078, 0.0081, 0.0085, 0.0147], rf_sd=[0.0076, 0.0085, 0.0109, 0.0148]),
+}
+_CSRF_X = {"folds": ("Pliegue externo", "Outer fold"), "size": ("Datos de entrenamiento usados", "Training data used"),
+           "noise": ("Etiquetas de entrenamiento invertidas", "Training labels flipped")}
+
+
+def fig_cs_vs_rf(scn):
+    """Líneas que se dibujan punto por punto (botón de reproducir) con la diferencia en cada paso."""
+    D = CS_VS_RF[scn]
+    n, xs = len(D["x"]), D["x"]
+    allv = D["cs"] + D["rf"]
+    pad = 0.012 if D["cs_sd"] else 0.006
+    yr = [min(allv) - pad, max(allv) + pad]
+    series = [("CS-FOF", D["cs"], D["cs_sd"], WARM_GOLD, "diamond"),
+              ("Random Forest", D["rf"], D["rf_sd"], DEEP_NAVY, "circle")]
+
+    # etiqueta arriba para el que va ganando en ese punto y abajo para el otro (no se enciman)
+    arriba = [a >= b for a, b in zip(D["cs"], D["rf"])]
+    pos = {"CS-FOF": ["top center" if u else "bottom center" for u in arriba],
+           "Random Forest": ["bottom center" if u else "top center" for u in arriba]}
+
+    def trazas(k):
+        out = []
+        for name, v, sd, col, sym in series:
+            out.append(go.Scatter(
+                x=xs[:k], y=v[:k], mode="lines+markers+text", name=name,
+                text=[f"{z:.3f}" for z in v[:k]], textposition=pos[name][:k],
+                textfont=dict(size=11, color=col),
+                line=dict(color=col, width=3), marker=dict(size=12, symbol=sym, color=col, line=dict(width=1.5, color=WHITE)),
+                error_y=dict(type="data", array=sd[:k], color=col, thickness=1.2, width=4, visible=True) if sd else None,
+                hovertemplate=f"<b>{name}</b><br>%{{x}}<br>F1: %{{y:.4f}}<extra></extra>"))
+        return out
+
+    def nota(k):
+        d = D["cs"][k - 1] - D["rf"][k - 1]
+        quien = "CS-FOF" if d > 0 else "Random Forest"
+        return [dict(xref="paper", yref="paper", x=0.0, y=1.22, showarrow=False, xanchor="left", yanchor="bottom",
+                     font=dict(size=13, color=WARM_GOLD if d > 0 else DEEP_NAVY),
+                     text=tx(f"<b>{xs[k - 1]}</b>: gana {quien} por {abs(d):.4f}",
+                             f"<b>{xs[k - 1]}</b>: {quien} wins by {abs(d):.4f}"))]
+
+    # nombres únicos por escenario: así una animación en curso no se mezcla con el escenario nuevo
+    frames = [go.Frame(data=trazas(k), name=f"{scn}-{k}", layout=go.Layout(annotations=nota(k))) for k in range(1, n + 1)]
+    fig = go.Figure(data=trazas(n), frames=frames)
+    style_fig(fig, 400)
+    play = dict(label=tx("▶ Reproducir", "▶ Play"), method="animate",
+                args=[None, dict(frame=dict(duration=900, redraw=True), transition=dict(duration=450, easing="cubic-in-out"),
+                                 fromcurrent=False, mode="immediate")])
+    fig.update_layout(
+        annotations=nota(n), margin=dict(l=60, r=20, t=100, b=95), uirevision=scn,
+        xaxis=dict(title=L(_CSRF_X[scn]), type="category", categoryorder="array", categoryarray=xs, range=[-0.4, n - 0.6]),
+        yaxis=dict(title=tx("F1 de la clase default", "F1 of the default class"), range=yr),
+        updatemenus=[dict(type="buttons", showactive=False, x=0, y=-0.22, xanchor="left", yanchor="top",
+                          bgcolor=CREAM, bordercolor=PALE_GOLD, font=dict(color=DEEP_NAVY), buttons=[play])],
+        sliders=[dict(active=n - 1, x=0.2, len=0.8, y=-0.17, yanchor="top", pad=dict(t=0),
+                      currentvalue=dict(visible=False), font=dict(color=GREY_BLUE),
+                      steps=[dict(label=xs[k - 1], method="animate",
+                                  args=[[f"{scn}-{k}"], dict(mode="immediate", frame=dict(duration=0, redraw=True),
+                                                       transition=dict(duration=300))]) for k in range(1, n + 1)])])
+    return fig
+
+
+def cs_vs_rf_interp(scn):
+    D = CS_VS_RF[scn]
+    gana = sum(a > b for a, b in zip(D["cs"], D["rf"]))
+    if scn == "folds":
+        basic = tx(f"CS-FOF le gana a Random Forest en {gana} de 5 pliegues, pero por poco: 0.003 de F1 en promedio, "
+                   "menos que lo que cambia el F1 de un pliegue a otro.",
+                   f"CS-FOF beats Random Forest in {gana} of 5 folds, but narrowly: 0.003 of F1 on average, less "
+                   "than F1 changes from one fold to another.")
+        tech = tx("Validación anidada 5 × 5, mejor combinación de cada uno (pesos de clase + búsqueda aleatoria). "
+                  "Nadeau–Bengio con Holm p = 1.000; δ de Cliff = 0.36 (efecto mediano); DeLong p = 0.171; McNemar "
+                  "p < 0.001 (313 errores exclusivos de CS-FOF frente a 615).",
+                  "Nested 5 × 5 validation, best combination of each (class weights + random search). Nadeau–Bengio "
+                  "with Holm p = 1.000; Cliff's δ = 0.36 (medium effect); DeLong p = 0.171; McNemar p < 0.001 (313 "
+                  "exclusive CS-FOF errors vs 615).")
+    elif scn == "size":
+        basic = tx("Con 25 % de los datos o más, CS-FOF queda arriba y sigue mejorando al recibir más clientes; Random "
+                   "Forest se estanca. Con muy pocos datos (10 %), Random Forest queda apenas por encima: calcular la "
+                   "dirección de Fisher en cada nodo necesita suficientes clientes.",
+                   "With 25% of the data or more, CS-FOF stays on top and keeps improving with more clients; Random "
+                   "Forest plateaus. With very little data (10%), Random Forest is slightly ahead: computing the Fisher "
+                   "direction at each node needs enough clients.")
+        tech = tx("Exploratorio: fracción estratificada del entrenamiento de cada pliegue, prueba completa, "
+                  "hiperparámetros elegidos en la validación anidada (sin búsqueda nueva). Barras: ± 1 desviación "
+                  "estándar entre los 5 pliegues. Sin pruebas de hipótesis.",
+                  "Exploratory: stratified fraction of each fold's training set, full test set, hyperparameters chosen "
+                  "in the nested validation (no new search). Bars: ± 1 standard deviation across the 5 folds. No "
+                  "hypothesis tests.")
+    else:
+        basic = tx("Al ensuciar las etiquetas de entrenamiento, los dos pierden casi lo mismo, y CS-FOF se mantiene "
+                   "arriba en todos los niveles.",
+                   "When the training labels are corrupted, both lose almost the same, and CS-FOF stays on top at "
+                   "every level.")
+        tech = tx("Exploratorio: se invierte al azar una fracción de las etiquetas de entrenamiento (la misma para los "
+                  "dos modelos); la prueba es limpia. Pérdida con 20 % de ruido: CS-FOF −0.015, Random Forest −0.013. "
+                  "Barras: ± 1 desviación estándar entre pliegues; se solapan, así que la diferencia no es concluyente.",
+                  "Exploratory: a random fraction of training labels is flipped (the same for both models); the test "
+                  "set is clean. Loss with 20% noise: CS-FOF −0.015, Random Forest −0.013. Bars: ± 1 standard "
+                  "deviation across folds; they overlap, so the difference is not conclusive.")
+    return interp_block(basic, tech)
+
+
+def _csfof_results():
+    c = CSFOF_CM
+    pos = c["tp"] + c["fn"]
+    sig = lambda p: html.B("< 0.001" if p < 0.001 else f"{p:.3f}") if p < 0.05 else f"{p:.3f}"
+    tests = _tbl([tx("Rival", "Rival"), tx("Dif. F1", "F1 diff."), tx("Gana en", "Wins in"),
+                  "p Nadeau–Bengio (Holm)", tx("δ de Cliff", "Cliff's δ"), "p DeLong",
+                  tx("Errores exclusivos (CS-FOF / rival)", "Exclusive errors (CS-FOF / rival)")],
+                 [(minfo(m, "label"), f"{d:+.4f}", f"{g}/5", sig(p), f"{dc:+.2f}", dl, mc)
+                  for m, d, g, p, dc, dl, mc in CSFOF_TESTS])
+    cross = _tbl([tx("Modelo", "Model"), tx("Taiwán", "Taiwan"), "German", "Australian", tx("Polish (año 1)", "Polish (year 1)"),
+                  tx("Rango medio", "Mean rank")],
+                 [((html.B if m == "cs_fof" else str)(minfo(m, "label")), f"{a:.3f}", f"{b:.3f}", f"{cc:.3f}", f"{d:.3f}", f"{r:.2f}")
+                  for m, a, b, cc, d, r in CROSS_DATA])
+    return [
+        html.P(tx("Validación cruzada anidada 5 × 5 con los mismos folds, preprocesamiento y presupuesto de búsqueda "
+                  "para los 10 modelos. Métrica principal: F1 de la clase default.",
+                  "Nested 5 × 5 cross-validation with the same folds, preprocessing and search budget for the 10 "
+                  "models. Main metric: F1 of the default class.")),
+        html.Div([
+            kpi("F1", "0.548 ± 0.005", tx("2.º de 10, a 0.0001 de CatBoost", "2nd of 10, 0.0001 behind CatBoost"), "trophy"),
+            kpi("ROC-AUC", "0.785", tx("el mayor de los 10 modelos", "the highest of the 10 models"), "target"),
+            kpi(tx("Cortes oblicuos", "Oblique splits"), "71 %", tx("de los nodos del modelo final", "of the final model's nodes"), "layers"),
+            kpi(tx("Incumplimientos detectados", "Defaults detected"), f"{c['tp'] / pos:.0%}",
+                tx(f"{c['tp']:,} de {pos:,}; {c['fp']:,} falsas alarmas", f"{c['tp']:,} of {pos:,}; {c['fp']:,} false alarms"), "bars"),
+        ], className="kpi-row k4"),
+        html.H4(tx("CS-FOF frente a Random Forest, el modelo básico más parecido",
+                   "CS-FOF vs Random Forest, the most similar basic model"), className="cs-h"),
+        html.P(tx("CS-FOF es un Random Forest al que se le agregó el corte oblicuo con costo, así que esta comparación "
+                  "aísla lo que aporta la idea nueva. Elige un escenario y presiona Reproducir.",
+                  "CS-FOF is a Random Forest with the cost-sensitive oblique cut added, so this comparison isolates "
+                  "what the new idea contributes. Pick a scenario and press Play."), className="muted"),
+        html.Div([control(tx("Escenario", "Scenario"), dcc.RadioItems(
+            id="csrf-scn", value="folds", className="radio",
+            options=[{"label": tx("Los 5 pliegues", "The 5 folds"), "value": "folds"},
+                     {"label": tx("Menos datos", "Less data"), "value": "size"},
+                     {"label": tx("Más ruido", "More noise"), "value": "noise"}]))], className="controls"),
+        html.Div(id="csrf-box"),
+        html.H4(tx("Pruebas frente a cada modelo (Taiwán)", "Tests against each model (Taiwan)")), tests,
+        html.H4(tx("Consistencia en otros conjuntos de crédito (F1)", "Consistency on other credit datasets (F1)")), cross,
+        html.Div(tx("Veredicto: CS-FOF empata con los mejores métodos del estado del arte en el problema principal, "
+                    "con la menor variación entre folds, pero no es superior de forma significativa a CatBoost, "
+                    "XGBoost, LightGBM ni Random Forest, y en los conjuntos adicionales queda por detrás de CatBoost.",
+                    "Verdict: CS-FOF ties with the best state-of-the-art methods on the main problem, with the lowest "
+                    "variation between folds, but it is not significantly superior to CatBoost, XGBoost, LightGBM or "
+                    "Random Forest, and on the additional datasets it falls behind CatBoost."), className="callout"),
+        interp_block(
+            tx("En el problema principal CS-FOF acierta tanto como los mejores modelos y es el más estable. Comete "
+               "menos errores que solo él cometa, pero eso se debe a que marca menos clientes como riesgosos, no a "
+               "que ordene mejor. En el conjunto polaco, con muy pocas quiebras (4 %), los métodos de boosting le "
+               "sacan mucha ventaja.",
+               "On the main problem CS-FOF is as accurate as the best models and is the most stable. It makes fewer "
+               "errors that only it makes, but that is because it flags fewer clients as risky, not because it ranks "
+               "them better. On the Polish dataset, with very few bankruptcies (4%), boosting methods are far ahead."),
+            tx("Friedman sobre los 10 modelos: χ² = 40.3, p = 6.7·10⁻⁶; rangos medios CatBoost 2.0 y CS-FOF 2.4; "
+               "diferencia crítica de Nemenyi 6.06. Wilcoxon con 5 folds no puede bajar de p = 0.0625. DeLong y "
+               "McNemar usan predicciones fuera de pliegue de los 29 965 clientes; el reajuste de LightGBM dio un AUC "
+               "menor que el de su validación (0.773 frente a 0.784), por eso no se reporta su DeLong. Entre los 4 "
+               "conjuntos, Iman–Davenport F = 4.38, p = 0.0013, sin diferencias significativas de CS-FOF tras Holm.",
+               "Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks CatBoost 2.0 and CS-FOF 2.4; "
+               "Nemenyi critical difference 6.06. Wilcoxon with 5 folds cannot go below p = 0.0625. DeLong and "
+               "McNemar use out-of-fold predictions for the 29,965 clients; the LightGBM refit gave a lower AUC than "
+               "its validation (0.773 vs 0.784), so its DeLong is not reported. Across the 4 datasets, "
+               "Iman–Davenport F = 4.38, p = 0.0013, with no significant CS-FOF differences after Holm.")),
+    ]
+
+
+def csfof_card():
+    tab = lambda lbl, val, kids: dcc.Tab(label=lbl, value=val, children=html.Div(kids, className="cs-pane"),
+                                         className="cs-tab", selected_className="cs-tab--on")
+    return card(tx("Modelo original: CS-FOF", "Original model: CS-FOF"), [
+        dcc.Tabs(value="teoria", className="cs-tabs", parent_className="cs-tabs-wrap", mobile_breakpoint=0, children=[
+            tab(tx("1 · Teoría", "1 · Theory"), "teoria", csfof_theory()),
+            tab(tx("2 · Resultados", "2 · Results"), "resultados", _csfof_results()),
+        ]),
+    ])
 
 
 def models_carousel():
@@ -2623,8 +3117,8 @@ def models_carousel():
                            "aria-label": tx("Modelo siguiente", "Next model")}),
         ], className="mc-stage"),
         html.Div(dots, className="mc-dots"),
-        html.P(tx("Desliza, usa las flechas o los puntos para recorrer los siete modelos.",
-                  "Swipe, or use the arrows or dots to browse the seven models."), className="muted mc-hint"),
+        html.P(tx(f"Desliza, usa las flechas o los puntos para recorrer los {len(rows)} modelos.",
+                  f"Swipe, or use the arrows or dots to browse the {len(rows)} models."), className="muted mc-hint"),
     ], className="mc-wrap")
 
 
@@ -2638,7 +3132,8 @@ def page_models():
         page_title(tx("Modelos", "Models"), ""),
         html.Div([
             kpi(tx("Combinaciones evaluadas", "Combinations evaluated"), f"{len(MR)}",
-                tx("7 modelos × 4 balanceos × 4 optimizadores", "7 models × 4 balancing × 4 optimizers"), "layers"),
+                tx("7 modelos × 4 × 4, más LightGBM, CatBoost y CS-FOF", "7 models × 4 × 4, plus LightGBM, CatBoost and CS-FOF"),
+                "layers"),
             kpi(tx("Mejor F1 (clase default)", "Best F1 (default class)"), f"{b['f1_mean']:.3f}",
                 f"{best_lbl} · {tech_lbl(b['technique'])}", "trophy"),
             kpi(tx("Mejora sobre la línea base", "Improvement over baseline"), f"+{b['f1_mean'] - BASELINE:.3f}",
@@ -2648,22 +3143,23 @@ def page_models():
                 tx("Recall del mejor modelo (umbral 0.5)", "Recall of the best model (threshold 0.5)"), "target"),
         ], className="kpi-row k4"),
         card(tx("Comparación de modelos", "Model comparison"), models_carousel()),
+        csfof_card(),
         html.Div([
             card(tx("F1 por modelo y técnica de balanceo", "F1 by model and balancing technique"), [
                 dcc.Graph(id="mdl-heat", figure=fig_models_heat(), config=gcfg),
                 interp_block(
                     tx("Cada celda es el mejor F1 que logró el modelo con esa técnica. Sin balanceo todos rinden peor, "
-                       "porque casi no detectan a quienes incumplen; con pesos de clase, Random Forest y XGBoost "
-                       "llegan a 0.55.",
+                       "porque casi no detectan a quienes incumplen; con pesos de clase, los cinco mejores llegan a "
+                       "0.55. CS-FOF solo se corrió con pesos de clase y a CatBoost le falta ADASYN (celdas vacías).",
                        "Each cell is the best F1 the model achieved with that technique. Without balancing all of them "
-                       "perform worse, because they barely detect defaulters; with class weights, Random Forest and "
-                       "XGBoost reach 0.55."),
-                    tx("Comparación por factor (Friedman con 28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. "
+                       "perform worse, because they barely detect defaulters; with class weights, the top five reach "
+                       "0.55. CS-FOF was only run with class weights and CatBoost lacks ADASYN (empty cells)."),
+                    tx("Comparación por factor sobre las 112 combinaciones base (Friedman con 28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. "
                        "Sin balanceo el F1 medio es 0.455, frente a 0.526 (pesos de clase), 0.520 (SMOTE) y 0.513 "
                        "(ADASYN); «sin balanceo» es peor que las tres (Nemenyi, p ≤ 0.010). Pesos de clase supera a "
                        "ADASYN (p < 10⁻⁴) y no se distingue de SMOTE (p = 0.35); SMOTE supera a ADASYN (p = 0.007). "
                        "Naive Bayes es el único modelo al que el balanceo casi no le cambia el F1.",
-                       "Comparison by factor (Friedman with 28 model × method blocks): χ² = 76.0, p ≈ 2·10⁻¹⁶. "
+                       "Comparison by factor over the 112 base combinations (Friedman with 28 model × method blocks): χ² = 76.0, p ≈ 2·10⁻¹⁶. "
                        "Without balancing the mean F1 is 0.455, versus 0.526 (class weights), 0.520 (SMOTE) and 0.513 "
                        "(ADASYN); “no balancing” is worse than all three (Nemenyi, p ≤ 0.010). Class weights beat "
                        "ADASYN (p < 10⁻⁴) and are indistinguishable from SMOTE (p = 0.35); SMOTE beats ADASYN "
@@ -2673,10 +3169,10 @@ def page_models():
                     "Balancing moves the threshold, not the ranking ability"), [
                 dcc.Graph(id="mdl-scatter", figure=fig_models_scatter(), config=gcfg),
                 interp_block(
-                    tx("Cada punto es una de las 112 combinaciones. Las que no balancean (gris) quedan abajo: "
+                    tx(f"Cada punto es una de las {len(MR)} combinaciones (rombos: CS-FOF). Las que no balancean (gris) quedan abajo: "
                        "aciertan poco con quienes incumplen. Pero no quedan más a la izquierda: ordenan a los clientes "
                        "casi igual de bien; lo que cambia es dónde se pone el corte entre «paga» e «incumple».",
-                       "Each point is one of the 112 combinations. Those without balancing (grey) sit at the bottom: "
+                       f"Each point is one of the {len(MR)} combinations (diamonds: CS-FOF). Those without balancing (grey) sit at the bottom: "
                        "they rarely get defaulters right. But they are not further to the left: they rank clients "
                        "almost equally well; what changes is where the cut between “pays” and “defaults” is placed."),
                     tx("ROC-AUC medio por técnica (96 combinaciones sin SVM): 0.759 sin balanceo, 0.762 con pesos de "
@@ -2700,15 +3196,13 @@ def page_models():
                        f"In exchange it raises {c['fp']:,} false alarms: of the {flagged:,} clients it flags as risky, "
                        f"{c['tp'] / flagged:.0%} actually default."),
                     tx(f"{tech_lbl(b['technique'])} y optimización {method_lbl(b['method']).lower()}. Predicciones "
-                       "out-of-fold de los cinco modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.782). "
-                       "Las probabilidades no están calibradas (ECE = 0.196) porque el balanceo infla la clase "
-                       "positiva; una recalibración isotónica la baja de 0.180 a 0.013 en un fold. Ajustar el umbral "
-                       "según el costo de cada tipo de error es el siguiente paso natural.",
+                       "out-of-fold de los cinco modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.784). "
+                       "Las probabilidades no están calibradas (ECE = 0.204) porque el balanceo infla la clase "
+                       "positiva. Ajustar el umbral según el costo de cada tipo de error es el siguiente paso natural.",
                        f"{tech_lbl(b['technique'])} and {method_lbl(b['method']).lower()} optimization. Out-of-fold "
-                       "predictions from the five outer-fold models, with a 0.5 threshold (pooled AUC 0.782). The "
-                       "probabilities are not calibrated (ECE = 0.196) because balancing inflates the positive class; "
-                       "isotonic recalibration lowers it from 0.180 to 0.013 on one fold. Tuning the threshold to the "
-                       "cost of each type of error is the natural next step.")),
+                       "predictions from the five outer-fold models, with a 0.5 threshold (pooled AUC 0.784). The "
+                       "probabilities are not calibrated (ECE = 0.204) because balancing inflates the positive class. "
+                       "Tuning the threshold to the cost of each type of error is the natural next step.")),
             ]),
             card(tx("Qué variables pesan más: SHAP en los 5 folds", "Which variables matter most: SHAP across 5 folds"), [
                 html.Div([control(tx("Modelo", "Model"), dcc.RadioItems(
@@ -3145,13 +3639,15 @@ def book_summary():
         html.P(tx("Incluye un pipeline de extracción, limpieza y transformación (ETL), un análisis exploratorio centrado "
                   "en el desbalance de clases y la multicolinealidad severa entre los montos facturados, y un diseño "
                   "factorial de 112 configuraciones que compara algoritmos, representaciones de variables, técnicas de "
-                  "balanceo y optimización (genética y bayesiana). El resultado mejora el F1 de la clase minoritaria y "
-                  "reduce los falsos negativos frente a la regresión logística base.",
+                  "balanceo y optimización (genética y bayesiana), y un modelo original (CS-FOF, un bosque con cortes "
+                  "oblicuos sensibles al costo) comparado con LightGBM y CatBoost. El resultado mejora el F1 de la "
+                  "clase minoritaria y reduce los falsos negativos frente a la regresión logística base.",
                   "It includes an extraction, cleaning and transformation (ETL) pipeline, an exploratory analysis "
                   "focused on class imbalance and the severe multicollinearity among billed amounts, and a factorial "
                   "design of 112 configurations comparing algorithms, feature representations, balancing techniques "
-                  "and optimization (genetic and Bayesian). The result improves the minority-class F1 and reduces "
-                  "false negatives compared with the baseline logistic regression.")),
+                  "and optimization (genetic and Bayesian), plus an original model (CS-FOF, a forest with "
+                  "cost-sensitive oblique splits) compared with LightGBM and CatBoost. The result improves the "
+                  "minority-class F1 and reduces false negatives compared with the baseline logistic regression.")),
     ])
 
 
@@ -3512,6 +4008,7 @@ a { color:inherit; }
 .ctl-label { display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:5px; }
 .radio label, .check label { display:inline-flex; align-items:center; gap:5px; margin-right:16px; cursor:pointer; font-size:14px; }
 .radio input, .check input { accent-color:var(--accent); }
+.radio label, .check label { color:var(--text) !important; }   /* Dash 4 fija un azul oscuro que no se lee en modo oscuro */
 
 /* ---------- Interpretaciones ---------- */
 .interp-wrap { margin-top:12px; }
@@ -3806,6 +4303,26 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite:xor; mask-composite:exclude; animation:mc-spin 5s linear infinite; }
 @keyframes mc-spin { to { --mc-ang:360deg; } }
+/* Modelo original: pestañas Teoría / Resultados */
+.cs-tabs-wrap { margin:4px 0 6px; }
+.cs-tabs { display:flex; gap:6px; padding:4px; border-radius:999px; background:var(--surface-2);
+  border:1px solid var(--line); width:fit-content; max-width:100%; }
+.cs-tabs .cs-tab { border:0 !important; background:transparent !important; color:var(--muted) !important;
+  padding:8px 18px !important; border-radius:999px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.cs-tabs .cs-tab--on { background:var(--accent) !important; color:var(--on-accent) !important; }
+.cs-pane { padding-top:14px; }
+.cs-h { margin:22px 0 6px; font-size:15px; color:var(--text); }
+.cs-fig-t { font-weight:600; font-size:13px; color:var(--muted); margin:6px 0 2px; }
+.cs-fig-t.on { color:var(--accent-2); }
+.cs-steps { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; }
+.cs-step { position:relative; background:var(--surface-2); border:1px solid var(--line); border-radius:14px;
+  padding:16px 16px 10px 16px; }
+.cs-step h4 { margin:6px 0 4px; font-size:14px; }
+.cs-step p { margin:0 0 6px; font-size:13.5px; color:var(--muted); }
+.cs-num { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%;
+  background:var(--accent-2); color:var(--on-accent); font-weight:700; font-size:13px; }
+[data-theme="dark"] .cs-num { color:#1A233D; }
+@media (max-width:600px) { .cs-tabs .cs-tab { padding:7px 12px !important; } }
 @keyframes mc-glow {
   0%,100% { box-shadow:0 0 0 1px rgba(210,187,137,.45), 0 0 22px 0 rgba(210,187,137,.35), 0 26px 46px -26px rgba(8,12,30,.65); }
   50%     { box-shadow:0 0 0 1px rgba(210,187,137,.75), 0 0 38px 4px rgba(210,187,137,.55), 0 26px 46px -26px rgba(8,12,30,.65); } }
@@ -4628,6 +5145,26 @@ def cb_corr():
 @graph_cb(Output("mdl-heat", "figure"))
 def cb_models_heat():
     return fig_models_heat()
+
+
+# Un gráfico nuevo (id distinto) por escenario: así una animación en curso no sigue sobre el escenario nuevo.
+@app.callback(Output("csrf-box", "children"), Input("csrf-scn", "value"), Input("theme", "data"), Input("lang", "data"))
+def cb_cs_vs_rf(scn, theme, lang):
+    set_lang(lang)
+    scn = scn or "folds"
+    fig = themed(fig_cs_vs_rf(scn), theme == "dark")
+    return [dcc.Graph(id=f"csrf-graph-{scn}", figure=fig, config={"displaylogo": False, "displayModeBar": False}),
+            cs_vs_rf_interp(scn)]
+
+
+@graph_cb(Output("cs-toy-tree", "figure"))
+def cb_cs_toy_tree():
+    return fig_csfof_toy("tree")
+
+
+@graph_cb(Output("cs-toy-obl", "figure"))
+def cb_cs_toy_obl():
+    return fig_csfof_toy("oblique")
 
 
 @graph_cb(Output("mdl-scatter", "figure"))

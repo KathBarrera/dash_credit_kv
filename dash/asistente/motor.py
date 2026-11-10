@@ -231,7 +231,7 @@ class Asistente:
         elif cob >= 0.4:    # mitad conocida: se exigen las dos
             ok = prob >= self.UMBRAL_PROB and sim >= self.UMBRAL_SIM
         else:               # casi todo desconocido: solo se acepta si parece un error de escritura
-            ok = sc >= self.UMBRAL_LETRAS and prob >= 0.12
+            ok = sc >= self.UMBRAL_LETRAS and prob >= 0.13
         return (cid if ok else None), prob
 
     # ------------------------------------------------------------------ responder
