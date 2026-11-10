@@ -191,7 +191,7 @@ def _construir(A, EN):
           ["what is the project about", "dashboard summary", "summarize the whole dashboard", "what is the main finding",
            "conclusions", "what did they find", "what are the conclusions of the analysis",
            "in a nutshell what does the dashboard say", "main findings", "what is the most important result"]),
-        t(f"El tablero estudia **{n:,} clientes** de tarjeta de crédito de un banco de Taiwán (abril–septiembre "
+        t(f"El tablero estudia **{n:,} clientes** de tarjeta de crédito de un banco de Taiwán (abril a septiembre "
           f"2005) para entender quién deja de pagar el mes siguiente ({pct(rate)} lo hizo). Lo más importante:\n\n"
           f"1. **El historial de pagos domina.** {findings[0][1]}\n"
           f"2. **Menor cupo, más riesgo.** {findings[2][1]}\n"
@@ -199,7 +199,7 @@ def _construir(A, EN):
           f"4. **Las facturas son redundantes.** {findings[1][1]}\n"
           f"5. **Modelos:** el mejor es {best_lbl} con {tech_b} "
           f"(F1 {B['f1_mean']:.3f} frente a {BL:.3f} de la línea base); balancear las clases es lo que más ayuda.",
-          f"The dashboard studies **{n:,} credit card clients** of a Taiwanese bank (April–September 2005) to "
+          f"The dashboard studies **{n:,} credit card clients** of a Taiwanese bank (April to September 2005) to "
           f"understand who stops paying the following month ({pct(rate)} did). The key points:\n\n"
           f"1. **Payment history dominates.** {findings[0][1]}\n"
           f"2. **Lower limit, higher risk.** {findings[2][1]}\n"
@@ -220,11 +220,11 @@ def _construir(A, EN):
           ["cover page", "home page", "home", "what is the card on the cover", "why is there a credit card",
            "the card that flips", "what does the card say", "main screen"]),
         t("La **portada** presenta el proyecto con una tarjeta de crédito interactiva:\n\n"
-          "- **Frente:** los titulares (las autoras) y el periodo de los datos (abril–septiembre 2005).\n"
+          "- **Frente:** los titulares (las autoras) y el periodo de los datos (abril a septiembre 2005).\n"
           f"- **Reverso** (haz clic para voltearla): {n:,} clientes, {pct(rate)} de default y el periodo.\n"
           "- **Iniciar recorrido** te lleva a la Introducción; desde ahí el menú lateral muestra todas las secciones.",
           "The **cover** presents the project with an interactive credit card:\n\n"
-          "- **Front:** the cardholders (the authors) and the data period (April–September 2005).\n"
+          "- **Front:** the cardholders (the authors) and the data period (April to September 2005).\n"
           f"- **Back** (click to flip it): {n:,} clients, {pct(rate)} default and the period.\n"
           "- **Start the tour** takes you to the Introduction; from there the side menu shows all sections."),
         pagina="/", sug=t(["¿De qué trata el proyecto?", "Explícame la introducción", "¿Cómo uso el tablero?"],
@@ -243,7 +243,7 @@ def _construir(A, EN):
         t("La **Introducción** da el contexto:\n\n"
           "- **Vistazo rápido:** una gráfica que muestra que el atraso de septiembre anticipa el incumplimiento.\n"
           f"- **KPIs:** {n:,} clientes, 24 variables (23 predictoras + 1 objetivo), {pct(rate)} de default y el "
-          "periodo abril–septiembre 2005.\n"
+          "periodo abril a septiembre 2005.\n"
           "- **Introducción:** el problema del riesgo en tarjetas de crédito y el recorrido del proyecto: EDA, "
           f"comparación de 112 combinaciones de modelos (la mejor, {best_lbl} con {tech_b}, F1 {B['f1_mean']:.3f}) y "
           "la página Predecir.\n"
@@ -251,7 +251,7 @@ def _construir(A, EN):
           "The **Introduction** gives the context:\n\n"
           "- **Quick look:** a chart showing that September's delay anticipates default.\n"
           f"- **KPIs:** {n:,} clients, 24 variables (23 predictors + 1 target), {pct(rate)} default and the "
-          "April–September 2005 period.\n"
+          "April to September 2005 period.\n"
           "- **Introduction:** the credit card risk problem and the project's path: EDA, a comparison of 112 "
           f"model combinations (the best, {best_lbl} with {tech_b}, F1 {B['f1_mean']:.3f}) and the Predict page.\n"
           "- **Sources:** the Yeh & Lien (2009) article and the UCI repository data; amounts in NT$."),
@@ -276,11 +276,11 @@ def _construir(A, EN):
           f"date or paying the minimum, **{r_ok:.0%}**. The dashed line is the overall rate ({pct(rate)}). Only "
           "values with at least 100 clients are shown."),
         tecnico=t("Se agrupa por PAY_0 y se calcula la media de la variable objetivo en cada grupo (grupos con n ≥ 100). "
-                  "La tasa salta de forma no lineal al pasar de 0 (pago mínimo) a 1–2 meses de atraso, por eso PAY_0 "
+                  "La tasa salta de forma no lineal al pasar de 0 (pago mínimo) a 1 a 2 meses de atraso, por eso PAY_0 "
                   "conviene tratarla como ordinal o categórica (dummies) y no como una variable lineal. Es la variable "
                   "con mayor ρ de Spearman con el default y la primera en importancia SHAP del mejor modelo.",
                   "Clients are grouped by PAY_0 and the mean of the target is computed in each group (groups with "
-                  "n ≥ 100). The rate jumps non-linearly from 0 (minimum payment) to 1–2 months late, so PAY_0 should "
+                  "n ≥ 100). The rate jumps non-linearly from 0 (minimum payment) to 1 to 2 months late, so PAY_0 should "
                   "be treated as ordinal or categorical (dummies) rather than linear. It is the variable with the "
                   "highest Spearman ρ with default and the first in SHAP importance for the best model."),
         pagina="/introduccion", sug=t(["¿Qué es PAY_0?", "¿Qué variables pesan más en el modelo?"],
@@ -350,14 +350,14 @@ def _construir(A, EN):
           f"- **KPIs:** clientes en default, límite expuesto (NT${exposure / 1e6:,.0f} M) y saldo facturado de "
           f"septiembre de quienes incumplen (NT${bill_def / 1e6:,.0f} M).\n"
           "- **Pregunta de investigación**, **justificación**, **alcance y limitaciones**.\n"
-          "- **Cinco hipótesis** (H1–H5) y los **objetivos** general y específicos.",
+          "- **Cinco hipótesis** (H1 a H5) y los **objetivos** general y específicos.",
           "**Problem and Objectives** explains why the analysis matters:\n\n"
           "- **Statement:** the bank lends without knowing who will pay; if it gets it wrong it loses capital or, "
           f"if it restricts too much, it loses income. Here {pct(rate)} ({n_def:,} clients) did not pay.\n"
           f"- **KPIs:** clients in default, exposed limit (NT${exposure / 1e6:,.0f} M) and September billed balance "
           f"of defaulters (NT${bill_def / 1e6:,.0f} M).\n"
           "- **Research question**, **rationale**, **scope and limitations**.\n"
-          "- **Five hypotheses** (H1–H5) and the general and specific **objectives**."),
+          "- **Five hypotheses** (H1 to H5) and the general and specific **objectives**."),
         tecnico=t("Los errores no son simétricos: un falso negativo (no detectar a quien incumplirá) suele costar más "
                   "que un falso positivo. Por eso más adelante se privilegian F1 y recall de la clase default sobre "
                   "la exactitud (accuracy).",
@@ -437,13 +437,13 @@ def _construir(A, EN):
            "does correlation imply causation", "is the analysis causal", "causality", "are the findings cause and effect",
            "does it apply to other countries"]),
         t("**Alcance y limitaciones:**\n\n"
-          "- Datos de un solo banco de Taiwán y un periodo corto (abril–septiembre 2005): no se generalizan sin cautela.\n"
+          "- Datos de un solo banco de Taiwán y un periodo corto (abril a septiembre 2005): no se generalizan sin cautela.\n"
           "- El análisis es **asociativo**: una correlación no implica causalidad.\n"
           "- El EDA no construye modelos; los modelos se entrenaron en el repositorio del proyecto y se resumen en "
           "la sección Modelos.\n"
           "- Los códigos −2 y 0 de PAY_x no están documentados con precisión; se conservan sin recodificar.",
           "**Scope and limitations:**\n\n"
-          "- Data from a single Taiwanese bank and a short period (April–September 2005): it should not be "
+          "- Data from a single Taiwanese bank and a short period (April to September 2005): it should not be "
           "generalized without caution.\n"
           "- The analysis is **associative**: correlation does not imply causation.\n"
           "- The EDA does not build models; the models were trained in the project repository and are summarized "
@@ -558,7 +558,7 @@ def _construir(A, EN):
         t("- **Asimetría (skewness):** hacia dónde se alarga la cola; los montos de dinero suelen tener una cola "
           "larga a la derecha.\n- **Curtosis:** qué tan pesadas son las colas.\n"
           "- **Atípico de Tukey:**\n\n$$\\begin{gathered} x < Q_1 - 1.5\\,\\mathrm{IQR} \\;\\;\\text{o} \\\\ x > Q_3 + 1.5\\,\\mathrm{IQR} \\\\ \\mathrm{IQR} = Q_3 - Q_1 \\end{gathered}$$\n\n"
-          "- **Winsorizar:** recortar los extremos a percentiles (p. ej. P1–P99) sin eliminar clientes.\n"
+          "- **Winsorizar:** recortar los extremos a percentiles (p. ej. P1 a P99) sin eliminar clientes.\n"
           "- **Atípicos en las gráficas:** los boxplots marcan los atípicos como puntos tenues y el eje se ajusta a "
           "los bigotes (1,5·IQR), para que unos pocos montos enormes no aplasten el gráfico; no se elimina ningún "
           "cliente.\n"
@@ -566,7 +566,7 @@ def _construir(A, EN):
           "- **Skewness:** which way the tail stretches; money amounts usually have a long right tail.\n"
           "- **Kurtosis:** how heavy the tails are.\n"
           "- **Tukey outlier:**\n\n$$\\begin{gathered} x < Q_1 - 1.5\\,\\mathrm{IQR} \\;\\;\\text{or} \\\\ x > Q_3 + 1.5\\,\\mathrm{IQR} \\\\ \\mathrm{IQR} = Q_3 - Q_1 \\end{gathered}$$\n\n"
-          "- **Winsorizing:** capping the extremes at percentiles (e.g. P1–P99) without removing clients.\n"
+          "- **Winsorizing:** capping the extremes at percentiles (e.g. P1 to P99) without removing clients.\n"
           "- **Outliers in the charts:** boxplots show outliers as faint points and the axis is fitted to the "
           "whiskers (1.5·IQR), so a few huge amounts don't squash the chart; no client is removed.\n"
           "- **Signed log:** smooths long tails when there are zeros or negatives."),
@@ -681,16 +681,16 @@ def _construir(A, EN):
           "- **EDUCATION:** 1 posgrado, 2 universidad, 3 secundaria, 4 otros.\n"
           "- **MARRIAGE:** 1 casado, 2 soltero, 3 otros.\n- **AGE:** edad en años.\n"
           "- **PAY_0, PAY_2…PAY_6:** estado de pago de septiembre a abril (−2/−1/0 sin atraso; 1…8 meses de atraso).\n"
-          "- **BILL_AMT1–6:** monto facturado de septiembre (1) a abril (6).\n"
-          "- **PAY_AMT1–6:** monto pagado de septiembre (1) a abril (6).\n"
+          "- **BILL_AMT1 a BILL_AMT6:** monto facturado de septiembre (1) a abril (6).\n"
+          "- **PAY_AMT1 a PAY_AMT6:** monto pagado de septiembre (1) a abril (6).\n"
           "- **default_payment_next_month:** 1 si incumple en octubre de 2005.",
           "**Variable dictionary** (Theoretical Framework):\n\n"
           "- **LIMIT_BAL:** credit limit in NT$.\n- **SEX:** 1 male, 2 female.\n"
           "- **EDUCATION:** 1 graduate school, 2 university, 3 high school, 4 others.\n"
           "- **MARRIAGE:** 1 married, 2 single, 3 others.\n- **AGE:** age in years.\n"
           "- **PAY_0, PAY_2…PAY_6:** repayment status from September to April (−2/−1/0 no delay; 1…8 months late).\n"
-          "- **BILL_AMT1–6:** bill amount from September (1) to April (6).\n"
-          "- **PAY_AMT1–6:** amount paid from September (1) to April (6).\n"
+          "- **BILL_AMT1 to BILL_AMT6:** bill amount from September (1) to April (6).\n"
+          "- **PAY_AMT1 to PAY_AMT6:** amount paid from September (1) to April (6).\n"
           "- **default_payment_next_month:** 1 if the client defaults in October 2005."),
         pagina="/marco", sug=t(["¿Qué es PAY_0?", "¿Qué es LIMIT_BAL?", "¿Qué es la variable objetivo?"],
                                ["What is PAY_0?", "What is LIMIT_BAL?", "What is the target variable?"])))
@@ -780,26 +780,26 @@ def _construir(A, EN):
               ["Explain the quick look", "Which variables matter most in the model?", "What is BILL_AMT?"])))
     b, tt = A.interp_quant("BILL_AMT")
     add(Intencion(
-        "v_bill", t("BILL_AMT1–6 (facturación)", "BILL_AMT1–6 (billing)"),
+        "v_bill", t("BILL_AMT1 a BILL_AMT6 (facturación)", "BILL_AMT1 to BILL_AMT6 (billing)"),
         t(["qué es BILL_AMT", "bill_amt", "monto facturado", "facturas mensuales", "qué es la facturación",
            "por qué hay facturas negativas", "saldo a favor", "BILL_AMT1"],
           ["what is BILL_AMT", "bill_amt", "bill amount", "monthly bills", "what is billing",
            "why are there negative bills", "credit balance", "BILL_AMT1"]),
-        t(f"**BILL_AMT1–6** es el monto facturado en el estado de cuenta, de septiembre (1) a abril (6), en NT$. {b}",
-          f"**BILL_AMT1–6** is the amount on the bill statement, from September (1) to April (6), in NT$. {b}"),
+        t(f"**BILL_AMT1 a BILL_AMT6** es el monto facturado en el estado de cuenta, de septiembre (1) a abril (6), en NT$. {b}",
+          f"**BILL_AMT1 to BILL_AMT6** is the amount on the bill statement, from September (1) to April (6), in NT$. {b}"),
         tecnico=tt, pagina="/univariado",
         sug=t(["¿Qué es PAY_AMT?", "¿Qué es la multicolinealidad?", "Explícame la matriz de correlación"],
               ["What is PAY_AMT?", "What is multicollinearity?", "Explain the correlation matrix"])))
     b, tt = A.interp_quant("PAY_AMT")
     add(Intencion(
-        "v_payamt", t("PAY_AMT1–6 (montos pagados)", "PAY_AMT1–6 (amounts paid)"),
+        "v_payamt", t("PAY_AMT1 a PAY_AMT6 (montos pagados)", "PAY_AMT1 to PAY_AMT6 (amounts paid)"),
         t(["qué es PAY_AMT", "pay_amt", "montos pagados", "cuánto pagan los clientes", "pagos mensuales",
            "diferencia entre PAY y PAY_AMT", "PAY_AMT1"],
           ["what is PAY_AMT", "pay_amt", "amounts paid", "how much do clients pay", "monthly payments",
            "difference between PAY and PAY_AMT", "PAY_AMT1"]),
-        t(f"**PAY_AMT1–6** es lo que el cliente pagó, de septiembre (1) a abril (6), en NT$. No confundir con "
+        t(f"**PAY_AMT1 a PAY_AMT6** es lo que el cliente pagó, de septiembre (1) a abril (6), en NT$. No confundir con "
           f"PAY_x, que es el *estado* de pago. {b}",
-          f"**PAY_AMT1–6** is what the client paid, from September (1) to April (6), in NT$. Not to be confused "
+          f"**PAY_AMT1 to PAY_AMT6** is what the client paid, from September (1) to April (6), in NT$. Not to be confused "
           f"with PAY_x, which is the repayment *status*. {b}"),
         tecnico=tt, pagina="/univariado", sug=t(["¿Qué es BILL_AMT?", "¿Qué es PAY_0?"],
                                                ["What is BILL_AMT?", "What is PAY_0?"])))
@@ -890,13 +890,13 @@ def _construir(A, EN):
           "- **Histograma:** cuántos clientes caen en cada rango.\n"
           "- **Boxplot:** la caja va del 25 % al 75 % de los datos, la línea es la mediana y los bigotes los "
           "valores típicos.\n- **Densidad:** una curva suavizada de la forma de la distribución.\n\n"
-          f"La vista se limita al rango P1–P99. Por ejemplo, para BILL_AMT: {b}",
+          f"La vista se limita al rango P1 a P99. Por ejemplo, para BILL_AMT: {b}",
           "The **Distributions of quantitative variables** card compares LIMIT_BAL, AGE and the BILL_AMT and "
           "PAY_AMT families (one color per month). You can view it as:\n\n"
           "- **Histogram:** how many clients fall in each range.\n"
           "- **Boxplot:** the box goes from 25% to 75% of the data, the line is the median and the whiskers the "
           "typical values.\n- **Density:** a smoothed curve of the shape of the distribution.\n\n"
-          f"The view is limited to the P1–P99 range. For example, for BILL_AMT: {b}"),
+          f"The view is limited to the P1 to P99 range. For example, for BILL_AMT: {b}"),
         tecnico=tt, pagina="/univariado", sug=t(["¿Qué es PAY_AMT?", "¿Qué es un valor atípico?"],
                                                ["What is PAY_AMT?", "What is an outlier?"])))
 
@@ -1063,8 +1063,9 @@ def _construir(A, EN):
            "cuántos modelos compararon", "qué clasificadores probaron", "112 combinaciones"],
           ["explain the models page", "what is in models", "models section", "which models did they use",
            "how many models did they compare", "which classifiers did they try", "112 combinations"]),
-        t(f"**Modelos** resume {len(A.MR)} combinaciones: **7 clasificadores × 4 técnicas de balanceo × 4 métodos de "
-          "optimización**, más **LightGBM**, **CatBoost** y el modelo original **CS-FOF**, con validación cruzada "
+        t(f"**Modelos** resume **{A.N_BASE} combinaciones de modelos tradicionales** (diseño factorial: 7 clasificadores × "
+          f"4 técnicas de balanceo × 4 métodos de optimización) y, aparte, **{A.N_EXTRA} corridas** de LightGBM, CatBoost y "
+          f"el modelo original CS-FOF, que buscan superar el mejor F1 de esas {A.N_BASE}. Todo con validación cruzada "
           "anidada.\n\n"
           f"- **KPIs:** mejor F1 {B['f1_mean']:.3f} ({best_lbl}), mejora de +{B['f1_mean'] - BL:.3f} sobre la línea "
           f"base y {B['recall_mean']:.0%} de incumplimientos detectados.\n"
@@ -1072,8 +1073,9 @@ def _construir(A, EN):
           "- El modelo original **CS-FOF** tiene su propia página: **Modelo original**.\n"
           "- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n"
           "- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
-          f"**Models** summarizes {len(A.MR)} combinations: **7 classifiers × 4 balancing techniques × 4 optimization "
-          "methods**, plus **LightGBM**, **CatBoost** and the original model **CS-FOF**, with nested "
+          f"**Models** summarizes **{A.N_BASE} traditional model combinations** (factorial design: 7 classifiers × 4 "
+          f"balancing techniques × 4 optimization methods) and, separately, **{A.N_EXTRA} runs** of LightGBM, CatBoost and "
+          f"the original model CS-FOF, which try to beat the best F1 of those {A.N_BASE}. All with nested "
           "cross-validation.\n\n"
           f"- **KPIs:** best F1 {B['f1_mean']:.3f} ({best_lbl}), +{B['f1_mean'] - BL:.3f} over the baseline and "
           f"{B['recall_mean']:.0%} of defaults detected.\n"
@@ -1118,9 +1120,9 @@ def _construir(A, EN):
           "4. **Results:** an animated chart against **Random Forest** (it wins in 4 of 5 folds), the tests against "
           "the 10 models and the three other credit datasets.\n\n"
           "Verdict: F1 0.548, tied with CatBoost and with the highest ROC-AUC, but **not significantly superior**."),
-        tecnico=t("Validación anidada 5×5. Frente a Random Forest: Nadeau–Bengio con Holm p = 1.000, δ de Cliff 0.36, "
+        tecnico=t("Validación anidada 5×5. Frente a Random Forest: Nadeau-Bengio con Holm p = 1.000, δ de Cliff 0.36, "
                   "DeLong p = 0.171. Friedman sobre 10 modelos χ² = 40.3; rangos medios CatBoost 2.0 y CS-FOF 2.4.",
-                  "Nested 5×5 validation. Against Random Forest: Nadeau–Bengio with Holm p = 1.000, Cliff's δ 0.36, "
+                  "Nested 5×5 validation. Against Random Forest: Nadeau-Bengio with Holm p = 1.000, Cliff's δ 0.36, "
                   "DeLong p = 0.171. Friedman over 10 models χ² = 40.3; mean ranks CatBoost 2.0 and CS-FOF 2.4."),
         pagina="/modelo-original", sug=t(["¿Cuál es el mejor modelo?", "¿Cómo le fue a Random Forest?",
                                           "¿Qué es la validación cruzada anidada?"],
@@ -1138,19 +1140,23 @@ def _construir(A, EN):
           f"- **F1:** {B['f1_mean']:.3f} ± {B['f1_std']:.3f} (línea base: {BL:.3f}, +{B['f1_mean'] - BL:.3f})\n"
           f"- **Recall:** {B['recall_mean']:.1%} · **Precisión:** {B['precision_mean']:.1%}\n"
           f"- **ROC-AUC:** {B['roc_auc_mean']:.3f} · **PR-AUC:** {B['pr_auc_mean']:.3f}\n\n"
-          "Ojo: está prácticamente **empatado** con el modelo original CS-FOF (a 0.0001), XGBoost, LightGBM y Random "
-          "Forest; la diferencia es menor que la variación entre folds.",
+          f"La mejor de las {A.N_BASE} combinaciones tradicionales es {A.minfo(A.BEST_BASE['model'], 'label')} "
+          f"(F1 {A.BEST_BASE['f1_mean']:.3f}). Ojo: el mejor global está prácticamente **empatado** con el modelo "
+          "original CS-FOF (a 0.0001), XGBoost, LightGBM y Random Forest; la diferencia es menor que 0.002 y ninguna "
+          "prueba estadística los separa.",
           f"The best is **{best_lbl}** with **{tech_b}** and **{meth_b}** optimization:\n\n"
           f"- **F1:** {B['f1_mean']:.3f} ± {B['f1_std']:.3f} (baseline: {BL:.3f}, +{B['f1_mean'] - BL:.3f})\n"
           f"- **Recall:** {B['recall_mean']:.1%} · **Precision:** {B['precision_mean']:.1%}\n"
           f"- **ROC-AUC:** {B['roc_auc_mean']:.3f} · **PR-AUC:** {B['pr_auc_mean']:.3f}\n\n"
-          "Note: it is practically **tied** with the original model CS-FOF (0.0001 behind), XGBoost, LightGBM and "
-          "Random Forest; the difference is smaller than the variation between folds."),
+          f"The best of the {A.N_BASE} traditional combinations is {A.minfo(A.BEST_BASE['model'], 'label')} "
+          f"(F1 {A.BEST_BASE['f1_mean']:.3f}). Note: the best overall is practically **tied** with the original model "
+          "CS-FOF (0.0001 behind), XGBoost, LightGBM and Random Forest; the difference is below 0.002 and no "
+          "statistical test separates them."),
         tecnico=t("Validación cruzada anidada 5×5. Friedman sobre los 10 modelos: χ² = 40.3, p = 6.7·10⁻⁶; rangos "
-                  "medios CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 y LightGBM 3.8. Ni Nadeau–Bengio "
+                  "medios CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 y LightGBM 3.8. Ni Nadeau-Bengio "
                   "ni Wilcoxon ni DeLong separan a CS-FOF de CatBoost, XGBoost, LightGBM o Random Forest.",
                   "Nested 5×5 cross-validation. Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks "
-                  "CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 and LightGBM 3.8. Neither Nadeau–Bengio "
+                  "CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 and LightGBM 3.8. Neither Nadeau-Bengio "
                   "nor Wilcoxon nor DeLong separates CS-FOF from CatBoost, XGBoost, LightGBM or Random Forest."),
         pagina="/modelos", sug=t(["Explícame la matriz de confusión", "¿Qué es el F1?", "¿Cómo le fue a Random Forest?"],
                                  ["Explain the confusion matrix", "What is F1?", "How did Random Forest do?"]),
@@ -1514,7 +1520,7 @@ def _construir(A, EN):
         t("**Conclusiones** cierra el proyecto en cuatro bloques:\n\n"
           "1. **Respuesta a la pregunta de investigación:** el atraso reciente (sobre todo PAY_0) es lo que más "
           "anticipa el default; le sigue el límite de crédito; lo demográfico aporta poco.\n"
-          f"2. **Veredicto de las hipótesis:** las cinco (H1–H5) se cumplen, cada una con su evidencia.\n"
+          f"2. **Veredicto de las hipótesis:** las cinco (H1 a H5) se cumplen, cada una con su evidencia.\n"
           f"3. **Qué significa para el banco:** usar el atraso como alerta temprana, revisar los cupos bajos y usar el "
           f"modelo ({best_lbl}, F1 {B['f1_mean']:.3f}) como filtro para un analista, no como decisión final.\n"
           "4. **Limitaciones y próximos pasos:** datos de 2005 y de un solo banco, análisis asociativo, umbral "
@@ -1522,7 +1528,7 @@ def _construir(A, EN):
           "**Conclusions** closes the project in four blocks:\n\n"
           "1. **Answer to the research question:** recent delay (especially PAY_0) best anticipates default; the "
           "credit limit follows; demographics add little.\n"
-          f"2. **Hypothesis verdicts:** all five (H1–H5) are supported, each with its evidence.\n"
+          f"2. **Hypothesis verdicts:** all five (H1 to H5) are supported, each with its evidence.\n"
           f"3. **What it means for the bank:** use delay as an early warning, review low limits and use the model "
           f"({best_lbl}, F1 {B['f1_mean']:.3f}) as a filter for an analyst, not as the final decision.\n"
           "4. **Limitations and next steps:** data from 2005 and a single bank, associative analysis, a threshold "
@@ -1565,7 +1571,7 @@ def _construir(A, EN):
         t("El **formulario** tiene tres bloques:\n\n"
           "- **Perfil:** cupo y edad con deslizadores; sexo, educación y estado civil con tarjetas.\n"
           "- **Estado de pago por mes** (abril → septiembre): −2 sin consumo, −1 pagó todo, 0 pago mínimo, "
-          "1–8 meses de atraso.\n"
+          "1 a 8 meses de atraso.\n"
           "- **Montos por mes:** lo facturado y lo pagado en NT$.\n\n"
           "Los botones **Prueba un ejemplo** cargan tres perfiles: *cliente típico* (mediana y moda), *al día, cupo "
           "alto* y *atrasos recientes*. Con sexo «Otro» el modelo promedia las predicciones como hombre y mujer, "
@@ -1573,7 +1579,7 @@ def _construir(A, EN):
           "The **form** has three blocks:\n\n"
           "- **Profile:** limit and age with sliders; sex, education and marital status with cards.\n"
           "- **Repayment status by month** (April → September): −2 no use, −1 paid in full, 0 minimum payment, "
-          "1–8 months late.\n"
+          "1 to 8 months late.\n"
           "- **Amounts by month:** what was billed and what was paid in NT$.\n\n"
           "The **Try an example** buttons load three profiles: *typical client* (median and mode), *up to date, high "
           "limit* and *recent delays*. With sex “Other” the model averages the predictions as male and female, "
