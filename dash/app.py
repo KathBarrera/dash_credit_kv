@@ -1288,10 +1288,10 @@ MODEL_INFO = {   # textos bilingües (es, en): se leen con minfo(modelo, campo)
                  "Boosting with symmetric trees and a random ordering of the data that reduces overfitting."),
         "note": ("Método reciente del estado del arte (2018). Tiene el mayor F1 medio, pero solo 0.0001 por "
                  "encima de CS-FOF; ninguna prueba los separa. Es el más consistente en los tres conjuntos "
-                 "adicionales. Solo se corrió con pesos de clase.",
+                 "adicionales. Se corrieron 9 de sus 16 combinaciones (sin ADASYN); pesos de clase es su mejor técnica.",
                  "Recent state-of-the-art method (2018). It has the highest mean F1, but only 0.0001 above CS-FOF; "
-                 "no test separates them. It is the most consistent across the three additional datasets. It was "
-                 "only run with class weights.")},
+                 "no test separates them. It is the most consistent across the three additional datasets. 9 of its "
+                 "16 combinations were run (no ADASYN); class weights is its best technique.")},
     "cs_fof": {
         "label": ("CS-FOF (original)", "CS-FOF (original)"),
         "family": ("Modelo original · bosque oblicuo con costo", "Original model · cost-sensitive oblique forest"),
@@ -1308,10 +1308,10 @@ MODEL_INFO = {   # textos bilingües (es, en): se leen con minfo(modelo, campo)
         "family": ("Boosting reciente (por hojas)", "Recent boosting (leaf-wise)"),
         "desc": ("Boosting que hace crecer cada árbol por la hoja que más reduce el error; muy rápido.",
                  "Boosting that grows each tree from the leaf that most reduces the error; very fast."),
-        "note": ("Método reciente del estado del arte (2017). Queda a 0.0018 del mejor. Solo se corrió con pesos "
-                 "de clase; su PR-AUC no se calculó.",
-                 "Recent state-of-the-art method (2017). It is 0.0018 behind the best. It was only run with class "
-                 "weights; its PR-AUC was not computed.")},
+        "note": ("Método reciente del estado del arte (2017). Queda a 0.0018 del mejor. Con sus 16 combinaciones, "
+                 "pesos de clase es su mejor técnica; su PR-AUC no se calculó.",
+                 "Recent state-of-the-art method (2017). It is 0.0018 behind the best. Across its 16 combinations, "
+                 "class weights is its best technique; its PR-AUC was not computed.")},
     "svm": {
         "label": ("SVM", "SVM"),
         "family": ("Máquina de vectores de soporte (kernel RBF)", "Support vector machine (RBF kernel)"),
@@ -2783,10 +2783,10 @@ def page_models():
                 interp_block(
                     tx("Cada celda es el mejor F1 que logró el modelo con esa técnica. Sin balanceo todos rinden peor, "
                        "porque casi no detectan a quienes incumplen; con pesos de clase, los cinco mejores llegan a "
-                       "0.55. CatBoost, LightGBM y CS-FOF solo se corrieron con pesos de clase (celdas vacías).",
+                       "0.55. CS-FOF solo se corrió con pesos de clase y a CatBoost le falta ADASYN (celdas vacías).",
                        "Each cell is the best F1 the model achieved with that technique. Without balancing all of them "
                        "perform worse, because they barely detect defaulters; with class weights, the top five reach "
-                       "0.55. CatBoost, LightGBM and CS-FOF were only run with class weights (empty cells)."),
+                       "0.55. CS-FOF was only run with class weights and CatBoost lacks ADASYN (empty cells)."),
                     tx("Comparación por factor sobre las 112 combinaciones base (Friedman con 28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. "
                        "Sin balanceo el F1 medio es 0.455, frente a 0.526 (pesos de clase), 0.520 (SMOTE) y 0.513 "
                        "(ADASYN); «sin balanceo» es peor que las tres (Nemenyi, p ≤ 0.010). Pesos de clase supera a "
