@@ -1403,10 +1403,10 @@ def fig_models_heat():
     fig = go.Figure(go.Heatmap(
         z=pv.values, x=[tech_lbl(t) for t in TECH_ORDER], y=[minfo(m, "label") for m in order],
         colorscale=SEQ_GOLD, texttemplate="%{z:.3f}", textfont=dict(size=13), xgap=3, ygap=3,
-        colorbar=dict(title="F1", thickness=12),
+        showscale=False,   # cada celda ya muestra su valor: sin barra de color hay más ancho
         hovertemplate="%{y} · %{x}<br>" + tx("Mejor F1", "Best F1") + ": %{z:.4f}<extra></extra>"))
     style_fig(fig, 480, legend_top=False)
-    fig.update_layout(margin=dict(l=130, r=20, t=24, b=40))
+    fig.update_layout(margin=dict(l=125, r=10, t=30, b=20))
     fig.update_yaxes(autorange="reversed", showgrid=False)
     fig.update_xaxes(side="top", showgrid=False)
     return fig
@@ -1461,8 +1461,8 @@ def fig_best_cm():
         text=txt, texttemplate="%{text}", textfont=dict(size=13), showscale=False, xgap=4, ygap=4,
         colorscale=[[0, CREAM], [0.25, PALE_GOLD], [1, NAVY]],
         hovertemplate="%{y} · %{x}<br>" + tx("Clientes", "Clients") + ": %{z:,}<extra></extra>"))
-    style_fig(fig, 340, legend_top=False)
-    fig.update_layout(margin=dict(l=100, r=20, t=24, b=40))
+    style_fig(fig, 380, legend_top=False)
+    fig.update_layout(margin=dict(l=100, r=20, t=30, b=20))
     fig.update_yaxes(autorange="reversed", showgrid=False)
     fig.update_xaxes(side="top", showgrid=False)
     return fig
@@ -3208,6 +3208,15 @@ def page_models():
         html.Div([
             card(tx(f"Mejor combinación: {best_lbl}", f"Best combination: {best_lbl}"), [
                 dcc.Graph(id="mdl-cm", figure=fig_best_cm(), config=gcfg),
+                html.Div([
+                    kpi("Recall", f"{c['tp'] / pos:.0%}", tx("incumplimientos detectados", "defaults detected"), "target"),
+                    kpi(tx("Precisión", "Precision"), f"{c['tp'] / flagged:.0%}",
+                        tx("de los señalados sí incumple", "of those flagged do default"), "alert"),
+                    kpi(tx("Especificidad", "Specificity"), f"{c['tn'] / (c['tn'] + c['fp']):.0%}",
+                        tx("de quienes pagan, bien clasificados", "of payers, correctly classified"), "users"),
+                    kpi(tx("Exactitud", "Accuracy"), f"{(c['tp'] + c['tn']) / (pos + c['tn'] + c['fp']):.0%}",
+                        tx("de todos los clientes", "of all clients"), "bars"),
+                ], className="kpi-row k2 kpi-compact"),
                 interp_block(
                     tx(f"De los {pos:,} clientes que incumplieron, el modelo detecta {c['tp']:,} ({c['tp'] / pos:.0%}). "
                        f"A cambio marca {c['fp']:,} falsas alarmas: de los {flagged:,} clientes que señala como "
@@ -4015,6 +4024,8 @@ a { color:inherit; }
 .span-2 { grid-column:span 2; }
 .kpi-row { display:grid; gap:16px; margin-bottom:20px; } .k4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .k3 { grid-template-columns:repeat(3,minmax(0,1fr)); margin:12px 0; }
+.k2 { grid-template-columns:repeat(2,minmax(0,1fr)); margin:10px 0 14px; }
+.kpi-compact .kpi-value { font-size:24px; }
 .kpi { background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent-2); border-radius:10px; padding:14px 16px; }
 .kpi-head { display:flex; align-items:center; gap:8px; color:var(--muted); }
 .kpi-head .ico { color:var(--accent-2); width:17px; height:17px; }
@@ -4472,7 +4483,14 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 /* resultado */
 .pf-result { border-top:3px solid var(--accent-2); }
 /* ---- tarjeta de riesgo: se agrieta con el puntaje y se parte con riesgo muy alto ---- */
-.rc { position:relative; width:100%; max-width:440px; margin:4px auto 16px; aspect-ratio:1.6; --heat:0; }
+.rc { position:relative; width:100%; max-width:440px; margin:4px auto 16px; aspect-ratio:1.6; --heat:0; isolation:isolate; }
+/* luz permanente detrás de la tarjeta: dorada si el puntaje está bajo el umbral (riesgo bajo), roja si no */
+.rc::before { content:''; position:absolute; inset:2%; border-radius:22px; z-index:-1; pointer-events:none;
+  animation:rc-aura 3.2s ease-in-out infinite;
+  box-shadow:0 0 22px 6px rgba(246,196,69,.75), 0 0 54px 18px rgba(242,193,78,.45); }
+.rc.hi::before { box-shadow:0 0 22px 6px rgba(235,64,52,.75), 0 0 54px 18px rgba(235,64,52,.45); }
+@keyframes rc-aura { 0%, 100% { opacity:.55; } 50% { opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .rc::before { animation:none; opacity:.7; } }
 .rc-piece { position:absolute; inset:0; transition:transform .6s cubic-bezier(.3,.7,.2,1);
   filter:drop-shadow(0 18px 22px rgba(8,12,30,.35)); }
 .rc .rc-face { display:flex; flex-direction:column; justify-content:space-between; padding:6% 7%;
