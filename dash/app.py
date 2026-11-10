@@ -2904,6 +2904,122 @@ def csfof_theory():
     ]
 
 
+
+# ----- CS-FOF frente a Random Forest (su versión sin cortes oblicuos ni costo por nodo) -----
+# Pliegues: validación anidada 5 x 5 (pesos de clase + búsqueda aleatoria, results/master_table_e3.csv).
+# Datos y ruido: experiments/robustez/ del proyecto (exploratorio; hiperparámetros fijos por pliegue).
+CS_VS_RF = {
+    "folds": dict(x=["1", "2", "3", "4", "5"],
+                  cs=[0.5484, 0.5447, 0.5441, 0.5572, 0.5453], rf=[0.5510, 0.5404, 0.5375, 0.5556, 0.5417],
+                  cs_sd=None, rf_sd=None),
+    "size": dict(x=["10 %", "25 %", "50 %", "100 %"],
+                 cs=[0.5356, 0.5429, 0.5473, 0.5483], rf=[0.5375, 0.5415, 0.5405, 0.5434],
+                 cs_sd=[0.0073, 0.0065, 0.0073, 0.0078], rf_sd=[0.0091, 0.0084, 0.0093, 0.0076]),
+    "noise": dict(x=["0 %", "5 %", "10 %", "20 %"],
+                  cs=[0.5483, 0.5455, 0.5455, 0.5336], rf=[0.5434, 0.5423, 0.5414, 0.5303],
+                  cs_sd=[0.0078, 0.0081, 0.0085, 0.0147], rf_sd=[0.0076, 0.0085, 0.0109, 0.0148]),
+}
+_CSRF_X = {"folds": ("Pliegue externo", "Outer fold"), "size": ("Datos de entrenamiento usados", "Training data used"),
+           "noise": ("Etiquetas de entrenamiento invertidas", "Training labels flipped")}
+
+
+def fig_cs_vs_rf(scn):
+    """Líneas que se dibujan punto por punto (botón de reproducir) con la diferencia en cada paso."""
+    D = CS_VS_RF[scn]
+    n, xs = len(D["x"]), D["x"]
+    allv = D["cs"] + D["rf"]
+    pad = 0.012 if D["cs_sd"] else 0.006
+    yr = [min(allv) - pad, max(allv) + pad]
+    series = [("CS-FOF", D["cs"], D["cs_sd"], WARM_GOLD, "diamond"),
+              ("Random Forest", D["rf"], D["rf_sd"], DEEP_NAVY, "circle")]
+
+    # etiqueta arriba para el que va ganando en ese punto y abajo para el otro (no se enciman)
+    arriba = [a >= b for a, b in zip(D["cs"], D["rf"])]
+    pos = {"CS-FOF": ["top center" if u else "bottom center" for u in arriba],
+           "Random Forest": ["bottom center" if u else "top center" for u in arriba]}
+
+    def trazas(k):
+        out = []
+        for name, v, sd, col, sym in series:
+            out.append(go.Scatter(
+                x=xs[:k], y=v[:k], mode="lines+markers+text", name=name,
+                text=[f"{z:.3f}" for z in v[:k]], textposition=pos[name][:k],
+                textfont=dict(size=11, color=col),
+                line=dict(color=col, width=3), marker=dict(size=12, symbol=sym, color=col, line=dict(width=1.5, color=WHITE)),
+                error_y=dict(type="data", array=sd[:k], color=col, thickness=1.2, width=4, visible=True) if sd else None,
+                hovertemplate=f"<b>{name}</b><br>%{{x}}<br>F1: %{{y:.4f}}<extra></extra>"))
+        return out
+
+    def nota(k):
+        d = D["cs"][k - 1] - D["rf"][k - 1]
+        quien = "CS-FOF" if d > 0 else "Random Forest"
+        return [dict(xref="paper", yref="paper", x=0.0, y=1.22, showarrow=False, xanchor="left", yanchor="bottom",
+                     font=dict(size=13, color=WARM_GOLD if d > 0 else DEEP_NAVY),
+                     text=tx(f"<b>{xs[k - 1]}</b>: gana {quien} por {abs(d):.4f}",
+                             f"<b>{xs[k - 1]}</b>: {quien} wins by {abs(d):.4f}"))]
+
+    # nombres únicos por escenario: así una animación en curso no se mezcla con el escenario nuevo
+    frames = [go.Frame(data=trazas(k), name=f"{scn}-{k}", layout=go.Layout(annotations=nota(k))) for k in range(1, n + 1)]
+    fig = go.Figure(data=trazas(n), frames=frames)
+    style_fig(fig, 400)
+    play = dict(label=tx("▶ Reproducir", "▶ Play"), method="animate",
+                args=[None, dict(frame=dict(duration=900, redraw=True), transition=dict(duration=450, easing="cubic-in-out"),
+                                 fromcurrent=False, mode="immediate")])
+    fig.update_layout(
+        annotations=nota(n), margin=dict(l=60, r=20, t=100, b=95), uirevision=scn,
+        xaxis=dict(title=L(_CSRF_X[scn]), type="category", categoryorder="array", categoryarray=xs, range=[-0.4, n - 0.6]),
+        yaxis=dict(title=tx("F1 de la clase default", "F1 of the default class"), range=yr),
+        updatemenus=[dict(type="buttons", showactive=False, x=0, y=-0.22, xanchor="left", yanchor="top",
+                          bgcolor=CREAM, bordercolor=PALE_GOLD, font=dict(color=DEEP_NAVY), buttons=[play])],
+        sliders=[dict(active=n - 1, x=0.2, len=0.8, y=-0.17, yanchor="top", pad=dict(t=0),
+                      currentvalue=dict(visible=False), font=dict(color=GREY_BLUE),
+                      steps=[dict(label=xs[k - 1], method="animate",
+                                  args=[[f"{scn}-{k}"], dict(mode="immediate", frame=dict(duration=0, redraw=True),
+                                                       transition=dict(duration=300))]) for k in range(1, n + 1)])])
+    return fig
+
+
+def cs_vs_rf_interp(scn):
+    D = CS_VS_RF[scn]
+    gana = sum(a > b for a, b in zip(D["cs"], D["rf"]))
+    if scn == "folds":
+        basic = tx(f"CS-FOF le gana a Random Forest en {gana} de 5 pliegues, pero por poco: 0.003 de F1 en promedio, "
+                   "menos que lo que cambia el F1 de un pliegue a otro.",
+                   f"CS-FOF beats Random Forest in {gana} of 5 folds, but narrowly: 0.003 of F1 on average, less "
+                   "than F1 changes from one fold to another.")
+        tech = tx("Validación anidada 5 × 5, mejor combinación de cada uno (pesos de clase + búsqueda aleatoria). "
+                  "Nadeau–Bengio con Holm p = 1.000; δ de Cliff = 0.36 (efecto mediano); DeLong p = 0.171; McNemar "
+                  "p < 0.001 (313 errores exclusivos de CS-FOF frente a 615).",
+                  "Nested 5 × 5 validation, best combination of each (class weights + random search). Nadeau–Bengio "
+                  "with Holm p = 1.000; Cliff's δ = 0.36 (medium effect); DeLong p = 0.171; McNemar p < 0.001 (313 "
+                  "exclusive CS-FOF errors vs 615).")
+    elif scn == "size":
+        basic = tx("Con 25 % de los datos o más, CS-FOF queda arriba y sigue mejorando al recibir más clientes; Random "
+                   "Forest se estanca. Con muy pocos datos (10 %), Random Forest queda apenas por encima: calcular la "
+                   "dirección de Fisher en cada nodo necesita suficientes clientes.",
+                   "With 25% of the data or more, CS-FOF stays on top and keeps improving with more clients; Random "
+                   "Forest plateaus. With very little data (10%), Random Forest is slightly ahead: computing the Fisher "
+                   "direction at each node needs enough clients.")
+        tech = tx("Exploratorio: fracción estratificada del entrenamiento de cada pliegue, prueba completa, "
+                  "hiperparámetros elegidos en la validación anidada (sin búsqueda nueva). Barras: ± 1 desviación "
+                  "estándar entre los 5 pliegues. Sin pruebas de hipótesis.",
+                  "Exploratory: stratified fraction of each fold's training set, full test set, hyperparameters chosen "
+                  "in the nested validation (no new search). Bars: ± 1 standard deviation across the 5 folds. No "
+                  "hypothesis tests.")
+    else:
+        basic = tx("Al ensuciar las etiquetas de entrenamiento, los dos pierden casi lo mismo, y CS-FOF se mantiene "
+                   "arriba en todos los niveles.",
+                   "When the training labels are corrupted, both lose almost the same, and CS-FOF stays on top at "
+                   "every level.")
+        tech = tx("Exploratorio: se invierte al azar una fracción de las etiquetas de entrenamiento (la misma para los "
+                  "dos modelos); la prueba es limpia. Pérdida con 20 % de ruido: CS-FOF −0.015, Random Forest −0.013. "
+                  "Barras: ± 1 desviación estándar entre pliegues; se solapan, así que la diferencia no es concluyente.",
+                  "Exploratory: a random fraction of training labels is flipped (the same for both models); the test "
+                  "set is clean. Loss with 20% noise: CS-FOF −0.015, Random Forest −0.013. Bars: ± 1 standard "
+                  "deviation across folds; they overlap, so the difference is not conclusive.")
+    return interp_block(basic, tech)
+
+
 def _csfof_results():
     c = CSFOF_CM
     pos = c["tp"] + c["fn"]
@@ -2929,6 +3045,18 @@ def _csfof_results():
             kpi(tx("Incumplimientos detectados", "Defaults detected"), f"{c['tp'] / pos:.0%}",
                 tx(f"{c['tp']:,} de {pos:,}; {c['fp']:,} falsas alarmas", f"{c['tp']:,} of {pos:,}; {c['fp']:,} false alarms"), "bars"),
         ], className="kpi-row k4"),
+        html.H4(tx("CS-FOF frente a Random Forest, el modelo básico más parecido",
+                   "CS-FOF vs Random Forest, the most similar basic model"), className="cs-h"),
+        html.P(tx("CS-FOF es un Random Forest al que se le agregó el corte oblicuo con costo, así que esta comparación "
+                  "aísla lo que aporta la idea nueva. Elige un escenario y presiona Reproducir.",
+                  "CS-FOF is a Random Forest with the cost-sensitive oblique cut added, so this comparison isolates "
+                  "what the new idea contributes. Pick a scenario and press Play."), className="muted"),
+        html.Div([control(tx("Escenario", "Scenario"), dcc.RadioItems(
+            id="csrf-scn", value="folds", className="radio",
+            options=[{"label": tx("Los 5 pliegues", "The 5 folds"), "value": "folds"},
+                     {"label": tx("Menos datos", "Less data"), "value": "size"},
+                     {"label": tx("Más ruido", "More noise"), "value": "noise"}]))], className="controls"),
+        html.Div(id="csrf-box"),
         html.H4(tx("Pruebas frente a cada modelo (Taiwán)", "Tests against each model (Taiwan)")), tests,
         html.H4(tx("Consistencia en otros conjuntos de crédito (F1)", "Consistency on other credit datasets (F1)")), cross,
         html.Div(tx("Veredicto: CS-FOF empata con los mejores métodos del estado del arte en el problema principal, "
@@ -3880,6 +4008,7 @@ a { color:inherit; }
 .ctl-label { display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:5px; }
 .radio label, .check label { display:inline-flex; align-items:center; gap:5px; margin-right:16px; cursor:pointer; font-size:14px; }
 .radio input, .check input { accent-color:var(--accent); }
+.radio label, .check label { color:var(--text) !important; }   /* Dash 4 fija un azul oscuro que no se lee en modo oscuro */
 
 /* ---------- Interpretaciones ---------- */
 .interp-wrap { margin-top:12px; }
@@ -5016,6 +5145,16 @@ def cb_corr():
 @graph_cb(Output("mdl-heat", "figure"))
 def cb_models_heat():
     return fig_models_heat()
+
+
+# Un gráfico nuevo (id distinto) por escenario: así una animación en curso no sigue sobre el escenario nuevo.
+@app.callback(Output("csrf-box", "children"), Input("csrf-scn", "value"), Input("theme", "data"), Input("lang", "data"))
+def cb_cs_vs_rf(scn, theme, lang):
+    set_lang(lang)
+    scn = scn or "folds"
+    fig = themed(fig_cs_vs_rf(scn), theme == "dark")
+    return [dcc.Graph(id=f"csrf-graph-{scn}", figure=fig, config={"displaylogo": False, "displayModeBar": False}),
+            cs_vs_rf_interp(scn)]
 
 
 @graph_cb(Output("cs-toy-tree", "figure"))
