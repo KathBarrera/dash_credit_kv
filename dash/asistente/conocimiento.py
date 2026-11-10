@@ -1090,24 +1090,32 @@ def _construir(A, EN):
         t(["explícame la página del modelo original", "qué hay en modelo original", "página del modelo original",
            "qué es el modelo original", "en qué consiste su modelo propio", "por qué propusieron CS-FOF",
            "qué es un corte oblicuo", "explícame la teoría de CS-FOF", "qué es la dirección de Fisher",
-           "CS-FOF le gana a Random Forest", "explícame la gráfica animada"],
+           "CS-FOF le gana a Random Forest", "explícame la gráfica animada",
+           "muéstrame el código de CS-FOF", "cuál es la metodología del modelo original", "dónde está el pseudocódigo"],
           ["explain the original model page", "what is in original model", "original model page",
            "what is the original model", "what is your own model about", "why did they propose CS-FOF",
            "what is an oblique cut", "explain the CS-FOF theory", "what is the Fisher direction",
-           "does CS-FOF beat Random Forest", "explain the animated chart"]),
-        t("**Modelo original** presenta **CS-FOF**, el bosque aleatorio propuesto en el proyecto, en dos pestañas:\n\n"
+           "does CS-FOF beat Random Forest", "explain the animated chart",
+           "show me the CS-FOF code", "what is the methodology of the original model", "where is the pseudocode"]),
+        t("**Modelo original** presenta **CS-FOF**, el bosque aleatorio propuesto en el proyecto, en cuatro pestañas:\n\n"
           "1. **Teoría:** con clientes reales, un árbol clásico necesita una escalera de cortes rectos y CS-FOF traza un "
           "solo **corte oblicuo** (en diagonal) en la dirección de Fisher, pesando más a quienes incumplen. Con 1 corte "
           "separa 58 % más; con 3, solo 5 % más, porque la escalera se acerca a la diagonal.\n"
-          "2. **Resultados:** una gráfica animada frente a **Random Forest** (gana en 4 de 5 pliegues), las pruebas "
+          "2. **Metodología:** los 8 pasos de la guía del curso, las ecuaciones numeradas con su justificación, el "
+          "pseudocódigo, la complejidad, la ablación y la lista de verificación.\n"
+          "3. **Código:** los fragmentos reales del archivo original_model.py y sus pruebas.\n"
+          "4. **Resultados:** una gráfica animada frente a **Random Forest** (gana en 4 de 5 pliegues), las pruebas "
           "frente a los 10 modelos y los otros tres conjuntos de crédito.\n\n"
           "Veredicto: F1 0.548, empatado con CatBoost y con el mayor ROC-AUC, pero **no es superior de forma "
           "significativa**.",
-          "**Original model** presents **CS-FOF**, the random forest proposed in the project, in two tabs:\n\n"
+          "**Original model** presents **CS-FOF**, the random forest proposed in the project, in four tabs:\n\n"
           "1. **Theory:** with real clients, a classic tree needs a staircase of straight cuts while CS-FOF draws a "
           "single **oblique (diagonal) cut** along the Fisher direction, weighting defaulters more. With 1 cut it "
           "separates 58% more; with 3, only 5% more, because the staircase approaches the diagonal.\n"
-          "2. **Results:** an animated chart against **Random Forest** (it wins in 4 of 5 folds), the tests against "
+          "2. **Methodology:** the 8 steps of the course guide, numbered equations with their justification, the "
+          "pseudocode, complexity, ablation and the checklist.\n"
+          "3. **Code:** the real excerpts of original_model.py and its tests.\n"
+          "4. **Results:** an animated chart against **Random Forest** (it wins in 4 of 5 folds), the tests against "
           "the 10 models and the three other credit datasets.\n\n"
           "Verdict: F1 0.548, tied with CatBoost and with the highest ROC-AUC, but **not significantly superior**."),
         tecnico=t("Validación anidada 5×5. Frente a Random Forest: Nadeau–Bengio con Holm p = 1.000, δ de Cliff 0.36, "
