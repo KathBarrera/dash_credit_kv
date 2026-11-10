@@ -2895,10 +2895,10 @@ def csfof_theory():
         html.Div(tx("Lo que la teoría no garantiza: la Proposición 1 asegura que cada corte es al menos tan bueno como "
                     "el mejor corte recto en los datos de entrenamiento, no que el bosque completo prediga mejor en "
                     "clientes nuevos que métodos como CatBoost o XGBoost. Eso solo lo dicen las pruebas estadísticas "
-                    "(pestaña 2).",
+                    "(pestaña 4).",
                     "What the theory does not guarantee: Proposition 1 ensures each cut is at least as good as the best "
                     "straight cut on the training data, not that the whole forest predicts new clients better than "
-                    "methods like CatBoost or XGBoost. Only the statistical tests can say that (tab 2)."),
+                    "methods like CatBoost or XGBoost. Only the statistical tests can say that (tab 4)."),
                  className="callout"),
     ])]
 
@@ -3019,6 +3019,305 @@ def cs_vs_rf_interp(scn):
     return interp_block(basic, tech)
 
 
+# ----- Metodología y código de CS-FOF (estructura de la «Guía de redacción metodológica» del curso) -----
+CSFOF_DIR = BASE_DIR / "modelo" / "cs_fof"
+CSFOF_SRC = (CSFOF_DIR / "original_model.py").read_text(encoding="utf-8")
+CSFOF_TESTS_SRC = (CSFOF_DIR / "test_original_model.py").read_text(encoding="utf-8")
+CSFOF_URL = REPO_PROJECT + "/blob/main/src/original_model.py"
+CSFOF_TESTS_URL = REPO_PROJECT + "/blob/main/tests/test_original_model.py"
+
+
+def _py_seg(src, name):
+    """Código fuente de una función o clase de nivel superior (se lee del archivo real)."""
+    import ast
+    for node in ast.parse(src).body:
+        if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and node.name == name:
+            return ast.get_source_segment(src, node)
+    raise KeyError(name)
+
+
+def _py_between(src, start, end):
+    """Líneas desde la que contiene `start` hasta antes de la que contiene `end`, sin sangría común."""
+    import textwrap
+    lines = src.splitlines()
+    i = next(k for k, ln in enumerate(lines) if start in ln)
+    j = next(k for k in range(i + 1, len(lines)) if end in lines[k])
+    return textwrap.dedent("\n".join(lines[i:j])).rstrip()
+
+
+def py_code(src):
+    """Bloque de código Python con colores de sintaxis (tokenize de la librería estándar, sin dependencias)."""
+    import io, keyword, tokenize
+    lines = src.splitlines(keepends=True)
+    offs = [0]
+    for ln in lines:
+        offs.append(offs[-1] + len(ln))
+    out, pos, prev = [], 0, None
+    try:
+        toks = list(tokenize.generate_tokens(io.StringIO(src).readline))
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        return html.Pre(html.Code(src), className="pf-code cs-code")
+    for tk in toks:
+        if tk.type in (tokenize.ENDMARKER,):
+            continue
+        a = offs[tk.start[0] - 1] + tk.start[1]
+        b = offs[tk.end[0] - 1] + tk.end[1]
+        if a > pos:
+            out.append(src[pos:a])
+        s = src[a:b]
+        cls = None
+        if tk.type == tokenize.COMMENT:
+            cls = "hl-com"
+        elif tk.type == tokenize.STRING:
+            cls = "hl-str"
+        elif tk.type == tokenize.NUMBER:
+            cls = "hl-num"
+        elif tk.type == tokenize.NAME:
+            if keyword.iskeyword(s):
+                cls = "hl-kw"
+            elif prev in ("def", "class"):
+                cls = "hl-def"
+            elif s in ("np", "self", "True", "False", "None"):
+                cls = "hl-bi"
+        out.append(html.Span(s, className=cls) if cls else s)
+        if tk.type == tokenize.NAME:
+            prev = s
+        elif tk.type not in (tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT):
+            prev = None
+        pos = b
+    out.append(src[pos:])
+    return html.Pre(html.Code(out), className="pf-code cs-code")
+
+
+def _eq(n, tex, why):
+    """Ecuación numerada con la razón de ser del componente (la guía pide justificar cada uno)."""
+    return html.Div([
+        html.Div(f"({n})", className="cs-eq-n"),
+        html.Div([dcc.Markdown(f"$${tex}$$", mathjax=True, className="formula"),
+                  html.P([html.B(tx("Por qué: ", "Why: ")), why], className="cs-eq-why")], className="cs-eq-body"),
+    ], className="cs-eq")
+
+
+METH_FLOW = [  # (título, texto) — los 8 pasos de la guía, aplicados a este proyecto
+    (("Formulación", "Formulation"), ("Clasificación binaria f: ℝ²⁰ → {0, 1}; 1 = incumple el pago del mes siguiente.",
+                                      "Binary classification f: ℝ²⁰ → {0, 1}; 1 = defaults next month.")),
+    (("Datos", "Data"), ("UCI Taiwán: 29 965 clientes, 20 variables, 22.1 % de incumplimiento. Preprocesamiento dentro de cada pliegue.",
+                         "UCI Taiwan: 29,965 clients, 20 variables, 22.1% default. Preprocessing inside each fold.")),
+    (("Modelo propuesto", "Proposed model"), ("Bosque con cortes oblicuos de Fisher ponderados por costo (ecuaciones 1–5).",
+                                              "Forest with cost-weighted Fisher oblique cuts (equations 1–5).")),
+    (("Entrenamiento", "Training"), ("4 búsquedas de hiperparámetros (malla, aleatoria, Optuna, genético); semilla 42.",
+                                     "4 hyperparameter searches (grid, random, Optuna, genetic); seed 42.")),
+    (("Baselines", "Baselines"), ("9 modelos: 7 clásicos + LightGBM y CatBoost, con el mismo presupuesto de búsqueda.",
+                                  "9 models: 7 classic + LightGBM and CatBoost, with the same search budget.")),
+    (("Evaluación", "Evaluation"), ("Validación anidada 5 × 5; F1, AUC-ROC, AUC-PR, MCC; Friedman, Nadeau–Bengio, Wilcoxon, DeLong.",
+                                    "Nested 5 × 5 validation; F1, ROC-AUC, PR-AUC, MCC; Friedman, Nadeau–Bengio, Wilcoxon, DeLong.")),
+    (("Ablación", "Ablation"), ("Mismo bosque sin corte oblicuo y variantes del corte, con todo lo demás fijo.",
+                                "Same forest without the oblique cut and variants of the cut, all else fixed.")),
+    (("Reproducibilidad", "Reproducibility"), ("Código en GitHub (MIT), 14 pruebas en GitHub Actions, datos de UCI.",
+                                               "Code on GitHub (MIT), 14 tests on GitHub Actions, UCI data.")),
+]
+
+PSEUDO = """Entrada: D = {(xᵢ, yᵢ)}, T árboles, profundidad d, hoja mínima h, q variables, ε
+1  wᵢ ← c·1{yᵢ = 1} + 1{yᵢ = 0},  c = n₀ / n₁                      ▷ ec. (1)
+2  para t = 1, …, T:
+3      tomar una muestra bootstrap y crecer el árbol por niveles
+4      para cada nodo con ≥ 2h clientes, sin ser puro y con profundidad < d:
+5          F ← q variables al azar
+6          mejor ← el corte recto sobre F de menor G                ▷ ec. (2)
+7          v ← dirección de Fisher con los clientes del nodo        ▷ ec. (3)–(4)
+8          si el mejor umbral sobre vᵀx tiene menor G: mejor ← oblicuo
+9          si mejor deja ≥ h clientes por lado: dividir; si no: hoja
+10 f(x) ← promedio de las probabilidades de hoja de los T árboles  ▷ ec. (5)"""
+
+ABLATION = [  # pruebas de diseño: solo entrenamiento del pliegue externo 1, validación interna de 3 pliegues
+    (("CS-FOF base (1 candidato oblicuo, q = √p, d = 10, h = 20)", "Base CS-FOF (1 oblique candidate, q = √p, d = 10, h = 20)"), "0.5493", ("Referencia", "Reference")),
+    (("Sin corte oblicuo", "Without oblique cut"), "0.5452", ("El corte oblicuo aporta +0.004", "The oblique cut adds +0.004")),
+    (("Oblicuo con p/2 variables", "Oblique with p/2 variables"), "0.5449", ("Un corte más fuerte sobreajusta", "A stronger cut overfits")),
+    (("Dos candidatos oblicuos por nodo", "Two oblique candidates per node"), "0.5482", ("Sin mejora", "No improvement")),
+    (("Más profundo (d = 14, h = 10)", "Deeper (d = 14, h = 10)"), "0.5238", ("Sobreajuste claro", "Clear overfitting")),
+    (("128 bins", "128 bins"), "0.5458", ("Sin mejora", "No improvement")),
+]
+
+CHECKLIST = [  # lista de verificación de la guía; estado honesto
+    ("ok", ("La tarea, la pérdida y la notación están definidas formalmente.", "Task, loss and notation are formally defined.")),
+    ("ok", ("Particiones antes de cualquier ajuste; imputación, escalado y SMOTE dentro de cada pliegue (sin fuga).",
+            "Splits before any fitting; imputation, scaling and SMOTE inside each fold (no leakage).")),
+    ("ok", ("El modelo tiene diagrama, ecuaciones, pseudocódigo y complejidad.", "The model has a diagram, equations, pseudocode and complexity.")),
+    ("ok", ("Baselines recientes (LightGBM, CatBoost) con el mismo presupuesto de búsqueda.",
+            "Recent baselines (LightGBM, CatBoost) with the same search budget.")),
+    ("ok", ("Media y desviación estándar sobre 5 pliegues externos.", "Mean and standard deviation over 5 outer folds.")),
+    ("ok", ("Pruebas estadísticas: Friedman–Nemenyi, Nadeau–Bengio, Wilcoxon con Holm, DeLong y McNemar.",
+            "Statistical tests: Friedman–Nemenyi, Nadeau–Bengio, Wilcoxon with Holm, DeLong and McNemar.")),
+    ("mid", ("Ablación por componente: hecha solo en el pliegue 1 y sin la variante «sin costo».",
+             "Ablation per component: done only on fold 1 and without the “no cost” variant.")),
+    ("ok", ("Código, datos y versiones disponibles (GitHub, UCI, requirements.txt); DOI de Zenodo pendiente.",
+            "Code, data and versions available (GitHub, UCI, requirements.txt); Zenodo DOI pending.")),
+    ("ok", ("Figuras del artículo en PDF vectorial, en inglés, desde un solo script.", "Paper figures in vector PDF, in English, from one script.")),
+]
+
+
+def csfof_method():
+    flow = html.Div([html.Div([html.Span(str(i + 1), className="cs-num"), html.B(L(tt)), html.P(L(dd))],
+                              className="cs-flow-item") for i, (tt, dd) in enumerate(METH_FLOW)], className="cs-flow")
+    eqs = [
+        _eq(1, r"w_i = c\,\mathbb{1}\{y_i=1\}+\mathbb{1}\{y_i=0\},\quad c=\frac{n_0}{n_1}",
+            tx("con 22 % de morosos, no detectar a uno cuesta más que una falsa alarma; c ≈ 3.5 iguala el peso de las dos clases.",
+               "with 22% defaulters, missing one costs more than a false alarm; c ≈ 3.5 equalizes the weight of both classes.")),
+        _eq(2, r"G(L,R)=W_L\,2p_L(1-p_L)+W_R\,2p_R(1-p_R),\quad p_A=\frac{\sum_{i\in A}w_iy_i}{\sum_{i\in A}w_i}",
+            tx("un solo criterio, con los mismos pesos, para comparar con justicia cortes rectos y oblicuos.",
+               "a single criterion, with the same weights, to compare straight and oblique cuts fairly.")),
+        _eq(3, r"S_w=\frac{1}{\sum_i w_i}\sum_i w_i(\mathbf{x}_{i,F}-\mu_{y_i})(\mathbf{x}_{i,F}-\mu_{y_i})^\top+\varepsilon\,\frac{\operatorname{tr}S}{q}\,I_q",
+            tx("los montos facturados son casi colineales y los nodos profundos tienen pocos clientes: ε evita que S_w sea casi singular.",
+               "billed amounts are nearly collinear and deep nodes have few clients: ε keeps S_w from being nearly singular.")),
+        _eq(4, r"\mathbf{v}=\frac{S_w^{-1}(\mu_1-\mu_0)}{\lVert S_w^{-1}(\mu_1-\mu_0)\rVert}",
+            tx("es la dirección que mejor separa a las dos clases en el nodo (Proposición 2), calculada solo con sus clientes.",
+               "it is the direction that best separates the two classes in the node (Proposition 2), computed only with its clients.")),
+        _eq(5, r"f(\mathbf{x})=\frac1T\sum_{t=1}^{T}\hat p_t(\mathbf{x}),\quad \hat p_{\text{hoja}}=\frac{\sum_{i\in\text{hoja}}w_iy_i}{\sum_{i\in\text{hoja}}w_i}",
+            tx("promediar árboles entrenados con muestras bootstrap distintas reduce la varianza, como en Random Forest.",
+               "averaging trees trained on different bootstrap samples reduces variance, as in Random Forest.")),
+    ]
+    hp = _tbl([tx("Hiperparámetro", "Hyperparameter"), tx("Rango buscado", "Search range"), tx("Modelo final", "Final model")],
+              [("n_estimators (T)", "100 – 500", "359"), ("max_depth (d)", "6 – 14", "11"),
+               ("min_samples_leaf (h)", "10 – 60", "51"), ("max_features (q)", "sqrt, log2", "log2"),
+               ("eps (ε)", tx("0.01 – 1 (escala log)", "0.01 – 1 (log scale)"), "0.324")])
+    nuevo = _tbl([tx("Se reutiliza", "Reused"), tx("Es nuevo en CS-FOF", "New in CS-FOF")], [
+        (tx("Bosque aleatorio: bootstrap, q variables al azar por nodo y promedio de árboles (Breiman, 2001).",
+            "Random forest: bootstrap, q random variables per node and averaging of trees (Breiman, 2001)."),
+         tx("La regla de partición: una dirección de Fisher local, ponderada por costo, que compite con los cortes rectos.",
+            "The split rule: a local, cost-weighted Fisher direction that competes with straight cuts.")),
+        (tx("La idea de cortes oblicuos (Murthy et al., 1994; Menze et al., 2011).",
+            "The idea of oblique cuts (Murthy et al., 1994; Menze et al., 2011)."),
+         tx("Ambos tipos de corte se evalúan con el mismo Gini ponderado por costo, así el corte oblicuo nunca empeora un nodo.",
+            "Both cut types are scored with the same cost-weighted Gini, so the oblique cut never worsens a node.")),
+        (tx("El discriminante lineal de Fisher (1936).", "Fisher's linear discriminant (1936)."),
+         tx("Su aplicación a la predicción de incumplimiento en tarjetas de crédito (sin antecedentes en Web of Science ni Scopus).",
+            "Its application to credit card default prediction (no precedent in Web of Science or Scopus).")),
+    ])
+    abl = _tbl([tx("Variante", "Variant"), "F1", tx("Lectura", "Reading")],
+               [(L(a), (html.B(f) if i == 0 else f), L(r)) for i, (a, f, r) in enumerate(ABLATION)])
+    check = html.Ul([html.Li([html.Span("✓" if s == "ok" else "◐", className=f"cs-chk {s}"), html.Span(L(txt))])
+                     for s, txt in CHECKLIST], className="cs-checklist")
+    return [
+        card(tx("Flujo de la metodología", "Methodology flow"), [
+            html.P(tx("Sigue los ocho pasos de la guía de redacción metodológica del curso, aplicados a este proyecto.",
+                      "It follows the eight steps of the course's methodology writing guide, applied to this project."),
+                   className="muted"),
+            flow]),
+        card(tx("Modelo propuesto: ecuaciones", "Proposed model: equations"), [
+            html.P(tx("Datos D = {(xᵢ, yᵢ)}, i = 1…n, con xᵢ ∈ ℝᵖ y yᵢ ∈ {0, 1}. Cada componente lleva su justificación.",
+                      "Data D = {(xᵢ, yᵢ)}, i = 1…n, with xᵢ ∈ ℝᵖ and yᵢ ∈ {0, 1}. Each component comes with its justification."),
+                   className="muted"),
+            *eqs]),
+        card(tx("Pseudocódigo", "Pseudocode"), [html.Pre(PSEUDO, className="pf-code cs-pseudo")]),
+        html.Div([
+            card(tx("Propiedades y complejidad", "Properties and complexity"), [html.Ul([
+                html.Li([html.B(tx("Proposición 1. ", "Proposition 1. ")),
+                         tx("El corte elegido nunca tiene más impureza que el mejor corte recto sobre las mismas variables.",
+                            "The chosen cut never has more impurity than the best straight cut on the same variables.")]),
+                html.Li([html.B(tx("Proposición 2. ", "Proposition 2. ")),
+                         tx("Con ε = 0, v maximiza el criterio de Fisher J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy–Schwarz).",
+                            "With ε = 0, v maximizes Fisher's criterion J(u) = (uᵀ(μ₁ − μ₀))² / uᵀS_w u (Cauchy–Schwarz).")]),
+                html.Li([html.B(tx("Proposición 3. ", "Proposition 3. ")),
+                         tx("Cada árbol termina y tiene a lo sumo ⌊n/h⌋ hojas.", "Each tree terminates and has at most ⌊n/h⌋ leaves.")]),
+                html.Li([html.B(tx("Tiempo. ", "Time. ")),
+                         tx("Entrenar un árbol cuesta O(d·n(q log n + q²)); predecir un cliente, O(T·d·p).",
+                            "Training one tree costs O(d·n(q log n + q²)); predicting one client, O(T·d·p).")]),
+                html.Li([html.B(tx("Memoria. ", "Memory. ")),
+                         tx("Cada nodo guarda q coeficientes y un umbral; el modelo final pesa 5 MB.",
+                            "Each node stores q coefficients and a threshold; the final model weighs 5 MB.")]),
+                html.Li([html.B(tx("Verificación. ", "Verification. ")),
+                         tx("Las tres proposiciones se comprueban con pruebas unitarias (pestaña Código).",
+                            "The three propositions are checked with unit tests (Code tab).")]),
+            ], className="cs-props")]),
+            card(tx("Entrenamiento y optimización", "Training and optimization"), [
+                html.P(tx("Los 5 hiperparámetros se buscan con los mismos 4 métodos y presupuesto que los demás modelos "
+                          "(malla de 32, 25 aleatorias, 30 de Optuna y genético 16 × 10), dentro de la validación anidada.",
+                          "The 5 hyperparameters are searched with the same 4 methods and budget as the other models "
+                          "(grid of 32, 25 random, 30 Optuna and genetic 16 × 10), inside the nested validation."),
+                       className="muted"), hp]),
+        ], className="grid g2"),
+        card(tx("Qué es nuevo y qué se reutiliza", "What is new and what is reused"), [nuevo]),
+        card(tx("Diseño del estudio de ablación", "Ablation study design"), [
+            html.P(tx("Cada variante cambia un solo componente y mantiene todo lo demás fijo. Se evaluó solo con el "
+                      "entrenamiento del pliegue externo 1 (validación interna de 3 pliegues), sin tocar datos de prueba.",
+                      "Each variant changes a single component and keeps everything else fixed. It was evaluated only on "
+                      "the training set of outer fold 1 (3-fold inner validation), without touching test data."),
+                   className="muted"), abl]),
+        card(tx("Lista de verificación de la guía", "Guide checklist"), [
+            check,
+            html.Div(tx("✓ cumplido · ◐ parcial. Los puntos parciales se declaran como desviaciones en el protocolo del proyecto.",
+                        "✓ done · ◐ partial. Partial items are declared as deviations in the project protocol."), className="muted")]),
+    ]
+
+
+def csfof_code():
+    n_lines = len(CSFOF_SRC.splitlines())
+    bloques = [
+        (tx("Ecuación (1): pesos de costo", "Equation (1): cost weights"), _py_seg(CSFOF_SRC, "_pesos_de_clase"),
+         tx("El moroso pesa c = n₀/n₁ cuando class_weight = «balanced».", "A defaulter weighs c = n₀/n₁ when class_weight = “balanced”.")),
+        (tx("Ecuación (2): Gini ponderado", "Equation (2): weighted Gini"), _py_seg(CSFOF_SRC, "_gini_ponderado"),
+         tx("El mismo criterio para los dos tipos de corte.", "The same criterion for both cut types.")),
+        (tx("Ecuaciones (3) y (4): dirección de Fisher por nodo", "Equations (3) and (4): Fisher direction per node"),
+         _py_seg(CSFOF_SRC, "direccion_fisher_por_nodo"),
+         tx("Vectorizada: calcula a la vez la dirección de todos los nodos de un nivel con np.bincount.",
+            "Vectorized: it computes the direction of every node in a level at once with np.bincount.")),
+        (tx("El corazón del modelo: los cortes compiten", "The heart of the model: cuts compete"),
+         _py_between(CSFOF_SRC, "# --- candidatos por ejes", "# --- aplicar cortes"),
+         tx("Primero los cortes rectos; luego el oblicuo reemplaza al ganador solo si tiene menor G (Proposición 1).",
+            "First the straight cuts; then the oblique one replaces the winner only if it has a lower G (Proposition 1).")),
+        (tx("Ecuación (5): predicción del bosque", "Equation (5): forest prediction"), _py_between(CSFOF_SRC, "def predict_proba", "def predict(self"),
+         tx("Promedio de las probabilidades de hoja de los T árboles.", "Average of the leaf probabilities of the T trees.")),
+    ]
+    uso = """from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from src.original_model import CSFisherObliqueForest
+
+modelo = make_pipeline(StandardScaler(), CSFisherObliqueForest(
+    n_estimators=359, max_depth=11, min_samples_leaf=51, max_features="log2",
+    eps=0.324, class_weight="balanced", random_state=42, n_jobs=8))
+modelo.fit(X_train, y_train)
+riesgo = modelo.predict_proba(X_test)[:, 1]          # puntaje de incumplimiento
+print(modelo[-1].fraccion_cortes_oblicuos())        # 0.71 en el modelo final"""
+    pruebas = "\n\n\n".join(_py_seg(CSFOF_TESTS_SRC, n) for n in
+                            ("test_frontera_diagonal_la_capta_un_solo_corte_oblicuo", "test_prop1_corte_oblicuo_nunca_peor_que_ejes"))
+    links = html.Div([
+        html.A([icon("github"), tx("Ver original_model.py en GitHub", "See original_model.py on GitHub")], href=CSFOF_URL,
+               target="_blank", rel="noopener noreferrer", className="cs-link"),
+        html.A([icon("github"), tx("Ver las 14 pruebas", "See the 14 tests")], href=CSFOF_TESTS_URL,
+               target="_blank", rel="noopener noreferrer", className="cs-link"),
+    ], className="cs-links")
+    return [
+        card(tx("Implementación propia", "Own implementation"), [
+            html.P(tx(f"CS-FOF está escrito desde cero en un solo archivo de {n_lines} líneas. Solo usa numpy para el cálculo; "
+                      "de scikit-learn hereda únicamente la interfaz fit / predict, para poder compararlo con los demás modelos "
+                      "en los mismos pipelines. No usa redes neuronales ni importa ningún modelo de árboles.",
+                      f"CS-FOF is written from scratch in a single {n_lines}-line file. It only uses numpy for computation; "
+                      "from scikit-learn it inherits just the fit / predict interface, so it can be compared with the other "
+                      "models in the same pipelines. It uses no neural networks and imports no tree model."),
+                   className="muted"),
+            html.Div([
+                kpi(tx("Líneas de código", "Lines of code"), f"{n_lines}", tx("un solo archivo, numpy", "one file, numpy"), "columns"),
+                kpi(tx("Pruebas unitarias", "Unit tests"), "14", tx("en GitHub Actions en cada push", "on GitHub Actions on every push"), "target"),
+                kpi(tx("Ajuste de un bosque", "Fitting one forest"), "≈ 13 s", tx("29 965 clientes, 4 procesos", "29,965 clients, 4 processes"), "clock"),
+                kpi(tx("Modelo serializado", "Serialized model"), "5 MB", tx("artifacts/cs_fof.joblib", "artifacts/cs_fof.joblib"), "save"),
+            ], className="kpi-row k4"),
+            links]),
+        *[card(tit, [html.P(nota, className="muted"), py_code(src)]) for tit, src, nota in bloques],
+        card(tx("Cómo se usa", "How to use it"), [
+                html.P(tx("Igual que cualquier modelo de scikit-learn, con los hiperparámetros del modelo final.",
+                          "Like any scikit-learn model, with the final model's hyperparameters."), className="muted"),
+                py_code(uso)]),
+        card(tx("Pruebas de las propiedades", "Tests of the properties"), [
+                html.P(tx("Dos de las 14 pruebas: un solo corte oblicuo capta una frontera diagonal, y la Proposición 1.",
+                          "Two of the 14 tests: a single oblique cut captures a diagonal boundary, and Proposition 1."),
+                       className="muted"),
+                py_code(pruebas)]),
+        card(tx(f"Archivo completo ({n_lines} líneas)", f"Full file ({n_lines} lines)"), [
+            html.Details([html.Summary(tx("Mostrar original_model.py", "Show original_model.py"), className="cs-sum"),
+                          py_code(CSFOF_SRC)])]),
+    ]
+
+
 def _csfof_results():
     sig = lambda p: html.B("< 0.001" if p < 0.001 else f"{p:.3f}") if p < 0.05 else f"{p:.3f}"
     tests = _tbl([tx("Rival", "Rival"), tx("Dif. F1", "F1 diff."), tx("Gana en", "Wins in"),
@@ -3055,6 +3354,18 @@ def _csfof_results():
                       "The 10 models with class weights and random search on three public UCI datasets."),
                    className="muted"),
             cross]),
+        card(tx("Métricas fuera de pliegue que pide la guía", "Out-of-fold metrics required by the guide"), [
+            html.P(tx("Predicciones fuera de pliegue de los 29 965 clientes (reajuste con los hiperparámetros de cada "
+                      "pliegue), umbral 0.5. Descriptivas: solo el AUC-ROC tiene prueba (DeLong).",
+                      "Out-of-fold predictions for the 29,965 clients (refit with each fold's hyperparameters), "
+                      "threshold 0.5. Descriptive: only ROC-AUC has a test (DeLong)."), className="muted"),
+            _tbl([tx("Modelo", "Model"), "MCC", "AUC-PR", tx("Brier (menor es mejor)", "Brier (lower is better)"), "F1"],
+                 [(html.B("CS-FOF (original)"), html.B("0.411"), html.B("0.560"), html.B("0.168"), html.B("0.548")),
+                  ("CatBoost", "0.402", "0.558", "0.179", "0.547"),
+                  ("XGBoost", "0.401", "0.555", "0.175", "0.545"),
+                  ("Random Forest", "0.400", "0.558", "0.173", "0.543"),
+                  (tx("LightGBM (reajuste con AUC menor)", "LightGBM (refit with lower AUC)"), "0.401", "0.528", "0.190", "0.546")]),
+        ]),
         card(tx("Veredicto", "Verdict"), [
         html.Div(tx("CS-FOF empata con los mejores métodos del estado del arte en el problema principal, "
                     "con la menor variación entre folds, pero no es superior de forma significativa a CatBoost, "
@@ -3095,12 +3406,14 @@ def page_original():
         card("CS-FOF · Cost-Sensitive Fisher Oblique Forest", [
             html.P(tx("Es el modelo propuesto en este proyecto: un bosque aleatorio programado desde cero, sin redes "
                       "neuronales, cuyos árboles pueden cortar en diagonal combinando varias variables, en la dirección "
-                      "de Fisher ponderada por el costo de no detectar a quien incumple. Primero se explica la idea "
-                      "(Teoría) y después cómo le fue (Resultados).",
+                      "de Fisher ponderada por el costo de no detectar a quien incumple. Las pestañas siguen el orden de "
+                      "una presentación: la idea (Teoría), cómo se construyó y evaluó (Metodología), el código y cómo le fue "
+                      "(Resultados).",
                       "It is the model proposed in this project: a random forest programmed from scratch, without neural "
                       "networks, whose trees can cut diagonally by combining several variables, along the Fisher "
-                      "direction weighted by the cost of missing a defaulter. First the idea is explained (Theory) and "
-                      "then how it performed (Results).")),
+                      "direction weighted by the cost of missing a defaulter. The tabs follow the order of a "
+                      "presentation: the idea (Theory), how it was built and evaluated (Methodology), the code and how it "
+                      "performed (Results).")),
             html.Div([
                 kpi("F1", "0.548 ± 0.005", tx("2.º de 10, a 0.0001 de CatBoost", "2nd of 10, 0.0001 behind CatBoost"), "trophy"),
                 kpi("ROC-AUC", "0.785", tx("el mayor de los 10 modelos", "the highest of the 10 models"), "target"),
@@ -3113,7 +3426,9 @@ def page_original():
         ]),
         dcc.Tabs(value="teoria", className="cs-tabs", parent_className="cs-tabs-wrap", mobile_breakpoint=0, children=[
             tab(tx("1 · Teoría", "1 · Theory"), "teoria", csfof_theory()),
-            tab(tx("2 · Resultados", "2 · Results"), "resultados", _csfof_results()),
+            tab(tx("2 · Metodología", "2 · Methodology"), "metodologia", csfof_method()),
+            tab(tx("3 · Código", "3 · Code"), "codigo", csfof_code()),
+            tab(tx("4 · Resultados", "4 · Results"), "resultados", _csfof_results()),
         ]),
     ])
 
@@ -4343,6 +4658,33 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .cs-tabs .cs-tab--on { background:var(--accent) !important; color:var(--on-accent) !important; }
 .cs-pane { padding-top:14px; display:flex; flex-direction:column; gap:18px; }
 .cs-pane > .card { margin:0; }
+.cs-pane > .grid > .card { margin:0; }
+.cs-tabs { flex-wrap:wrap; border-radius:22px !important; }
+.cs-flow { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; counter-reset:paso; }
+.cs-flow-item { position:relative; padding:12px 14px; border-radius:12px; background:var(--surface-2); border:1px solid var(--line); }
+.cs-flow-item b { display:block; margin:6px 0 2px; } .cs-flow-item p { margin:0; font-size:12.8px; color:var(--muted); }
+.cs-flow-item:nth-child(3) { border-color:var(--accent-2); box-shadow:0 0 0 1px var(--accent-2) inset; }
+.cs-eq { display:flex; gap:12px; align-items:flex-start; margin:6px 0 12px; }
+.cs-eq-n { flex:none; width:34px; padding-top:16px; font-weight:700; color:var(--accent-2); text-align:right; }
+.cs-eq-body { flex:1; min-width:0; } .cs-eq-why { margin:2px 0 0; font-size:13.5px; color:var(--muted); }
+.cs-pseudo { font-size:12.8px; line-height:1.7; white-space:pre; }
+.cs-props li { margin:0 0 8px; font-size:14px; }
+.cs-checklist { list-style:none; padding:0; margin:0 0 8px; display:grid; gap:8px; }
+.cs-checklist li { display:flex; gap:10px; align-items:flex-start; font-size:14px; }
+.cs-chk { flex:none; display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; font-size:15px; line-height:1; font-weight:800; }
+.cs-chk.ok { background:var(--accent-2); color:#1A233D; } .cs-chk.mid { border:2px solid var(--accent-2); color:var(--accent-2); }
+.cs-links { display:flex; flex-wrap:wrap; gap:10px; margin-top:4px; }
+.cs-link { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; border:1px solid var(--line-strong);
+  color:var(--text); text-decoration:none; font-weight:600; font-size:13.5px; }
+.cs-link:hover { border-color:var(--accent-2); color:var(--accent-2); }
+.cs-code { max-height:520px; overflow:auto; font-size:12.6px; line-height:1.55; }
+.cs-sum { cursor:pointer; font-weight:600; margin:4px 0 8px; }
+.hl-kw { color:#8A3FA0; font-weight:600; } .hl-def { color:#1F5FA8; font-weight:700; } .hl-str { color:#2E7D4F; }
+.hl-com { color:#7A8094; font-style:italic; } .hl-num { color:#B5591E; } .hl-bi { color:#9A7A33; }
+[data-theme="dark"] .hl-kw { color:#D49BE8; } [data-theme="dark"] .hl-def { color:#8EC1FF; } [data-theme="dark"] .hl-str { color:#9AD7A8; }
+[data-theme="dark"] .hl-com { color:#9AA3BA; } [data-theme="dark"] .hl-num { color:#F2B37A; } [data-theme="dark"] .hl-bi { color:#D2BB89; }
+@media (max-width:1100px) { .cs-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:600px) { .cs-flow { grid-template-columns:1fr; } .cs-eq-n { width:26px; } }
 .cs-h { margin:22px 0 6px; font-size:15px; color:var(--text); }
 .cs-fig-t { font-weight:600; font-size:13px; color:var(--muted); margin:6px 0 2px; }
 .cs-fig-t.on { color:var(--accent-2); }
@@ -4483,14 +4825,7 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 /* resultado */
 .pf-result { border-top:3px solid var(--accent-2); }
 /* ---- tarjeta de riesgo: se agrieta con el puntaje y se parte con riesgo muy alto ---- */
-.rc { position:relative; width:100%; max-width:440px; margin:4px auto 16px; aspect-ratio:1.6; --heat:0; isolation:isolate; }
-/* luz permanente detrás de la tarjeta: dorada si el puntaje está bajo el umbral (riesgo bajo), roja si no */
-.rc::before { content:''; position:absolute; inset:2%; border-radius:22px; z-index:-1; pointer-events:none;
-  animation:rc-aura 3.2s ease-in-out infinite;
-  box-shadow:0 0 22px 6px rgba(246,196,69,.75), 0 0 54px 18px rgba(242,193,78,.45); }
-.rc.hi::before { box-shadow:0 0 22px 6px rgba(235,64,52,.75), 0 0 54px 18px rgba(235,64,52,.45); }
-@keyframes rc-aura { 0%, 100% { opacity:.55; } 50% { opacity:1; } }
-@media (prefers-reduced-motion:reduce) { .rc::before { animation:none; opacity:.7; } }
+.rc { position:relative; width:100%; max-width:440px; margin:4px auto 16px; aspect-ratio:1.6; --heat:0; }
 .rc-piece { position:absolute; inset:0; transition:transform .6s cubic-bezier(.3,.7,.2,1);
   filter:drop-shadow(0 18px 22px rgba(8,12,30,.35)); }
 .rc .rc-face { display:flex; flex-direction:column; justify-content:space-between; padding:6% 7%;
