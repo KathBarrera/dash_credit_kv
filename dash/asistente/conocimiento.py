@@ -1069,7 +1069,7 @@ def _construir(A, EN):
           f"- **KPIs:** mejor F1 {B['f1_mean']:.3f} ({best_lbl}), mejora de +{B['f1_mean'] - BL:.3f} sobre la línea "
           f"base y {B['recall_mean']:.0%} de incumplimientos detectados.\n"
           "- **Carrusel:** la mejor combinación de cada modelo.\n"
-          "- **Modelo original CS-FOF:** sus pruebas frente a cada modelo y su consistencia en otros conjuntos.\n"
+          "- El modelo original **CS-FOF** tiene su propia página: **Modelo original**.\n"
           "- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n"
           "- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
           f"**Models** summarizes {len(A.MR)} combinations: **7 classifiers × 4 balancing techniques × 4 optimization "
@@ -1078,13 +1078,46 @@ def _construir(A, EN):
           f"- **KPIs:** best F1 {B['f1_mean']:.3f} ({best_lbl}), +{B['f1_mean'] - BL:.3f} over the baseline and "
           f"{B['recall_mean']:.0%} of defaults detected.\n"
           "- **Carousel:** the best combination of each model.\n"
-          "- **Original model CS-FOF:** its tests against each model and its consistency on other datasets.\n"
+          "- The original model **CS-FOF** has its own page: **Original model**.\n"
           "- **F1 by model and technique** (heatmap) and **F1 vs. ROC-AUC** (scatter).\n"
           "- **Confusion matrix** of the best model and **SHAP summary**."),
         pagina="/modelos", sug=t(["¿Cuál es el mejor modelo?", "Explícame el carrusel de modelos",
                                   "¿Qué técnicas de balanceo usaron?"],
                                  ["Which is the best model?", "Explain the model carousel",
                                   "Which balancing techniques were used?"])))
+    add(Intencion(
+        "p_original", t("Modelo original", "Original model"),
+        t(["explícame la página del modelo original", "qué hay en modelo original", "página del modelo original",
+           "qué es el modelo original", "en qué consiste su modelo propio", "por qué propusieron CS-FOF",
+           "qué es un corte oblicuo", "explícame la teoría de CS-FOF", "qué es la dirección de Fisher",
+           "CS-FOF le gana a Random Forest", "explícame la gráfica animada"],
+          ["explain the original model page", "what is in original model", "original model page",
+           "what is the original model", "what is your own model about", "why did they propose CS-FOF",
+           "what is an oblique cut", "explain the CS-FOF theory", "what is the Fisher direction",
+           "does CS-FOF beat Random Forest", "explain the animated chart"]),
+        t("**Modelo original** presenta **CS-FOF**, el bosque aleatorio propuesto en el proyecto, en dos pestañas:\n\n"
+          "1. **Teoría:** con clientes reales, un árbol clásico necesita una escalera de cortes rectos y CS-FOF traza un "
+          "solo **corte oblicuo** (en diagonal) en la dirección de Fisher, pesando más a quienes incumplen. Con 1 corte "
+          "separa 58 % más; con 3, solo 5 % más, porque la escalera se acerca a la diagonal.\n"
+          "2. **Resultados:** una gráfica animada frente a **Random Forest** (gana en 4 de 5 pliegues), las pruebas "
+          "frente a los 10 modelos y los otros tres conjuntos de crédito.\n\n"
+          "Veredicto: F1 0.548, empatado con CatBoost y con el mayor ROC-AUC, pero **no es superior de forma "
+          "significativa**.",
+          "**Original model** presents **CS-FOF**, the random forest proposed in the project, in two tabs:\n\n"
+          "1. **Theory:** with real clients, a classic tree needs a staircase of straight cuts while CS-FOF draws a "
+          "single **oblique (diagonal) cut** along the Fisher direction, weighting defaulters more. With 1 cut it "
+          "separates 58% more; with 3, only 5% more, because the staircase approaches the diagonal.\n"
+          "2. **Results:** an animated chart against **Random Forest** (it wins in 4 of 5 folds), the tests against "
+          "the 10 models and the three other credit datasets.\n\n"
+          "Verdict: F1 0.548, tied with CatBoost and with the highest ROC-AUC, but **not significantly superior**."),
+        tecnico=t("Validación anidada 5×5. Frente a Random Forest: Nadeau–Bengio con Holm p = 1.000, δ de Cliff 0.36, "
+                  "DeLong p = 0.171. Friedman sobre 10 modelos χ² = 40.3; rangos medios CatBoost 2.0 y CS-FOF 2.4.",
+                  "Nested 5×5 validation. Against Random Forest: Nadeau–Bengio with Holm p = 1.000, Cliff's δ 0.36, "
+                  "DeLong p = 0.171. Friedman over 10 models χ² = 40.3; mean ranks CatBoost 2.0 and CS-FOF 2.4."),
+        pagina="/modelo-original", sug=t(["¿Cuál es el mejor modelo?", "¿Cómo le fue a Random Forest?",
+                                          "¿Qué es la validación cruzada anidada?"],
+                                         ["Which is the best model?", "How did Random Forest do?",
+                                          "What is nested cross-validation?"]), mood="proud"))
     add(Intencion(
         "mejor_modelo", t("Mejor modelo", "Best model"),
         t(["cuál es el mejor modelo", "mejor modelo del ranking", "modelo campeón", "cuál fue el mejor F1",
@@ -1744,7 +1777,7 @@ def _construir(A, EN):
     paginas = {p: A.L(lbl) for p, lbl, _ic in A.NAV}
     paginas["/"] = t("Inicio (portada)", "Home (cover)")
     intencion_de_pagina = {"/": "p_inicio", "/introduccion": "p_intro", "/problema": "p_problema", "/marco": "p_marco",
-                           "/univariado": "p_uni", "/multivariado": "p_multi", "/modelos": "p_modelos",
+                           "/univariado": "p_uni", "/multivariado": "p_multi", "/modelos": "p_modelos", "/modelo-original": "p_original",
                            "/predecir": "p_predecir", "/conclusiones": "p_conclusiones", "/enlaces": "p_enlaces", "/equipo": "p_equipo"}
     sug_de_pagina = t({
         "/": ["¿De qué trata el proyecto?", "¿Cómo uso el tablero?", "¿Cuál es el hallazgo principal?"],
@@ -1758,6 +1791,8 @@ def _construir(A, EN):
                           "Explícame el boxplot del límite de crédito", "Explícame la gráfica de edad y atrasos"],
         "/modelos": ["¿Cuál es el mejor modelo?", "Explícame el carrusel de modelos", "Explícame la matriz de confusión",
                      "Explícame la gráfica de F1 vs ROC-AUC"],
+        "/modelo-original": ["Explícame la página del modelo original", "¿Qué es un corte oblicuo?",
+                             "¿CS-FOF le gana a Random Forest?"],
         "/predecir": ["¿Cómo lleno el formulario?", "¿Cómo leo el puntaje de riesgo?", "¿Qué son los votos de los árboles?",
                       "Explícame «¿Qué pasaría si…?»"],
         "/conclusiones": ["¿Se cumplieron las hipótesis?", "¿Qué implicaciones tiene para el negocio?", "¿Cuáles son los próximos pasos?"],
@@ -1774,6 +1809,8 @@ def _construir(A, EN):
                           "Explain the credit limit boxplot", "Explain the age and delays chart"],
         "/modelos": ["Which is the best model?", "Explain the model carousel", "Explain the confusion matrix",
                      "Explain the F1 vs ROC-AUC chart"],
+        "/modelo-original": ["Explain the original model page", "What is an oblique cut?",
+                             "Does CS-FOF beat Random Forest?"],
         "/predecir": ["How do I fill in the form?", "How do I read the risk score?", "What are the trees' votes?",
                       "Explain “What if…?”"],
         "/conclusiones": ["Were the hypotheses supported?", "What are the business implications?",
