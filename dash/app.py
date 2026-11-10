@@ -1930,10 +1930,10 @@ def icon(name, cls=""):
 
 
 PAGE_ICONS = {"Introducción": "info", "Problema y Objetivos": "target", "Marco Teórico": "book",
-              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Modelos": "layers", "Predecir": "gauge",
+              "EDA Univariado": "bars", "EDA Multivariado": "scatter", "Modelos": "layers", "Modelo original": "tree", "Predecir": "gauge",
               "Enlaces": "link", "Equipo": "users", "Conclusiones": "flag",
               "Introduction": "info", "Problem and Objectives": "target", "Theoretical Framework": "book",
-              "Univariate EDA": "bars", "Multivariate EDA": "scatter", "Models": "layers", "Predict": "gauge",
+              "Univariate EDA": "bars", "Multivariate EDA": "scatter", "Models": "layers", "Original model": "tree", "Predict": "gauge",
               "Links": "link", "Team": "users", "Conclusions": "flag"}
 
 
@@ -2815,8 +2815,7 @@ def csfof_theory():
     bmin = df[bill].corr(method="spearman").values[np.triu_indices(6, 1)].min()
     gcfg = {"displaylogo": False, "displayModeBar": False}
     mejora = T["g_obl"] / T["g_axis"] - 1
-    return [
-        html.H4(tx("La idea en una imagen", "The idea in one picture"), className="cs-h"),
+    return [card(tx("La idea en una imagen", "The idea in one picture"), [
         html.P(tx("Cada punto es un cliente real. Un árbol clásico solo puede cortar en línea recta sobre una variable "
                   "a la vez, así que para separar a quienes incumplen arma una escalera de cortes. Pero el riesgo no "
                   "depende del límite o del pago por separado, sino de la combinación de ambos: es una frontera en "
@@ -2864,7 +2863,7 @@ def csfof_theory():
                f"(standardized) ∝ ({T['v'][0]:+.2f}, {T['v'][1]:+.2f}). Cost weights c = n₀/n₁ = {T['c']:.2f}. The "
                "classic tree is CART with depth 3, minimum leaf 200 and the same weights. It is a 2-variable "
                "illustration; in the real model each node uses √p random variables.")),
-        html.H4(tx("Cómo decide cada nodo", "How each node decides"), className="cs-h"),
+    ]), card(tx("Cómo decide cada nodo", "How each node decides"), [
         html.Div([
             _cs_step(1, tx("Cortes rectos", "Straight cuts"),
                      tx("Como en Random Forest, prueba umbrales sobre √p variables elegidas al azar.",
@@ -2882,7 +2881,7 @@ def csfof_theory():
                         "why the chosen cut is never worse than the best straight cut (Proposition 1)."),
                      r"\Delta G(\text{elegido})\ \ge\ \max_j \Delta G(\text{recto}_j)"),
         ], className="cs-steps"),
-        html.H4(tx("Por qué encaja con estos datos", "Why it fits this data"), className="cs-h"),
+    ]), card(tx("Por qué encaja con estos datos", "Why it fits this data"), [
         html.Div([
             kpi(tx("Atrasos correlacionados", "Correlated delays"), f"ρ = {rho_pay:.2f}",
                 tx("PAY_0 con PAY_2: el riesgo vive en combinaciones", "PAY_0 with PAY_2: risk lives in combinations"), "layers"),
@@ -2901,7 +2900,7 @@ def csfof_theory():
                     "straight cut on the training data, not that the whole forest predicts new clients better than "
                     "methods like CatBoost or XGBoost. Only the statistical tests can say that (tab 2)."),
                  className="callout"),
-    ]
+    ])]
 
 
 
@@ -3021,8 +3020,6 @@ def cs_vs_rf_interp(scn):
 
 
 def _csfof_results():
-    c = CSFOF_CM
-    pos = c["tp"] + c["fn"]
     sig = lambda p: html.B("< 0.001" if p < 0.001 else f"{p:.3f}") if p < 0.05 else f"{p:.3f}"
     tests = _tbl([tx("Rival", "Rival"), tx("Dif. F1", "F1 diff."), tx("Gana en", "Wins in"),
                   "p Nadeau–Bengio (Holm)", tx("δ de Cliff", "Cliff's δ"), "p DeLong",
@@ -3034,19 +3031,8 @@ def _csfof_results():
                  [((html.B if m == "cs_fof" else str)(minfo(m, "label")), f"{a:.3f}", f"{b:.3f}", f"{cc:.3f}", f"{d:.3f}", f"{r:.2f}")
                   for m, a, b, cc, d, r in CROSS_DATA])
     return [
-        html.P(tx("Validación cruzada anidada 5 × 5 con los mismos folds, preprocesamiento y presupuesto de búsqueda "
-                  "para los 10 modelos. Métrica principal: F1 de la clase default.",
-                  "Nested 5 × 5 cross-validation with the same folds, preprocessing and search budget for the 10 "
-                  "models. Main metric: F1 of the default class.")),
-        html.Div([
-            kpi("F1", "0.548 ± 0.005", tx("2.º de 10, a 0.0001 de CatBoost", "2nd of 10, 0.0001 behind CatBoost"), "trophy"),
-            kpi("ROC-AUC", "0.785", tx("el mayor de los 10 modelos", "the highest of the 10 models"), "target"),
-            kpi(tx("Cortes oblicuos", "Oblique splits"), "71 %", tx("de los nodos del modelo final", "of the final model's nodes"), "layers"),
-            kpi(tx("Incumplimientos detectados", "Defaults detected"), f"{c['tp'] / pos:.0%}",
-                tx(f"{c['tp']:,} de {pos:,}; {c['fp']:,} falsas alarmas", f"{c['tp']:,} of {pos:,}; {c['fp']:,} false alarms"), "bars"),
-        ], className="kpi-row k4"),
-        html.H4(tx("CS-FOF frente a Random Forest, el modelo básico más parecido",
-                   "CS-FOF vs Random Forest, the most similar basic model"), className="cs-h"),
+        card(tx("CS-FOF frente a Random Forest, el modelo básico más parecido",
+                "CS-FOF vs Random Forest, the most similar basic model"), [
         html.P(tx("CS-FOF es un Random Forest al que se le agregó el corte oblicuo con costo, así que esta comparación "
                   "aísla lo que aporta la idea nueva. Elige un escenario y presiona Reproducir.",
                   "CS-FOF is a Random Forest with the cost-sensitive oblique cut added, so this comparison isolates "
@@ -3057,12 +3043,23 @@ def _csfof_results():
                      {"label": tx("Menos datos", "Less data"), "value": "size"},
                      {"label": tx("Más ruido", "More noise"), "value": "noise"}]))], className="controls"),
         html.Div(id="csrf-box"),
-        html.H4(tx("Pruebas frente a cada modelo (Taiwán)", "Tests against each model (Taiwan)")), tests,
-        html.H4(tx("Consistencia en otros conjuntos de crédito (F1)", "Consistency on other credit datasets (F1)")), cross,
-        html.Div(tx("Veredicto: CS-FOF empata con los mejores métodos del estado del arte en el problema principal, "
+        ]),
+        card(tx("Pruebas frente a cada modelo (Taiwán)", "Tests against each model (Taiwan)"), [
+            html.P(tx("Validación cruzada anidada 5 × 5 con los mismos folds, preprocesamiento y presupuesto de "
+                      "búsqueda para los 10 modelos. Métrica principal: F1 de la clase default. En negrita, p < 0.05.",
+                      "Nested 5 × 5 cross-validation with the same folds, preprocessing and search budget for the 10 "
+                      "models. Main metric: F1 of the default class. In bold, p < 0.05."), className="muted"),
+            tests]),
+        card(tx("Consistencia en otros conjuntos de crédito (F1)", "Consistency on other credit datasets (F1)"), [
+            html.P(tx("Los 10 modelos con pesos de clase y búsqueda aleatoria en tres conjuntos públicos de UCI.",
+                      "The 10 models with class weights and random search on three public UCI datasets."),
+                   className="muted"),
+            cross]),
+        card(tx("Veredicto", "Verdict"), [
+        html.Div(tx("CS-FOF empata con los mejores métodos del estado del arte en el problema principal, "
                     "con la menor variación entre folds, pero no es superior de forma significativa a CatBoost, "
                     "XGBoost, LightGBM ni Random Forest, y en los conjuntos adicionales queda por detrás de CatBoost.",
-                    "Verdict: CS-FOF ties with the best state-of-the-art methods on the main problem, with the lowest "
+                    "CS-FOF ties with the best state-of-the-art methods on the main problem, with the lowest "
                     "variation between folds, but it is not significantly superior to CatBoost, XGBoost, LightGBM or "
                     "Random Forest, and on the additional datasets it falls behind CatBoost."), className="callout"),
         interp_block(
@@ -3083,13 +3080,37 @@ def _csfof_results():
                "McNemar use out-of-fold predictions for the 29,965 clients; the LightGBM refit gave a lower AUC than "
                "its validation (0.773 vs 0.784), so its DeLong is not reported. Across the 4 datasets, "
                "Iman–Davenport F = 4.38, p = 0.0013, with no significant CS-FOF differences after Holm.")),
+        ]),
     ]
 
 
-def csfof_card():
+def page_original():
+    """Página del modelo original CS-FOF: presentación, pestaña de teoría y pestaña de resultados."""
+    c = CSFOF_CM
+    pos = c["tp"] + c["fn"]
     tab = lambda lbl, val, kids: dcc.Tab(label=lbl, value=val, children=html.Div(kids, className="cs-pane"),
                                          className="cs-tab", selected_className="cs-tab--on")
-    return card(tx("Modelo original: CS-FOF", "Original model: CS-FOF"), [
+    return html.Div([
+        page_title(tx("Modelo original", "Original model"), ""),
+        card("CS-FOF · Cost-Sensitive Fisher Oblique Forest", [
+            html.P(tx("Es el modelo propuesto en este proyecto: un bosque aleatorio programado desde cero, sin redes "
+                      "neuronales, cuyos árboles pueden cortar en diagonal combinando varias variables, en la dirección "
+                      "de Fisher ponderada por el costo de no detectar a quien incumple. Primero se explica la idea "
+                      "(Teoría) y después cómo le fue (Resultados).",
+                      "It is the model proposed in this project: a random forest programmed from scratch, without neural "
+                      "networks, whose trees can cut diagonally by combining several variables, along the Fisher "
+                      "direction weighted by the cost of missing a defaulter. First the idea is explained (Theory) and "
+                      "then how it performed (Results).")),
+            html.Div([
+                kpi("F1", "0.548 ± 0.005", tx("2.º de 10, a 0.0001 de CatBoost", "2nd of 10, 0.0001 behind CatBoost"), "trophy"),
+                kpi("ROC-AUC", "0.785", tx("el mayor de los 10 modelos", "the highest of the 10 models"), "target"),
+                kpi(tx("Cortes oblicuos", "Oblique splits"), "71 %",
+                    tx("de los nodos del modelo final", "of the final model's nodes"), "layers"),
+                kpi(tx("Incumplimientos detectados", "Defaults detected"), f"{c['tp'] / pos:.0%}",
+                    tx(f"{c['tp']:,} de {pos:,}; {c['fp']:,} falsas alarmas",
+                       f"{c['tp']:,} of {pos:,}; {c['fp']:,} false alarms"), "bars"),
+            ], className="kpi-row k4"),
+        ]),
         dcc.Tabs(value="teoria", className="cs-tabs", parent_className="cs-tabs-wrap", mobile_breakpoint=0, children=[
             tab(tx("1 · Teoría", "1 · Theory"), "teoria", csfof_theory()),
             tab(tx("2 · Resultados", "2 · Results"), "resultados", _csfof_results()),
@@ -3143,7 +3164,6 @@ def page_models():
                 tx("Recall del mejor modelo (umbral 0.5)", "Recall of the best model (threshold 0.5)"), "target"),
         ], className="kpi-row k4"),
         card(tx("Comparación de modelos", "Model comparison"), models_carousel()),
-        csfof_card(),
         html.Div([
             card(tx("F1 por modelo y técnica de balanceo", "F1 by model and balancing technique"), [
                 dcc.Graph(id="mdl-heat", figure=fig_models_heat(), config=gcfg),
@@ -4304,13 +4324,14 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
   -webkit-mask-composite:xor; mask-composite:exclude; animation:mc-spin 5s linear infinite; }
 @keyframes mc-spin { to { --mc-ang:360deg; } }
 /* Modelo original: pestañas Teoría / Resultados */
-.cs-tabs-wrap { margin:4px 0 6px; }
+.cs-tabs-wrap { margin:18px 0 4px; }
 .cs-tabs { display:flex; gap:6px; padding:4px; border-radius:999px; background:var(--surface-2);
   border:1px solid var(--line); width:fit-content; max-width:100%; }
-.cs-tabs .cs-tab { border:0 !important; background:transparent !important; color:var(--muted) !important;
+.cs-tabs .cs-tab { width:auto !important; flex:none !important; border:0 !important; background:transparent !important; color:var(--muted) !important;
   padding:8px 18px !important; border-radius:999px; font-weight:600; cursor:pointer; white-space:nowrap; }
 .cs-tabs .cs-tab--on { background:var(--accent) !important; color:var(--on-accent) !important; }
-.cs-pane { padding-top:14px; }
+.cs-pane { padding-top:14px; display:flex; flex-direction:column; gap:18px; }
+.cs-pane > .card { margin:0; }
 .cs-h { margin:22px 0 6px; font-size:15px; color:var(--text); }
 .cs-fig-t { font-weight:600; font-size:13px; color:var(--muted); margin:6px 0 2px; }
 .cs-fig-t.on { color:var(--accent-2); }
@@ -4867,7 +4888,9 @@ NAV = [("/", ("Inicio", "Home"), "home"), ("/introduccion", ("Introducción", "I
        ("/marco", ("Marco Teórico", "Theoretical Framework"), "book"),
        ("/univariado", ("EDA Univariado", "Univariate EDA"), "bars"),
        ("/multivariado", ("EDA Multivariado", "Multivariate EDA"), "scatter"),
-       ("/modelos", ("Modelos", "Models"), "layers"), ("/predecir", ("Predecir", "Predict"), "gauge"),
+       ("/modelos", ("Modelos", "Models"), "layers"),
+       ("/modelo-original", ("Modelo original", "Original model"), "tree"),
+       ("/predecir", ("Predecir", "Predict"), "gauge"),
        ("/conclusiones", ("Conclusiones", "Conclusions"), "flag"),
        ("/enlaces", ("Enlaces", "Links"), "link"), ("/equipo", ("Equipo", "Team"), "users")]
 
@@ -5274,6 +5297,8 @@ def _route(path):
         return page_intro()
     if path == "/modelos":
         return page_models()
+    if path == "/modelo-original":
+        return page_original()
     if path == "/predecir":
         return page_predict()
     if path == "/conclusiones":
