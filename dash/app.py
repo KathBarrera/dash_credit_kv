@@ -42,7 +42,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 from scipy import stats
-from dash import ALL, Dash, Input, Output, State, ctx, dcc, html, no_update
+from dash import ALL, Dash, Input, Output, State, ctx, dash_table, dcc, html, no_update
 
 warnings.filterwarnings("ignore")
 
@@ -151,6 +151,12 @@ LINKS = [
     {"icon": "notebook", "title": ("Notebook del EDA", "EDA notebook"), "url": NOTEBOOK_URL,
      "desc": ("Análisis exploratorio completo del que sale este tablero (00_eda).",
               "Full exploratory analysis this dashboard is based on (00_eda).")},
+    {"icon": "tree", "title": ("Ficha del modelo (model card)", "Model card"), "url": BOOK_URL + "MODEL_CARD.html",
+     "desc": ("Uso previsto de CS-FOF, datos de entrenamiento, métricas, limitaciones, riesgos y usos no recomendados.",
+              "Intended use of CS-FOF, training data, metrics, limitations, risks and uses not recommended.")},
+    {"icon": "database", "title": ("Declaración de los datos", "Data statement"), "url": BOOK_URL + "DATA_STATEMENT.html",
+     "desc": ("Procedencia, licencia y sesgos conocidos del conjunto de datos.",
+              "Provenance, license and known biases of the dataset.")},
     {"icon": "github", "title": ("Repositorio del proyecto", "Project repository"), "url": REPO_PROJECT,
      "desc": ("Pipeline de datos, notebooks, resultados de los experimentos y código fuente.",
               "Data pipeline, notebooks, experiment results and source code.")},
@@ -1376,6 +1382,46 @@ _METHOD_LBL = {"grid_search": ("Grid search", "Grid search"), "random_search": (
                "genetic_deap": ("Genética (DEAP)", "Genetic (DEAP)")}
 
 
+# Tiempo de inferencia (ms por 1,000 clientes, 25 columnas, pliegue 0, 4 núcleos), medido en
+# experiments/robustez/escalabilidad.csv del proyecto. Solo se midió para los cinco mejores modelos.
+INFER_MS = {"cs_fof": 253.1, "catboost": 0.4, "xgboost": 4.8, "lightgbm": 5.5, "random_forest": 9.4}
+
+
+def leaderboard():
+    """Tabla de líderes: las 148 combinaciones, ordenable y filtrable (mejor de cada modelo marcada)."""
+    d = MR.copy()
+    best = d.loc[d.groupby("model")["f1_mean"].idxmax()].index
+    d["mejor"] = np.where(d.index.isin(best), "★", "")
+    d = d.sort_values("f1_mean", ascending=False).reset_index(drop=True)
+    d["rank"] = np.arange(1, len(d) + 1)
+    rows = [{"rank": int(r["rank"]), "mejor": r["mejor"], "modelo": minfo(r["model"], "label"),
+             "balanceo": tech_lbl(r["technique"]), "busqueda": method_lbl(r["method"]),
+             "f1": f"{r['f1_mean']:.4f} ± {r['f1_std']:.4f}", "f1_num": r["f1_mean"],
+             "auc": None if pd.isna(r["roc_auc_mean"]) else round(r["roc_auc_mean"], 4),
+             "recall": None if pd.isna(r["recall_mean"]) else round(r["recall_mean"], 4),
+             "precision": None if pd.isna(r["precision_mean"]) else round(r["precision_mean"], 4),
+             "inferencia": INFER_MS.get(r["model"]) if r["mejor"] else None} for _, r in d.iterrows()]
+    cols = [("rank", "#", "numeric"), ("mejor", tx("Mejor", "Best"), "text"), ("modelo", tx("Modelo", "Model"), "text"),
+            ("balanceo", tx("Balanceo", "Balancing"), "text"), ("busqueda", tx("Búsqueda", "Search"), "text"),
+            ("f1", tx("F1 media ± d.e.", "F1 mean ± s.d."), "text"), ("auc", "AUC-ROC", "numeric"),
+            ("recall", "Recall", "numeric"), ("precision", tx("Precisión", "Precision"), "numeric"),
+            ("inferencia", tx("Inferencia (ms / 1,000)", "Inference (ms / 1,000)"), "numeric")]
+    return dash_table.DataTable(
+        id="mdl-leaderboard", data=rows,
+        columns=[{"name": n, "id": i, "type": t} for i, n, t in cols],
+        sort_action="native", filter_action="native", page_size=10, sort_mode="single",
+        filter_options={"case": "insensitive", "placeholder_text": tx("filtrar…", "filter…")},
+        style_table={"overflowX": "auto"},
+        style_cell={"fontFamily": "inherit", "fontSize": 13, "padding": "6px 10px", "textAlign": "left",
+                    "backgroundColor": "var(--surface)", "color": "var(--text)",
+                    "border": "1px solid var(--line)"},
+        style_header={"fontWeight": 700, "backgroundColor": "rgba(54,69,109,.10)"},
+        style_filter={"backgroundColor": "rgba(210,187,137,.12)"},
+        style_data_conditional=[{"if": {"filter_query": '{mejor} = "★"'}, "fontWeight": 700},
+                                {"if": {"filter_query": '{modelo} contains "CS-FOF"'}, "color": WARM_GOLD}],
+    )
+
+
 def tech_lbl(t):
     return L(_TECH_LBL[t])
 
@@ -1802,26 +1848,87 @@ def fig_client_history(values):
     return fig
 
 
+# Fondo para SHAP: 40 clientes reales al azar (semilla fija). Se elige una sola vez al iniciar.
+_SHAP_BG = None
+
+
+def _shap_background():
+    global _SHAP_BG
+    if _SHAP_BG is None:
+        _SHAP_BG = df[INPUT_COLS].sample(40, random_state=42).to_dict("records")
+    return _SHAP_BG
+
+
+def shap_groups(values):
+    """Valores de Shapley exactos (SHAP intervencional) por grupo de variables.
+
+    Con 5 grupos hay 2^5 = 32 coaliciones. Para cada coalición S, v(S) es el puntaje medio cuando el
+    cliente conserva sus valores en los grupos de S y toma los de cada cliente del fondo en el resto.
+    phi_g = sum_S |S|!(5-|S|-1)!/5! [v(S + g) - v(S)]. Por construcción, base + sum(phi) = puntaje.
+    """
+    from itertools import combinations
+    from math import factorial
+    bg = _shap_background(); G = len(DRIVER_GROUPS)
+    coal = [frozenset(c) for r in range(G + 1) for c in combinations(range(G), r)]
+    rows = []
+    for S in coal:
+        keep = [c for g in S for c in DRIVER_GROUPS[g][1]]
+        rows += [{**b, **{c: values[c] for c in keep}} for b in bg]
+    p = predict_scores(rows).reshape(len(coal), len(bg)).mean(1)
+    v = dict(zip(coal, p))
+    phi = []
+    for g in range(G):
+        tot = 0.0
+        for S in coal:
+            if g in S:
+                continue
+            w = factorial(len(S)) * factorial(G - len(S) - 1) / factorial(G)
+            tot += w * (v[S | {g}] - v[S])
+        phi.append(tot)
+    return v[frozenset()], np.array(phi), v[frozenset(range(G))]
+
+
 def fig_drivers(values, score):
-    """Cuánto cambia el puntaje si cada grupo de variables fuera el de un cliente típico."""
-    typical = PROFILES["tipico"][1]
-    rows = [{**values, **{c: typical[c] for c in cols}} for _, cols in DRIVER_GROUPS]
-    alt = predict_scores(rows)
-    d = pd.DataFrame({"grupo": [L(g) for g, _ in DRIVER_GROUPS], "aporte": (score - alt) * 100})
+    """Barras SHAP por grupo de variables (puntos de riesgo frente al puntaje medio del fondo)."""
+    base, phi, full = shap_groups(values)
+    d = pd.DataFrame({"grupo": [L(g) for g, _ in DRIVER_GROUPS], "aporte": phi * 100})
     d = d.reindex(d["aporte"].abs().sort_values().index)
     fig = go.Figure(go.Bar(
         x=d["aporte"], y=d["grupo"], orientation="h",
         marker_color=[WARM_GOLD if v > 0 else NAVY for v in d["aporte"]],
         text=[f"{v:+.1f} pts" for v in d["aporte"]], textposition="outside", cliponaxis=False,
-        hovertemplate="%{y}: %{x:+.1f} " + tx("puntos frente a un cliente típico", "points vs. a typical client")
-                      + "<extra></extra>"))
+        hovertemplate="%{y}: %{x:+.1f} " + tx("puntos (valor SHAP)", "points (SHAP value)") + "<extra></extra>"))
     lim = max(5, d["aporte"].abs().max() * 1.6)
     fig.add_vline(x=0, line_color=GREY_BLUE, line_width=1)
     style_fig(fig, 340, legend_top=False)
-    fig.update_layout(margin=dict(l=150, r=30, t=20, b=46), showlegend=False,
+    fig.update_layout(margin=dict(l=150, r=30, t=34, b=46), showlegend=False,
+                      title=dict(text=tx(f"Puntaje medio {base * 100:.1f} + aportes = {full * 100:.1f}",
+                                         f"Average score {base * 100:.1f} + contributions = {full * 100:.1f}"),
+                                 font=dict(size=13), x=0.5),
                       xaxis_title=tx("Puntos de riesgo que suma (+) o resta (−)", "Risk points added (+) or removed (−)"))
     fig.update_xaxes(range=[-lim, lim], zeroline=False)
     return fig
+
+
+def conformal_block(score):
+    """Conjunto de predicción conforme (90 %) a partir de los umbrales guardados en modelo_credito.json."""
+    cf = MODELO_META.get("conformal")
+    if not cf:
+        return ""
+    no, si = score <= cf["q0"], 1 - score <= cf["q1"]
+    etiquetas = ([tx("no incumple", "no default")] if no else []) + ([tx("incumple", "default")] if si else [])
+    txt = (tx("El modelo no puede decidir con 90 % de confianza.", "The model cannot decide with 90% confidence.")
+           if len(etiquetas) == 2 else tx("Conjunto vacío (caso atípico).", "Empty set (unusual case).") if not etiquetas else "")
+    return html.Div([
+        html.B(tx("Conjunto de predicción (90 %): ", "Prediction set (90%): ")),
+        html.Span("{" + ", ".join(etiquetas) + "}"), *([html.Br(), html.Span(txt)] if txt else []), html.Br(),
+        html.Small(tx(f"Predicción conforme. Cobertura real {cf['cobertura_empirica']:.1%} en {cf['n_verificacion']:,} clientes de prueba. "
+                      f"Bajo {cf['solo_no_incumple_si_p_menor_que']:.0%}: «no incumple»; sobre {cf['solo_incumple_si_p_mayor_que']:.0%}: "
+                      f"«incumple»; entre ambos, las dos.",
+                      f"Conformal prediction. Actual coverage {cf['cobertura_empirica']:.1%} on {cf['n_verificacion']:,} test clients. "
+                      f"Below {cf['solo_no_incumple_si_p_menor_que']:.0%}: “no default”; above {cf['solo_incumple_si_p_mayor_que']:.0%}: "
+                      f"“default”; in between, both."),
+                   className="muted")], className="callout pf-conformal")
 
 
 def fig_whatif(values, var, score):
@@ -3540,6 +3647,22 @@ def page_models():
                 tx(f"{c['tp']:,} de {pos:,} · {best_lbl}, predicciones fuera de pliegue (umbral 0.5)",
                    f"{c['tp']:,} of {pos:,} · {best_lbl}, out-of-fold predictions (threshold 0.5)"), "target"),
         ], className="kpi-row k4"),
+        card(tx("Tabla de líderes: 148 combinaciones", "Leaderboard: 148 combinations"), [
+            leaderboard(),
+            interp_block(
+                tx("Haz clic en un encabezado para ordenar y escribe en la fila gris para filtrar (por ejemplo, "
+                   "«CatBoost» en Modelo o «> 0.54» en AUC). La estrella marca la mejor combinación de cada modelo, "
+                   "elegida por el F1 medio del bucle externo de la validación anidada 5 × 5.",
+                   "Click a header to sort and type in the grey row to filter (for example, “CatBoost” in Model or "
+                   "“> 0.54” in AUC). The star marks each model's best combination, chosen by the mean F1 of the "
+                   "outer loop of the 5 × 5 nested validation."),
+                tx("El tiempo de inferencia se midió con el pliegue 0 (5,993 clientes, 4 núcleos) para los cinco "
+                   "mejores modelos. CS-FOF es el más lento al predecir (253 ms por cada 1,000 clientes) porque sus "
+                   "árboles se recorren con numpy, sin código compilado como el de las librerías de los demás.",
+                   "Inference time was measured on fold 0 (5,993 clients, 4 cores) for the five best models. CS-FOF is "
+                   "the slowest to predict (253 ms per 1,000 clients) because its trees are traversed with numpy, without "
+                   "compiled code like the other models' libraries.")),
+        ]),
         card(tx("Comparación de modelos", "Model comparison"), models_carousel()),
         html.Div([
             card(tx("F1 por modelo y técnica de balanceo", "F1 by model and balancing technique"), [
@@ -3856,19 +3979,23 @@ def page_predict():
                        "repayment statuses (PAY_0 … PAY_6) do enter one by one and are the most important variables "
                        "according to SHAP.")),
             ]),
-            card(tx("¿Qué empuja su riesgo?", "What drives their risk?"), [
+            card(tx("¿Qué empuja su riesgo? (SHAP)", "What drives their risk? (SHAP)"), [
                 dcc.Graph(id="pf-drivers", config=gcfg),
                 interp_block(
-                    tx("Cada barra responde: «si en este grupo de datos el cliente fuera como un cliente típico, ¿cuánto "
-                       "cambiaría su puntaje?». Las barras doradas suben el riesgo y las azules lo bajan.",
-                       "Each bar answers: “if, in this group of data, the client were like a typical client, how much "
-                       "would their score change?”. Gold bars raise the risk and blue ones lower it."),
-                    tx("Explicación local por sustitución: se reemplaza cada grupo de variables por los valores del "
-                       "cliente típico (mediana o moda) y se mide la diferencia en el puntaje. Es aproximada: no suma "
-                       "exactamente el total porque los grupos interactúan dentro del bosque (a diferencia de SHAP).",
-                       "Local explanation by substitution: each group of variables is replaced by the typical client's "
-                       "values (median or mode) and the difference in the score is measured. It is approximate: it does "
-                       "not add up exactly to the total because the groups interact inside the forest (unlike SHAP).")),
+                    tx("Cada barra es el valor SHAP de un grupo de variables: cuántos puntos de riesgo suma (dorado) o "
+                       "resta (azul) frente al puntaje medio de 40 clientes reales. El título muestra que el puntaje medio "
+                       "más todos los aportes da exactamente el puntaje del cliente.",
+                       "Each bar is the SHAP value of a group of variables: how many risk points it adds (gold) or "
+                       "removes (blue) compared with the average score of 40 real clients. The title shows that the "
+                       "average score plus all contributions gives exactly the client's score."),
+                    tx("Valores de Shapley exactos por grupo (SHAP intervencional): con 5 grupos se evalúan las 32 "
+                       "coaliciones posibles, cada una promediada sobre los 40 clientes de fondo (1,280 predicciones). "
+                       "Se agrupa por tema porque las variables de un mismo grupo (por ejemplo, los seis estados de pago) "
+                       "están muy correlacionadas, y repartir el aporte entre ellas una por una sería inestable.",
+                       "Exact Shapley values by group (interventional SHAP): with 5 groups the 32 possible coalitions "
+                       "are evaluated, each averaged over the 40 background clients (1,280 predictions). Variables are "
+                       "grouped by topic because those in the same group (for example, the six repayment statuses) are "
+                       "highly correlated, and splitting the contribution among them one by one would be unstable.")),
             ]),
         ], className="grid g2"),
         card(tx("¿Qué pasaría si…?", "What if…?"), [
@@ -4022,6 +4149,7 @@ def predict_verdict(values, score):
     return html.Div([
         html.Div(risk_card(score, thr), className="rc-wrap"),
         html.Ul([html.Li([icon(ic), html.Span(s)]) for ic, s in signals], className="pf-signals"),
+        conformal_block(score),
         html.Details([html.Summary(tx("¿Cómo leer el puntaje?", "How to read the score?")), html.P(
             (tx(f"Con el umbral de 50 % el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
                 f"{pr.get('precision', 0):.0%} de los clientes que marca como riesgosos (datos de prueba). ",

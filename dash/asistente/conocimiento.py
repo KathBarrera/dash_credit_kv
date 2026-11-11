@@ -1668,18 +1668,20 @@ def _construir(A, EN):
           ["explain “What drives their risk?”", "what drives their risk", "contribution of each variable group",
            "risk points added or removed", "why is this client risky", "what increases the client's risk",
            "why is this client's score high", "what explains this client's risk", "what makes them risky"]),
-        t("Cada barra responde: «si en este grupo de datos el cliente fuera como un **cliente típico**, ¿cuánto "
-          "cambiaría su puntaje?». Los grupos son historial de pagos, montos pagados, facturación, cupo y perfil "
-          "demográfico. Barras **doradas** suben el riesgo; **azules** lo bajan.",
-          "Each bar answers: “if, in this group of data, the client were like a **typical client**, how much would "
-          "their score change?”. The groups are payment history, amounts paid, billing, limit and demographic "
-          "profile. **Gold** bars raise the risk; **blue** ones lower it."),
-        tecnico=t("Explicación local por sustitución: se reemplaza cada grupo por la mediana/moda del cliente típico y se "
-                  "mide la diferencia en el puntaje. Es aproximada: no suma exactamente el total porque los grupos "
-                  "interactúan dentro del bosque (a diferencia de SHAP).",
-                  "Local explanation by substitution: each group is replaced by the typical client's median/mode and "
-                  "the difference in the score is measured. It is approximate: it does not add up exactly to the total "
-                  "because the groups interact inside the forest (unlike SHAP)."),
+        t("Cada barra es el **valor SHAP** de un grupo de variables: cuántos puntos de riesgo suma o resta frente al "
+          "puntaje medio de 40 clientes reales. Los grupos son historial de pagos, montos pagados, facturación, cupo y "
+          "perfil demográfico. Barras **doradas** suben el riesgo; **azules** lo bajan, y todas suman exactamente el "
+          "puntaje del cliente.",
+          "Each bar is the **SHAP value** of a group of variables: how many risk points it adds or removes compared "
+          "with the average score of 40 real clients. The groups are payment history, amounts paid, billing, limit and "
+          "demographic profile. **Gold** bars raise the risk; **blue** ones lower it, and together they add up exactly "
+          "to the client's score."),
+        tecnico=t("Valores de Shapley exactos por grupo (SHAP intervencional): se evalúan las 32 coaliciones de los 5 "
+                  "grupos, cada una promediada sobre 40 clientes de fondo. Se agrupa porque las variables de un mismo "
+                  "grupo están muy correlacionadas.",
+                  "Exact Shapley values by group (interventional SHAP): the 32 coalitions of the 5 groups are evaluated, "
+                  "each averaged over 40 background clients. Variables are grouped because those in the same group are "
+                  "highly correlated."),
         pagina="/predecir", sug=t(["Explícame «¿Qué pasaría si…?»", "¿Qué es SHAP?"],
                                   ["Explain “What if…?”", "What is SHAP?"])))
     add(Intencion(

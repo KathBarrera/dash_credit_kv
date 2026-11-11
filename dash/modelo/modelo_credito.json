@@ -61,5 +61,21 @@
     "joblib": "1.6.0"
   },
   "fecha": "2026-10-26",
-  "segundos_entrenamiento": 90.7
+  "segundos_entrenamiento": 90.7,
+  "conformal": {
+    "alfa": 0.1,
+    "cobertura_nominal": 0.9,
+    "q0": 0.624752,
+    "q1": 0.731037,
+    "solo_no_incumple_si_p_menor_que": 0.269,
+    "solo_incumple_si_p_mayor_que": 0.6248,
+    "n_calibracion": 2996,
+    "n_verificacion": 2997,
+    "cobertura_empirica": 0.8942,
+    "cobertura_no_incumple": 0.8946,
+    "cobertura_incumple": 0.8929,
+    "tamano_medio": 1.5042,
+    "fraccion_un_solo_valor": 0.4958,
+    "fraccion_vacio": 0.0
+  }
 }
