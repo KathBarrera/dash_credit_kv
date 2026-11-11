@@ -1,0 +1,81 @@
+{
+  "modelo": "CS-FOF (modelo original)",
+  "balanceo": "pesos de clase (balanced)",
+  "busqueda": "sin búsqueda: hiperparámetros finales de la validación anidada 5 × 5 del proyecto",
+  "hiperparametros": {
+    "eps": 0.3241326804195627,
+    "max_depth": 11,
+    "max_features": "log2",
+    "min_samples_leaf": 51,
+    "n_estimators": 359
+  },
+  "prueba": {
+    "n": 5993,
+    "f1": 0.5404,
+    "precision": 0.4965,
+    "recall": 0.5928,
+    "roc_auc": 0.7749,
+    "pr_auc": 0.5511,
+    "matriz_confusion": {
+      "tn": 3870,
+      "fp": 797,
+      "fn": 540,
+      "tp": 786
+    }
+  },
+  "n_entrenamiento": 23972,
+  "tasa_default_entrenamiento": 0.2213,
+  "umbral": 0.5,
+  "entradas": [
+    "LIMIT_BAL",
+    "SEX",
+    "EDUCATION",
+    "MARRIAGE",
+    "AGE",
+    "PAY_0",
+    "PAY_2",
+    "PAY_3",
+    "PAY_4",
+    "PAY_5",
+    "PAY_6",
+    "BILL_AMT1",
+    "BILL_AMT2",
+    "BILL_AMT3",
+    "BILL_AMT4",
+    "BILL_AMT5",
+    "BILL_AMT6",
+    "PAY_AMT1",
+    "PAY_AMT2",
+    "PAY_AMT3",
+    "PAY_AMT4",
+    "PAY_AMT5",
+    "PAY_AMT6"
+  ],
+  "prueba_ida_y_vuelta": true,
+  "versiones": {
+    "python": "3.13.17",
+    "scikit-learn": "1.9.1",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "joblib": "1.6.0"
+  },
+  "fecha": "2026-11-11",
+  "segundos_entrenamiento": 32.3,
+  "tamano_mb": 4.26,
+  "conformal": {
+    "alfa": 0.1,
+    "cobertura_nominal": 0.9,
+    "q0": 0.616721,
+    "q1": 0.738458,
+    "solo_no_incumple_si_p_menor_que": 0.2615,
+    "solo_incumple_si_p_mayor_que": 0.6167,
+    "n_calibracion": 2996,
+    "n_verificacion": 2997,
+    "cobertura_empirica": 0.8949,
+    "cobertura_no_incumple": 0.8937,
+    "cobertura_incumple": 0.8989,
+    "tamano_medio": 1.5112,
+    "fraccion_un_solo_valor": 0.4888,
+    "fraccion_vacio": 0.0
+  }
+}

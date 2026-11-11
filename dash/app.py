@@ -1737,6 +1737,28 @@ except Exception as _e:   # el tablero sigue funcionando aunque falte el modelo
     INPUT_COLS = (["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BILL_COLS + PAYAMT_COLS)
     print(f"[modelo] no se pudo cargar {MODEL_FILE.name}: {MODELO_ERROR}")
 
+# Selector de «Predecir»: Random Forest (el de siempre), CatBoost (mejor global) y CS-FOF (original).
+# Los dos últimos los genera `python -m modelo.entrenar_extra`; si faltan, el selector solo ofrece RF.
+MODELOS = {}
+if MODELO is not None:
+    MODELOS["rf"] = (MODELO, MODELO_META)
+for _k in ("catboost", "cs_fof"):
+    try:
+        MODELOS[_k] = (joblib.load(BASE_DIR / "modelo" / f"modelo_{_k}.pkl"),
+                       json.loads((BASE_DIR / "modelo" / f"modelo_{_k}.json").read_text(encoding="utf-8")))
+    except Exception as _e:
+        print(f"[modelo] no se pudo cargar modelo_{_k}.pkl: {type(_e).__name__}: {_e}")
+MODEL_LABELS = {"rf": ("Random Forest", "Random Forest"), "catboost": ("CatBoost (mejor global)", "CatBoost (best overall)"),
+                "cs_fof": ("CS-FOF (modelo original)", "CS-FOF (original model)")}
+
+
+def _mk(key):
+    return key if key in MODELOS else "rf"
+
+
+def _meta(key):
+    return MODELOS[_mk(key)][1]
+
 # Columnas del formulario en orden cronológico (Abr ... Sep)
 PAY_CHRONO = MONTH_ORDER                                         # PAY_6 ... PAY_0
 BILL_CHRONO = [f"BILL_AMT{i}" for i in range(6, 0, -1)]          # BILL_AMT6 = abril
@@ -1791,7 +1813,7 @@ def _pay_short(v):
     return L(_PAY_SHORT[v]) if v in _PAY_SHORT else tx(f"{v} m atraso", f"{v} m late")
 
 
-def predict_scores(rows):
+def predict_scores(rows, key="rf"):
     """Lista de dicts con las 23 variables -> puntajes (0-1) del modelo serializado.
 
     Para SEX = 3 («Otro») promedia las predicciones como hombre y como mujer, porque el
@@ -1800,25 +1822,33 @@ def predict_scores(rows):
     d = pd.DataFrame([[r[c] for c in INPUT_COLS] for r in rows], columns=INPUT_COLS)
     other = (d["SEX"] == SEX_OTHER).to_numpy()
     d.loc[other, "SEX"] = 1
-    p = MODELO.predict_proba(d)[:, 1]
+    modelo = MODELOS[_mk(key)][0]
+    p = modelo.predict_proba(d)[:, 1]
     if other.any():
         d2 = d[other].copy()
         d2["SEX"] = 2
-        p[other] = (p[other] + MODELO.predict_proba(d2)[:, 1]) / 2
+        p[other] = (p[other] + modelo.predict_proba(d2)[:, 1]) / 2
     return p
 
 
-def predict_risk(values):
-    return float(predict_scores([values])[0])
+def predict_risk(values, key="rf"):
+    return float(predict_scores([values], key)[0])
 
 
-def tree_votes(values):
+def tree_votes(values, key="rf"):
     """Cuántos árboles del bosque dan probabilidad ≥ 0.5 de incumplir (los «votos»)."""
     rows = [values] if values["SEX"] != SEX_OTHER else [{**values, "SEX": 1}, {**values, "SEX": 2}]
     X = pd.DataFrame([[r[c] for c in INPUT_COLS] for r in rows], columns=INPUT_COLS)
-    Xt = MODELO[:-1].transform(X)
-    trees = MODELO[-1].estimators_
-    yes = np.mean([np.mean(t.predict_proba(Xt)[:, 1] >= 0.5) for t in trees]) * len(trees)
+    modelo = MODELOS[_mk(key)][0]
+    Xt = modelo[:-1].transform(X)
+    if _mk(key) == "cs_fof":
+        bosque = modelo[-1]
+        Z = (np.asarray(Xt, dtype=float) - bosque.media_) / bosque.escala_
+        trees = bosque.arboles_
+        yes = np.mean([np.mean(a.proba1(Z) >= 0.5) for a in trees]) * len(trees)
+    else:
+        trees = modelo[-1].estimators_
+        yes = np.mean([np.mean(t.predict_proba(Xt)[:, 1] >= 0.5) for t in trees]) * len(trees)
     return int(round(yes)), len(trees)
 
 
@@ -1859,7 +1889,7 @@ def _shap_background():
     return _SHAP_BG
 
 
-def shap_groups(values):
+def shap_groups(values, key="rf"):
     """Valores de Shapley exactos (SHAP intervencional) por grupo de variables.
 
     Con 5 grupos hay 2^5 = 32 coaliciones. Para cada coalición S, v(S) es el puntaje medio cuando el
@@ -1874,7 +1904,7 @@ def shap_groups(values):
     for S in coal:
         keep = [c for g in S for c in DRIVER_GROUPS[g][1]]
         rows += [{**b, **{c: values[c] for c in keep}} for b in bg]
-    p = predict_scores(rows).reshape(len(coal), len(bg)).mean(1)
+    p = predict_scores(rows, key).reshape(len(coal), len(bg)).mean(1)
     v = dict(zip(coal, p))
     phi = []
     for g in range(G):
@@ -1888,9 +1918,9 @@ def shap_groups(values):
     return v[frozenset()], np.array(phi), v[frozenset(range(G))]
 
 
-def fig_drivers(values, score):
+def fig_drivers(values, score, key="rf"):
     """Barras SHAP por grupo de variables (puntos de riesgo frente al puntaje medio del fondo)."""
-    base, phi, full = shap_groups(values)
+    base, phi, full = shap_groups(values, key)
     d = pd.DataFrame({"grupo": [L(g) for g, _ in DRIVER_GROUPS], "aporte": phi * 100})
     d = d.reindex(d["aporte"].abs().sort_values().index)
     fig = go.Figure(go.Bar(
@@ -1910,9 +1940,9 @@ def fig_drivers(values, score):
     return fig
 
 
-def conformal_block(score):
+def conformal_block(score, key="rf"):
     """Conjunto de predicción conforme (90 %) a partir de los umbrales guardados en modelo_credito.json."""
-    cf = MODELO_META.get("conformal")
+    cf = _meta(key).get("conformal")
     if not cf:
         return ""
     no, si = score <= cf["q0"], 1 - score <= cf["q1"]
@@ -1931,12 +1961,12 @@ def conformal_block(score):
                    className="muted")], className="callout pf-conformal")
 
 
-def fig_whatif(values, var, score):
+def fig_whatif(values, var, score, key="rf"):
     """Puntaje del cliente si solo cambiara una variable."""
     lbl, grid, xtitle = WHATIF[var]
     lbl, xtitle = L(lbl), L(xtitle)
-    p = predict_scores([{**values, var: x} for x in grid]) * 100
-    thr = MODELO_META.get("umbral", 0.5) * 100
+    p = predict_scores([{**values, var: x} for x in grid], key) * 100
+    thr = _meta(key).get("umbral", 0.5) * 100
     cur = values[var]
     is_pay = var == "PAY_0"
     xs = [_pay_short(x) if is_pay else x for x in grid]
@@ -3957,9 +3987,16 @@ def page_predict():
         html.Div(id="pf-verdict"),
         html.Div(id="pf-trees"),
     ], cls="pf-result")
+    selector = card(tx("Modelo", "Model"), [
+        dcc.RadioItems(id="pf-model", value="rf", className="pf-tiles pf-seg", inputClassName="pf-tile-in",
+                       labelClassName="pf-tile", options=[{"label": L(MODEL_LABELS[k]), "value": k} for k in MODELOS],
+                       **KEEP),
+        html.Div(id="pf-model-info", className="muted"),
+    ])
     return html.Div([
         head,
         _flow(),
+        selector,
         html.Div([form, html.Div(result, className="pf-side")], className="pf-layout"),
         html.Div([
             card(tx("Historial del cliente", "Client history"), [
@@ -4021,8 +4058,18 @@ def page_predict():
     ])
 
 
-def trees_block(values):
-    yes, n = tree_votes(values)
+def trees_block(values, key="rf"):
+    if _mk(key) == "catboost":
+        n = MODELOS["catboost"][0][-1].tree_count_
+        return html.Div([
+            html.Div([icon("tree"), html.B(tx(f"{n} árboles en secuencia", f"{n} trees in sequence"))],
+                     className="pf-trees-h"),
+            html.P(tx("CatBoost no vota: cada árbol corrige el error de los anteriores y el puntaje es la suma de "
+                      "todos (boosting). Por eso no hay un conteo de votos como en los bosques.",
+                      "CatBoost does not vote: each tree corrects the error of the previous ones and the score is the "
+                      "sum of all of them (boosting). That is why there is no vote count as in the forests."),
+                   className="muted")], className="pf-trees")
+    yes, n = tree_votes(values, key)
     share = yes / n if n else 0
     cells = int(round(share * 100))
     return html.Div([
@@ -4122,9 +4169,9 @@ def risk_card(score, thr):
                             f"{title}. Score {score:.0%}, threshold {thr:.0%}.")})
 
 
-def predict_verdict(values, score):
-    thr = MODELO_META.get("umbral", 0.5)
-    pr = MODELO_META.get("prueba", {})
+def predict_verdict(values, score, key="rf"):
+    thr = _meta(key).get("umbral", 0.5)
+    pr = _meta(key).get("prueba", {})
     late = [m for m, c in zip(month_lbl(), PAY_CHRONO) if (values.get(c) or 0) >= 1]
     signals = []
     if (values.get("PAY_0") or 0) >= 1:
@@ -4149,7 +4196,7 @@ def predict_verdict(values, score):
     return html.Div([
         html.Div(risk_card(score, thr), className="rc-wrap"),
         html.Ul([html.Li([icon(ic), html.Span(s)]) for ic, s in signals], className="pf-signals"),
-        conformal_block(score),
+        conformal_block(score, key),
         html.Details([html.Summary(tx("¿Cómo leer el puntaje?", "How to read the score?")), html.P(
             (tx(f"Con el umbral de 50 % el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
                 f"{pr.get('precision', 0):.0%} de los clientes que marca como riesgosos (datos de prueba). ",
@@ -5805,11 +5852,26 @@ def _pf_values(vals):
     return values, missing
 
 
+def model_info(key):
+    m = _meta(key)
+    pr = m.get("prueba", {})
+    if not pr:
+        return ""
+    return tx(f"{m.get('modelo', '')}: en {pr['n']:,} clientes de prueba (20 %, nunca vistos al entrenar) logra F1 "
+              f"{pr['f1']:.3f}, recall {pr['recall']:.3f}, precisión {pr['precision']:.3f} y AUC-ROC {pr['roc_auc']:.3f}. "
+              "Los tres modelos usan la misma partición, las mismas variables y pesos de clase.",
+              f"{m.get('modelo', '')}: on {pr['n']:,} test clients (20%, never seen in training) it reaches F1 "
+              f"{pr['f1']:.3f}, recall {pr['recall']:.3f}, precision {pr['precision']:.3f} and ROC-AUC {pr['roc_auc']:.3f}. "
+              "The three models use the same split, the same variables and class weights.")
+
+
 @app.callback(Output("pf-verdict", "children"), Output("pf-trees", "children"),
-              Output("pf-history", "figure"), Output("pf-drivers", "figure"),
-              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("theme", "data"), Input("lang", "data"))
+              Output("pf-history", "figure"), Output("pf-drivers", "figure"), Output("pf-model-info", "children"),
+              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("pf-model", "value"),
+              Input("theme", "data"), Input("lang", "data"))
 def cb_predict(*vals):
-    *vals, theme, lang = vals
+    *vals, key, theme, lang = vals
+    key = _mk(key)
     set_lang(lang)
     dark = theme == "dark"
     values, missing = _pf_values(vals)
@@ -5818,21 +5880,23 @@ def cb_predict(*vals):
                      + ("…" if len(missing) > 4 else ""),
                      className="callout") if missing else ""
         empty = style_fig(go.Figure(), 340, legend_top=False)
-        return msg, "", themed(empty, dark), themed(empty, dark)
-    score = predict_risk(values)
-    return (predict_verdict(values, score), trees_block(values),
-            themed(fig_client_history(values), dark), themed(fig_drivers(values, score), dark))
+        return msg, "", themed(empty, dark), themed(empty, dark), model_info(key)
+    score = predict_risk(values, key)
+    return (predict_verdict(values, score, key), trees_block(values, key),
+            themed(fig_client_history(values), dark), themed(fig_drivers(values, score, key), dark), model_info(key))
 
 
 @app.callback(Output("pf-whatif", "figure"), Input("pf-whatif-var", "value"),
-              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("theme", "data"), Input("lang", "data"))
+              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("pf-model", "value"),
+              Input("theme", "data"), Input("lang", "data"))
 def cb_whatif(var, *vals):
-    *vals, theme, lang = vals
+    *vals, key, theme, lang = vals
+    key = _mk(key)
     set_lang(lang)
     values, missing = _pf_values(vals)
     if MODELO is None or missing:
         return themed(style_fig(go.Figure(), 360, legend_top=False), theme == "dark")
-    return themed(fig_whatif(values, var or "PAY_0", predict_risk(values)), theme == "dark")
+    return themed(fig_whatif(values, var or "PAY_0", predict_risk(values, key), key), theme == "dark")
 
 
 def nav_buttons(path):
