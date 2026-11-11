@@ -3097,38 +3097,67 @@ def csfof_theory():
 
 
 
-# ----- CS-FOF frente a Random Forest (su versión sin cortes oblicuos ni costo por nodo) -----
-# Pliegues: validación anidada 5 x 5 (pesos de clase + búsqueda aleatoria, results/master_table_e3.csv).
+# ----- CS-FOF frente al rival que se elija (Random Forest es su versión sin cortes oblicuos ni costo por nodo) -----
+# Pliegues: validación anidada 5 x 5, mejor combinación de cada modelo (experiments/comparacion_final/mejor_por_modelo.csv).
 # Datos y ruido: experiments/robustez/ del proyecto (exploratorio; hiperparámetros fijos por pliegue).
-CS_VS_RF = {
-    "folds": dict(x=["1", "2", "3", "4", "5"],
-                  cs=[0.5484, 0.5447, 0.5441, 0.5572, 0.5453], rf=[0.5510, 0.5404, 0.5375, 0.5556, 0.5417],
-                  cs_sd=None, rf_sd=None),
-    "size": dict(x=["10 %", "25 %", "50 %", "100 %"],
-                 cs=[0.5356, 0.5429, 0.5473, 0.5483], rf=[0.5375, 0.5415, 0.5405, 0.5434],
-                 cs_sd=[0.0073, 0.0065, 0.0073, 0.0078], rf_sd=[0.0091, 0.0084, 0.0093, 0.0076]),
-    "noise": dict(x=["0 %", "5 %", "10 %", "20 %"],
-                  cs=[0.5483, 0.5455, 0.5455, 0.5336], rf=[0.5434, 0.5423, 0.5414, 0.5303],
-                  cs_sd=[0.0078, 0.0081, 0.0085, 0.0147], rf_sd=[0.0076, 0.0085, 0.0109, 0.0148]),
+CS_RIVALS = ["random_forest", "catboost", "xgboost", "lightgbm"]
+CS_VS = {
+    "folds": dict(x=["1", "2", "3", "4", "5"], v={
+        "cs_fof": ([0.5484, 0.5447, 0.5441, 0.5572, 0.5453], None),
+        "random_forest": ([0.5510, 0.5404, 0.5375, 0.5556, 0.5417], None),
+        "catboost": ([0.5491, 0.5492, 0.5382, 0.5614, 0.5423], None),
+        "xgboost": ([0.5478, 0.5428, 0.5403, 0.5619, 0.5399], None),
+        "lightgbm": ([0.5466, 0.5470, 0.5374, 0.5598, 0.5401], None)}),
+    "size": dict(x=["10 %", "25 %", "50 %", "100 %"], v={
+        "cs_fof": ([0.5356, 0.5429, 0.5473, 0.5483], [0.0073, 0.0065, 0.0073, 0.0078]),
+        "random_forest": ([0.5375, 0.5415, 0.5405, 0.5434], [0.0091, 0.0084, 0.0093, 0.0076]),
+        "catboost": ([0.5290, 0.5379, 0.5442, 0.5471], [0.0084, 0.0112, 0.0077, 0.0100]),
+        "xgboost": ([0.5244, 0.5370, 0.5392, 0.5448], [0.0088, 0.0089, 0.0076, 0.0087]),
+        "lightgbm": ([0.5363, 0.5415, 0.5437, 0.5459], [0.0069, 0.0104, 0.0085, 0.0085])}),
+    "noise": dict(x=["0 %", "5 %", "10 %", "20 %"], v={
+        "cs_fof": ([0.5483, 0.5455, 0.5455, 0.5336], [0.0078, 0.0081, 0.0085, 0.0147]),
+        "random_forest": ([0.5434, 0.5423, 0.5414, 0.5303], [0.0076, 0.0085, 0.0109, 0.0148]),
+        "catboost": ([0.5471, 0.5469, 0.5416, 0.5301], [0.0100, 0.0072, 0.0092, 0.0077]),
+        "xgboost": ([0.5448, 0.5430, 0.5401, 0.5252], [0.0087, 0.0065, 0.0090, 0.0111]),
+        "lightgbm": ([0.5459, 0.5443, 0.5408, 0.5304], [0.0085, 0.0078, 0.0118, 0.0102])}),
 }
 _CSRF_X = {"folds": ("Pliegue externo", "Outer fold"), "size": ("Datos de entrenamiento usados", "Training data used"),
            "noise": ("Etiquetas de entrenamiento invertidas", "Training labels flipped")}
+_RIVAL_DESC = {
+    "random_forest": ("Random Forest es el modelo básico más parecido: CS-FOF es un Random Forest al que se le agregó el "
+                      "corte oblicuo con costo, así que esta comparación aísla lo que aporta la idea nueva.",
+                      "Random Forest is the most similar basic model: CS-FOF is a Random Forest with the cost-sensitive "
+                      "oblique cut added, so this comparison isolates what the new idea contributes."),
+    "catboost": ("CatBoost es la mejor combinación global de las 148: es el rival más exigente.",
+                 "CatBoost is the best overall combination of the 148: it is the toughest rival."),
+    "xgboost": ("XGBoost es la mejor de las 112 combinaciones del diseño factorial del Entregable 2.",
+                "XGBoost is the best of the 112 combinations of the Deliverable 2 factorial design."),
+    "lightgbm": ("LightGBM es uno de los dos métodos recientes del estado del arte que pide la guía.",
+                 "LightGBM is one of the two recent state-of-the-art methods required by the guide."),
+}
 
 
-def fig_cs_vs_rf(scn):
+def _rival(r):
+    return r if r in CS_RIVALS else "random_forest"
+
+
+def fig_cs_vs_rf(scn, rival="random_forest"):
     """Líneas que se dibujan punto por punto (botón de reproducir) con la diferencia en cada paso."""
-    D = CS_VS_RF[scn]
+    rival = _rival(rival)
+    D = CS_VS[scn]
     n, xs = len(D["x"]), D["x"]
-    allv = D["cs"] + D["rf"]
-    pad = 0.012 if D["cs_sd"] else 0.006
+    cs, cs_sd = D["v"]["cs_fof"]
+    rv, rv_sd = D["v"][rival]
+    rname = minfo(rival, "label")
+    allv = cs + rv
+    pad = 0.012 if cs_sd else 0.006
     yr = [min(allv) - pad, max(allv) + pad]
-    series = [("CS-FOF", D["cs"], D["cs_sd"], WARM_GOLD, "diamond"),
-              ("Random Forest", D["rf"], D["rf_sd"], DEEP_NAVY, "circle")]
+    series = [("CS-FOF", cs, cs_sd, WARM_GOLD, "diamond"), (rname, rv, rv_sd, DEEP_NAVY, "circle")]
 
     # etiqueta arriba para el que va ganando en ese punto y abajo para el otro (no se enciman)
-    arriba = [a >= b for a, b in zip(D["cs"], D["rf"])]
+    arriba = [a >= b for a, b in zip(cs, rv)]
     pos = {"CS-FOF": ["top center" if u else "bottom center" for u in arriba],
-           "Random Forest": ["bottom center" if u else "top center" for u in arriba]}
+           rname: ["bottom center" if u else "top center" for u in arriba]}
 
     def trazas(k):
         out = []
@@ -3143,22 +3172,25 @@ def fig_cs_vs_rf(scn):
         return out
 
     def nota(k):
-        d = D["cs"][k - 1] - D["rf"][k - 1]
-        quien = "CS-FOF" if d > 0 else "Random Forest"
+        d = cs[k - 1] - rv[k - 1]
+        if abs(d) < 5e-5:
+            txt = tx(f"<b>{xs[k - 1]}</b>: empate", f"<b>{xs[k - 1]}</b>: tie")
+        else:
+            quien = "CS-FOF" if d > 0 else rname
+            txt = tx(f"<b>{xs[k - 1]}</b>: gana {quien} por {abs(d):.4f}", f"<b>{xs[k - 1]}</b>: {quien} wins by {abs(d):.4f}")
         return [dict(xref="paper", yref="paper", x=0.0, y=1.22, showarrow=False, xanchor="left", yanchor="bottom",
-                     font=dict(size=13, color=WARM_GOLD if d > 0 else DEEP_NAVY),
-                     text=tx(f"<b>{xs[k - 1]}</b>: gana {quien} por {abs(d):.4f}",
-                             f"<b>{xs[k - 1]}</b>: {quien} wins by {abs(d):.4f}"))]
+                     font=dict(size=13, color=WARM_GOLD if d > 0 else DEEP_NAVY), text=txt)]
 
-    # nombres únicos por escenario: así una animación en curso no se mezcla con el escenario nuevo
-    frames = [go.Frame(data=trazas(k), name=f"{scn}-{k}", layout=go.Layout(annotations=nota(k))) for k in range(1, n + 1)]
+    # nombres únicos por escenario y rival: así una animación en curso no se mezcla con la nueva
+    tag = f"{scn}-{rival}"
+    frames = [go.Frame(data=trazas(k), name=f"{tag}-{k}", layout=go.Layout(annotations=nota(k))) for k in range(1, n + 1)]
     fig = go.Figure(data=trazas(n), frames=frames)
     style_fig(fig, 400)
     play = dict(label=tx("▶ Reproducir", "▶ Play"), method="animate",
                 args=[None, dict(frame=dict(duration=900, redraw=True), transition=dict(duration=450, easing="cubic-in-out"),
                                  fromcurrent=False, mode="immediate")])
     fig.update_layout(
-        annotations=nota(n), margin=dict(l=60, r=20, t=100, b=95), uirevision=scn,
+        annotations=nota(n), margin=dict(l=60, r=20, t=100, b=95), uirevision=tag,
         xaxis=dict(title=L(_CSRF_X[scn]), type="category", categoryorder="array", categoryarray=xs, range=[-0.4, n - 0.6]),
         yaxis=dict(title=tx("F1 de la clase default", "F1 of the default class"), range=yr),
         updatemenus=[dict(type="buttons", showactive=False, x=0, y=-0.22, xanchor="left", yanchor="top",
@@ -3166,32 +3198,47 @@ def fig_cs_vs_rf(scn):
         sliders=[dict(active=n - 1, x=0.2, len=0.8, y=-0.17, yanchor="top", pad=dict(t=0),
                       currentvalue=dict(visible=False), font=dict(color=GREY_BLUE),
                       steps=[dict(label=xs[k - 1], method="animate",
-                                  args=[[f"{scn}-{k}"], dict(mode="immediate", frame=dict(duration=0, redraw=True),
+                                  args=[[f"{tag}-{k}"], dict(mode="immediate", frame=dict(duration=0, redraw=True),
                                                        transition=dict(duration=300))]) for k in range(1, n + 1)])])
     return fig
 
 
-def cs_vs_rf_interp(scn):
-    D = CS_VS_RF[scn]
-    gana = sum(a > b for a, b in zip(D["cs"], D["rf"]))
+def cs_vs_rf_interp(scn, rival="random_forest"):
+    rival = _rival(rival)
+    D = CS_VS[scn]
+    cs, _ = D["v"]["cs_fof"]
+    rv, _ = D["v"][rival]
+    rname = minfo(rival, "label")
+    xs = D["x"]
+    gana = sum(a > b for a, b in zip(cs, rv))
+    dif = float(np.mean(np.array(cs) - np.array(rv)))
+    lead = L(_RIVAL_DESC[rival]) + " "
     if scn == "folds":
-        basic = tx(f"CS-FOF le gana a Random Forest en {gana} de 5 pliegues, pero por poco: 0.003 de F1 en promedio, "
-                   "menos que lo que cambia el F1 de un pliegue a otro.",
-                   f"CS-FOF beats Random Forest in {gana} of 5 folds, but narrowly: 0.003 of F1 on average, less "
-                   "than F1 changes from one fold to another.")
-        tech = tx("Validación anidada 5 × 5, mejor combinación de cada uno (pesos de clase + búsqueda aleatoria). "
-                  "Nadeau-Bengio con Holm p = 1.000; δ de Cliff = 0.36 (efecto mediano); DeLong p = 0.171; McNemar "
-                  "p < 0.001 (313 errores exclusivos de CS-FOF frente a 615).",
-                  "Nested 5 × 5 validation, best combination of each (class weights + random search). Nadeau-Bengio "
-                  "with Holm p = 1.000; Cliff's δ = 0.36 (medium effect); DeLong p = 0.171; McNemar p < 0.001 (313 "
-                  "exclusive CS-FOF errors vs 615).")
+        if dif >= 0:
+            basic = tx(f"CS-FOF le gana a {rname} en {gana} de 5 pliegues, con {dif:.4f} de F1 más en promedio: menos "
+                       "que lo que cambia el F1 de un pliegue a otro.",
+                       f"CS-FOF beats {rname} in {gana} of 5 folds, with {dif:.4f} more F1 on average: less than F1 "
+                       "changes from one fold to another.")
+        else:
+            basic = tx(f"CS-FOF le gana a {rname} solo en {gana} de 5 pliegues y queda {abs(dif):.4f} de F1 por debajo en "
+                       "promedio: en la práctica, un empate.",
+                       f"CS-FOF beats {rname} in only {gana} of 5 folds and is {abs(dif):.4f} of F1 below on average: "
+                       "in practice, a tie.")
+        t = next(row for row in CSFOF_TESTS if row[0] == rival)
+        tech = tx(f"Validación anidada 5 × 5, mejor combinación de cada uno. Nadeau-Bengio con Holm p = {t[3]:.3f}; "
+                  f"δ de Cliff = {t[4]:+.2f}; DeLong p = {t[5]}; McNemar (errores exclusivos CS-FOF / {rname}): {t[6]}. "
+                  "Ninguna prueba de superioridad es significativa.",
+                  f"Nested 5 × 5 validation, best combination of each. Nadeau-Bengio with Holm p = {t[3]:.3f}; "
+                  f"Cliff's δ = {t[4]:+.2f}; DeLong p = {t[5]}; McNemar (exclusive errors CS-FOF / {rname}): {t[6]}. "
+                  "No superiority test is significant.")
     elif scn == "size":
-        basic = tx("Con 25 % de los datos o más, CS-FOF queda arriba y sigue mejorando al recibir más clientes; Random "
-                   "Forest se estanca. Con muy pocos datos (10 %), Random Forest queda apenas por encima: calcular la "
-                   "dirección de Fisher en cada nodo necesita suficientes clientes.",
-                   "With 25% of the data or more, CS-FOF stays on top and keeps improving with more clients; Random "
-                   "Forest plateaus. With very little data (10%), Random Forest is slightly ahead: computing the Fisher "
-                   "direction at each node needs enough clients.")
+        donde = ", ".join(x for x, a, b in zip(xs, cs, rv) if a > b) or tx("ninguno", "none")
+        basic = tx(f"CS-FOF queda arriba de {rname} en {gana} de 4 tamaños ({donde}). Con 10 % de los datos pierde "
+                   f"{cs[-1] - cs[0]:.3f} de F1 frente a {rv[-1] - rv[0]:.3f} de {rname}: calcular la dirección de Fisher "
+                   "en cada nodo necesita suficientes clientes.",
+                   f"CS-FOF is above {rname} in {gana} of 4 sizes ({donde}). With 10% of the data it loses "
+                   f"{cs[-1] - cs[0]:.3f} of F1 versus {rv[-1] - rv[0]:.3f} for {rname}: computing the Fisher direction "
+                   "at each node needs enough clients.")
         tech = tx("Exploratorio: fracción estratificada del entrenamiento de cada pliegue, prueba completa, "
                   "hiperparámetros elegidos en la validación anidada (sin búsqueda nueva). Barras: ± 1 desviación "
                   "estándar entre los 5 pliegues. Sin pruebas de hipótesis.",
@@ -3199,17 +3246,17 @@ def cs_vs_rf_interp(scn):
                   "in the nested validation (no new search). Bars: ± 1 standard deviation across the 5 folds. No "
                   "hypothesis tests.")
     else:
-        basic = tx("Al ensuciar las etiquetas de entrenamiento, los dos pierden casi lo mismo, y CS-FOF se mantiene "
-                   "arriba en todos los niveles.",
-                   "When the training labels are corrupted, both lose almost the same, and CS-FOF stays on top at "
-                   "every level.")
-        tech = tx("Exploratorio: se invierte al azar una fracción de las etiquetas de entrenamiento (la misma para los "
-                  "dos modelos); la prueba es limpia. Pérdida con 20 % de ruido: CS-FOF −0.015, Random Forest −0.013. "
-                  "Barras: ± 1 desviación estándar entre pliegues; se solapan, así que la diferencia no es concluyente.",
-                  "Exploratory: a random fraction of training labels is flipped (the same for both models); the test "
-                  "set is clean. Loss with 20% noise: CS-FOF −0.015, Random Forest −0.013. Bars: ± 1 standard "
-                  "deviation across folds; they overlap, so the difference is not conclusive.")
-    return interp_block(basic, tech)
+        basic = tx(f"Al ensuciar las etiquetas de entrenamiento, CS-FOF queda arriba de {rname} en {gana} de 4 niveles. "
+                   f"Con 20 % de ruido pierde {cs[0] - cs[-1]:.3f} de F1 y {rname} {rv[0] - rv[-1]:.3f}.",
+                   f"When the training labels are corrupted, CS-FOF is above {rname} at {gana} of 4 levels. With 20% "
+                   f"noise it loses {cs[0] - cs[-1]:.3f} of F1 and {rname} {rv[0] - rv[-1]:.3f}.")
+        tech = tx("Exploratorio: se invierte al azar una fracción de las etiquetas de entrenamiento (la misma para todos "
+                  "los modelos); la prueba es limpia. Barras: ± 1 desviación estándar entre pliegues; si se solapan, la "
+                  "diferencia no es concluyente.",
+                  "Exploratory: a random fraction of training labels is flipped (the same for all models); the test set "
+                  "is clean. Bars: ± 1 standard deviation across folds; if they overlap, the difference is not "
+                  "conclusive.")
+    return interp_block(lead + basic, tech)
 
 
 # ----- Metodología y código de CS-FOF (estructura de la «Guía de redacción metodológica» del curso) -----
@@ -3523,13 +3570,13 @@ def _csfof_results():
                  [((html.B if m == "cs_fof" else str)(minfo(m, "label")), f"{a:.3f}", f"{b:.3f}", f"{cc:.3f}", f"{d:.3f}", f"{r:.2f}")
                   for m, a, b, cc, d, r in CROSS_DATA])
     return [
-        card(tx("CS-FOF frente a Random Forest, el modelo básico más parecido",
-                "CS-FOF vs Random Forest, the most similar basic model"), [
-        html.P(tx("CS-FOF es un Random Forest al que se le agregó el corte oblicuo con costo, así que esta comparación "
-                  "aísla lo que aporta la idea nueva. Elige un escenario y presiona Reproducir.",
-                  "CS-FOF is a Random Forest with the cost-sensitive oblique cut added, so this comparison isolates "
-                  "what the new idea contributes. Pick a scenario and press Play."), className="muted"),
-        html.Div([control(tx("Escenario", "Scenario"), dcc.RadioItems(
+        card(tx("CS-FOF frente a otro modelo", "CS-FOF vs another model"), [
+        html.P(tx("Elige contra qué modelo comparar a CS-FOF y en qué escenario, y presiona Reproducir.",
+                  "Choose which model to compare CS-FOF against and in which scenario, and press Play."), className="muted"),
+        html.Div([control(tx("Comparar con", "Compare with"), dcc.RadioItems(
+            id="csrf-rival", value="random_forest", className="radio",
+            options=[{"label": minfo(m, "label"), "value": m} for m in CS_RIVALS])),
+            control(tx("Escenario", "Scenario"), dcc.RadioItems(
             id="csrf-scn", value="folds", className="radio",
             options=[{"label": tx("Los 5 pliegues", "The 5 folds"), "value": "folds"},
                      {"label": tx("Menos datos", "Less data"), "value": "size"},
@@ -5812,14 +5859,15 @@ def cb_models_heat():
     return fig_models_heat()
 
 
-# Un gráfico nuevo (id distinto) por escenario: así una animación en curso no sigue sobre el escenario nuevo.
-@app.callback(Output("csrf-box", "children"), Input("csrf-scn", "value"), Input("theme", "data"), Input("lang", "data"))
-def cb_cs_vs_rf(scn, theme, lang):
+# Un gráfico nuevo (id distinto) por escenario y rival: así una animación en curso no sigue sobre el escenario nuevo.
+@app.callback(Output("csrf-box", "children"), Input("csrf-scn", "value"), Input("csrf-rival", "value"),
+              Input("theme", "data"), Input("lang", "data"))
+def cb_cs_vs_rf(scn, rival, theme, lang):
     set_lang(lang)
-    scn = scn or "folds"
-    fig = themed(fig_cs_vs_rf(scn), theme == "dark")
-    return [dcc.Graph(id=f"csrf-graph-{scn}", figure=fig, config={"displaylogo": False, "displayModeBar": False}),
-            cs_vs_rf_interp(scn)]
+    scn, rival = scn or "folds", _rival(rival)
+    fig = themed(fig_cs_vs_rf(scn, rival), theme == "dark")
+    return [dcc.Graph(id=f"csrf-graph-{scn}-{rival}", figure=fig, config={"displaylogo": False, "displayModeBar": False}),
+            cs_vs_rf_interp(scn, rival)]
 
 
 @graph_cb(Output("cs-toy-tree", "figure"))
