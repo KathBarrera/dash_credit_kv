@@ -1961,12 +1961,12 @@ def conformal_block(score, key="rf"):
                    className="muted")], className="callout pf-conformal")
 
 
-def fig_whatif(values, var, score, key="rf"):
+def fig_whatif(values, var, score, key="rf", thr=None):
     """Puntaje del cliente si solo cambiara una variable."""
     lbl, grid, xtitle = WHATIF[var]
     lbl, xtitle = L(lbl), L(xtitle)
     p = predict_scores([{**values, var: x} for x in grid], key) * 100
-    thr = _meta(key).get("umbral", 0.5) * 100
+    thr = (_meta(key).get("umbral", 0.5) if thr is None else thr) * 100
     cur = values[var]
     is_pay = var == "PAY_0"
     xs = [_pay_short(x) if is_pay else x for x in grid]
@@ -3992,6 +3992,12 @@ def page_predict():
                        labelClassName="pf-tile", options=[{"label": L(MODEL_LABELS[k]), "value": k} for k in MODELOS],
                        **KEEP),
         html.Div(id="pf-model-info", className="muted"),
+        html.H4([icon("target"), tx("Umbral de decisión", "Decision threshold")], className="pf-h"),
+        dcc.Slider(id="pf-thr", min=0.05, max=0.95, step=0.01, value=_rec_thr("rf"),
+                   marks={v: f"{v:.0%}" for v in (0.05, 0.25, 0.5, 0.75, 0.95)},
+                   tooltip={"placement": "top", "always_visible": True, "transform": "pctFormat"},
+                   className="pf-slider", **KEEP),
+        html.Div(id="pf-thr-info", className="pf-thr-info"),
     ])
     return html.Div([
         head,
@@ -4107,9 +4113,10 @@ def _rc_x_at(y):
     return RC_SPLIT[-1][0]
 
 
-def _rc_svg(score):
+def _rc_svg(score, thr=RC_SPLIT_FROM):
     """SVG (data URI) con la parte visible de la fractura para este puntaje."""
-    t = min(max((score - RC_CRACK_FROM) / (RC_SPLIT_FROM - RC_CRACK_FROM), 0), 1)
+    crack_from = max(thr - (RC_SPLIT_FROM - RC_CRACK_FROM), 0.01)
+    t = min(max((score - crack_from) / (thr - crack_from), 0), 1)
     if t <= 0:
         return "none"
     top, bot = RC_CENTER_Y * (1 - t), RC_CENTER_Y + (100 - RC_CENTER_Y) * t
@@ -4134,10 +4141,11 @@ def _rc_clip(side):
 def risk_card(score, thr):
     """Veredicto como tarjeta de crédito: intacta con riesgo bajo; con riesgo alto se rompe y se abre."""
     high = score >= thr
-    k = min(max((score - RC_SPLIT_FROM) / (RC_SPLIT_FULL - RC_SPLIT_FROM), 0), 1)   # cuánto se separan los pedazos
+    full = max(RC_SPLIT_FULL, min(thr + 0.05, 1.0))
+    k = min(max((score - thr) / (full - thr), 0), 1)   # cuánto se separan los pedazos (desde el umbral)
     title = (tx("Riesgo alto: probable incumplimiento", "High risk: likely default") if high
              else tx("Riesgo bajo: probable pago", "Low risk: likely to pay"))
-    cracks = _rc_svg(score)
+    cracks = _rc_svg(score, thr)
 
     def face(clip, hidden=False):
         return html.Div([
@@ -4169,9 +4177,15 @@ def risk_card(score, thr):
                             f"{title}. Score {score:.0%}, threshold {thr:.0%}.")})
 
 
-def predict_verdict(values, score, key="rf"):
-    thr = _meta(key).get("umbral", 0.5)
-    pr = _meta(key).get("prueba", {})
+def threshold_stats(key, thr):
+    """Recall, precisión y falsas alarmas del umbral elegido, medidos en la mitad de verificación de la prueba."""
+    curva = _meta(key).get("umbral_ajustable", {}).get("curva", [])
+    return min(curva, key=lambda c: abs(c["umbral"] - thr)) if curva else {}
+
+
+def predict_verdict(values, score, key="rf", thr=None):
+    thr = _meta(key).get("umbral", 0.5) if thr is None else thr
+    pr = threshold_stats(key, thr)
     late = [m for m, c in zip(month_lbl(), PAY_CHRONO) if (values.get(c) or 0) >= 1]
     signals = []
     if (values.get("PAY_0") or 0) >= 1:
@@ -4198,9 +4212,9 @@ def predict_verdict(values, score, key="rf"):
         html.Ul([html.Li([icon(ic), html.Span(s)]) for ic, s in signals], className="pf-signals"),
         conformal_block(score, key),
         html.Details([html.Summary(tx("¿Cómo leer el puntaje?", "How to read the score?")), html.P(
-            (tx(f"Con el umbral de 50 % el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
+            (tx(f"Con el umbral de {thr:.0%} el modelo detecta {pr.get('recall', 0):.0%} de quienes incumplen y acierta en "
                 f"{pr.get('precision', 0):.0%} de los clientes que marca como riesgosos (datos de prueba). ",
-                f"With the 50% threshold the model detects {pr.get('recall', 0):.0%} of defaulters and is right about "
+                f"With the {thr:.0%} threshold the model detects {pr.get('recall', 0):.0%} of defaulters and is right about "
                 f"{pr.get('precision', 0):.0%} of the clients it flags as risky (test data). ") if pr else "")
             + tx("No es una probabilidad calibrada: el modelo se entrenó con pesos de clase, que lo hacen sobrestimar "
                  "el riesgo frente a la tasa real (22 %). Sirve para ordenar y clasificar clientes.",
@@ -4376,10 +4390,12 @@ def page_conclusions():
                    "with current data."),
                 tx("El análisis es asociativo: muestra qué anticipa el default, no qué lo causa.",
                    "The analysis is associative: it shows what anticipates default, not what causes it."),
-                tx("El umbral está fijo en 0.5. Ajustarlo según el costo real de cada error (un incumplimiento no "
-                   "detectado cuesta más que una falsa alarma) mejoraría el uso práctico.",
-                   "The threshold is fixed at 0.5. Tuning it to the real cost of each error (a missed default costs "
-                   "more than a false alarm) would improve practical use."),
+                tx("Las métricas de la validación usan el umbral 0.5. En «Predecir» el umbral es ajustable y muestra "
+                   "su efecto en recall, precisión y falsas alarmas; fijarlo con el costo real de cada error (un "
+                   "incumplimiento no detectado cuesta más que una falsa alarma) es el paso siguiente para usarlo.",
+                   "Validation metrics use the 0.5 threshold. In “Predict” the threshold is adjustable and shows its "
+                   "effect on recall, precision and false alarms; setting it with the real cost of each error (a "
+                   "missed default costs more than a false alarm) is the next step to use it."),
                 tx("Sumar variables que hoy no están (ingresos, deudas en otras entidades) y vigilar que el modelo no "
                    "pierda precisión con el tiempo.",
                    "Add variables that are missing today (income, debts at other institutions) and monitor that the "
@@ -5050,6 +5066,11 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-field { min-width:0; } .pf-field .ctl-label { margin-bottom:8px; }
 .pf-hint { font-size:12.5px; color:var(--muted); } .pf-note { margin:6px 0 12px; } .pf-row { margin-bottom:14px; }
 .pf-slider { padding-top:34px; }
+.pf-thr-info { margin-top:10px; }
+.pf-thr-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:8px; }
+.pf-thr-k { border:1px solid var(--line); border-radius:12px; padding:8px 12px; display:flex; flex-direction:column; }
+.pf-thr-k b { font-size:22px; color:var(--accent-2, #B88F3D); line-height:1.2; }
+.pf-thr-k small { color:var(--muted); font-size:12px; }
 .pf-form { --Dash-Fill-Interactive-Strong:var(--accent-2); --Dash-Fill-Inverse-Strong:var(--surface);
   --Dash-Text-Strong:var(--text); --Dash-Fill-Disabled:var(--line-strong); --Dash-Text-Primary:var(--muted); }
 .pf-form .dash-slider-tooltip { color:var(--text); font-weight:700; font-variant-numeric:tabular-nums;
@@ -5852,6 +5873,42 @@ def _pf_values(vals):
     return values, missing
 
 
+def _rec_thr(key):
+    return _meta(key).get("umbral_ajustable", {}).get("recomendado", 0.5)
+
+
+def thr_info(key, thr):
+    st = threshold_stats(key, thr)
+    if not st:
+        return ""
+    rec = _rec_thr(key)
+    return html.Div([
+        html.Div([
+            html.Div([html.Small(tx("Detecta", "Detects")), html.B(f"{st['recall']:.0%}"),
+                      html.Small(tx("de quienes incumplen", "of defaulters"))], className="pf-thr-k"),
+            html.Div([html.Small(tx("Acierta en", "Right about")), html.B(f"{st['precision']:.0%}"),
+                      html.Small(tx("de los que marca", "of those flagged"))], className="pf-thr-k"),
+            html.Div([html.Small(tx("Marca como riesgo", "Flags as risky")), html.B(f"{st['marcados']:.0%}"),
+                      html.Small(tx("de los clientes", "of clients"))], className="pf-thr-k"),
+            html.Div([html.Small(tx("Falsas alarmas", "False alarms")), html.B(f"{st['falsas_alarmas_por_100']:.1f}"),
+                      html.Small(tx("por cada 100 clientes", "per 100 clients"))], className="pf-thr-k"),
+            html.Div([html.Small("F1"), html.B(f"{st['f1']:.3f}"), html.Small(tx("clase de impago", "default class"))],
+                     className="pf-thr-k")], className="pf-thr-kpis"),
+        html.P(tx(f"Umbral recomendado para este modelo: {rec:.0%} (máximo F1, elegido con una mitad de la prueba y "
+                  "medido con la otra; las cifras de arriba son de esa otra mitad). Bajar el umbral detecta más "
+                  "incumplimientos a cambio de más falsas alarmas; subirlo hace lo contrario. El banco lo fija según "
+                  "cuánto le cuesta cada tipo de error.",
+                  f"Recommended threshold for this model: {rec:.0%} (maximum F1, chosen with one half of the test set "
+                  "and measured on the other; the figures above come from that other half). Lowering the threshold "
+                  "catches more defaults at the cost of more false alarms; raising it does the opposite. The bank sets "
+                  "it according to how much each kind of error costs."), className="muted")])
+
+
+@app.callback(Output("pf-thr", "value"), Input("pf-model", "value"), prevent_initial_call=True)
+def cb_thr_reset(key):
+    return _rec_thr(_mk(key))
+
+
 def model_info(key):
     m = _meta(key)
     pr = m.get("prueba", {})
@@ -5867,11 +5924,13 @@ def model_info(key):
 
 @app.callback(Output("pf-verdict", "children"), Output("pf-trees", "children"),
               Output("pf-history", "figure"), Output("pf-drivers", "figure"), Output("pf-model-info", "children"),
-              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("pf-model", "value"),
+              Output("pf-thr-info", "children"),
+              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("pf-model", "value"), Input("pf-thr", "value"),
               Input("theme", "data"), Input("lang", "data"))
 def cb_predict(*vals):
-    *vals, key, theme, lang = vals
+    *vals, key, thr, theme, lang = vals
     key = _mk(key)
+    thr = float(thr) if thr is not None else _rec_thr(key)
     set_lang(lang)
     dark = theme == "dark"
     values, missing = _pf_values(vals)
@@ -5880,23 +5939,25 @@ def cb_predict(*vals):
                      + ("…" if len(missing) > 4 else ""),
                      className="callout") if missing else ""
         empty = style_fig(go.Figure(), 340, legend_top=False)
-        return msg, "", themed(empty, dark), themed(empty, dark), model_info(key)
+        return msg, "", themed(empty, dark), themed(empty, dark), model_info(key), thr_info(key, thr)
     score = predict_risk(values, key)
-    return (predict_verdict(values, score, key), trees_block(values, key),
-            themed(fig_client_history(values), dark), themed(fig_drivers(values, score, key), dark), model_info(key))
+    return (predict_verdict(values, score, key, thr), trees_block(values, key),
+            themed(fig_client_history(values), dark), themed(fig_drivers(values, score, key), dark), model_info(key),
+            thr_info(key, thr))
 
 
 @app.callback(Output("pf-whatif", "figure"), Input("pf-whatif-var", "value"),
-              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("pf-model", "value"),
+              *[Input(f"pf-{c}", "value") for c in INPUT_COLS], Input("pf-model", "value"), Input("pf-thr", "value"),
               Input("theme", "data"), Input("lang", "data"))
 def cb_whatif(var, *vals):
-    *vals, key, theme, lang = vals
+    *vals, key, thr, theme, lang = vals
     key = _mk(key)
+    thr = float(thr) if thr is not None else _rec_thr(key)
     set_lang(lang)
     values, missing = _pf_values(vals)
     if MODELO is None or missing:
         return themed(style_fig(go.Figure(), 360, legend_top=False), theme == "dark")
-    return themed(fig_whatif(values, var or "PAY_0", predict_risk(values, key), key), theme == "dark")
+    return themed(fig_whatif(values, var or "PAY_0", predict_risk(values, key), key, thr), theme == "dark")
 
 
 def nav_buttons(path):

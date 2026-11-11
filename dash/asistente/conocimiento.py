@@ -1601,22 +1601,28 @@ def _construir(A, EN):
            "the credit card in the result", "what score counts as high risk", "high risk threshold",
            "cracked credit card", "the card is broken in the result", "split card in predict",
            "when is a client considered high risk", "which score means high risk"]),
-        t(f"La **tarjeta de crédito** del resultado muestra el puntaje de 0 a 100 %. Desde el **umbral de {thr:.0%}** el "
+        t(f"La **tarjeta de crédito** del resultado muestra el puntaje de 0 a 100 %. Desde el **umbral de decisión** el "
           "veredicto es «riesgo alto: probable incumplimiento» (dorado); por debajo, «riesgo bajo» (azul).\n\n"
-          "Además se rompe según el riesgo: está intacta con riesgo bajo; **desde 30 %** aparece una fractura por la "
-          "mitad que crece hasta cruzarla, y **desde el umbral (50 %)** la tarjeta se abre por ahí, más cuanto más "
-          "alto es el puntaje.\n\nDebajo aparecen "
+          "**El umbral no es fijo:** se mueve con el control «Umbral de decisión» y arranca en el recomendado de cada "
+          "modelo (el de máximo F1, cerca de 52 %). Bajarlo detecta más incumplimientos a cambio de más falsas "
+          "alarmas; subirlo hace lo contrario. Debajo del control se ven el recall, la precisión y las falsas alarmas "
+          "de ese umbral en clientes de prueba.\n\n"
+          "Además la tarjeta se rompe según el riesgo: aparece una fractura 20 puntos antes del umbral y, **desde el "
+          "umbral**, se abre por ahí, más cuanto más alto es el puntaje.\n\nDebajo aparecen "
           "**señales** en lenguaje simple: atrasos, qué parte de lo facturado pagó y cómo es su cupo frente a los demás.\n\n"
-          + (f"Con ese umbral el modelo detecta {prueba.get('recall', 0):.0%} de quienes incumplen y acierta en "
+          + (f"Con el umbral de {thr:.0%} el modelo detecta {prueba.get('recall', 0):.0%} de quienes incumplen y acierta en "
              f"{prueba.get('precision', 0):.0%} de los que marca (datos de prueba). " if prueba else "")
           + "No es una probabilidad calibrada: sirve para **ordenar y clasificar** clientes.",
-          f"The result's **credit card** shows the score from 0 to 100%. From the **{thr:.0%} threshold** the verdict "
+          f"The result's **credit card** shows the score from 0 to 100%. From the **decision threshold** the verdict "
           "is “high risk: likely default” (gold); below it, “low risk” (blue).\n\n"
-          "It also breaks according to the risk: it is intact with low risk; **from 30%** a crack appears in the "
-          "middle and grows until it crosses the card, and **from the threshold (50%)** the card splits open there, "
-          "more the higher the score.\n\nBelow it there are **signals** in plain language: delays, what share of the "
+          "**The threshold is not fixed:** it moves with the “Decision threshold” control and starts at each model's "
+          "recommended value (maximum F1, about 52%). Lowering it catches more defaults at the cost of more false "
+          "alarms; raising it does the opposite. Below the control you see the recall, precision and false alarms of "
+          "that threshold on test clients.\n\n"
+          "The card also breaks according to the risk: a crack appears 20 points before the threshold and, **from the "
+          "threshold**, it splits open there, more the higher the score.\n\nBelow it there are **signals** in plain language: delays, what share of the "
           "bill was paid and how their limit compares with others.\n\n"
-          + (f"With that threshold the model detects {prueba.get('recall', 0):.0%} of defaulters and is right about "
+          + (f"With the {thr:.0%} threshold the model detects {prueba.get('recall', 0):.0%} of defaulters and is right about "
              f"{prueba.get('precision', 0):.0%} of those it flags (test data). " if prueba else "")
           + "It is not a calibrated probability: it is useful to **rank and classify** clients."),
         tecnico=t("El Random Forest se entrenó con class_weight='balanced', lo que desplaza las probabilidades hacia la "
