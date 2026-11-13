@@ -292,6 +292,43 @@ AGE_LABELS = ["21-25", "26-30", "31-35", "36-40", "41-45",
               "46-50", "51-55", "56-60", "61+"]
 df["AGE_GRP"] = pd.cut(df["AGE"], bins=AGE_BINS, labels=AGE_LABELS)
 
+# ----- Filtros globales del EDA ------------------------------------------------
+# Los gráficos del EDA leen la variable global `df`. Para filtrarlos todos a la vez, cada callback del EDA
+# calcula su figura dentro de `filtrado(f)`, que cambia `df` por el subconjunto filtrado y lo restaura al
+# terminar. El candado evita que dos peticiones se crucen; en Render, gunicorn usa además un solo hilo.
+import threading
+from contextlib import contextmanager
+DF_FULL = df
+_DF_LOCK = threading.RLock()
+EDA_MIN_ROWS = 200
+
+
+def aplicar_filtro(f):
+    """Subconjunto de DF_FULL según el filtro global del EDA (None o vacío = todos los clientes)."""
+    if not f:
+        return DF_FULL
+    m = pd.Series(True, index=DF_FULL.index)
+    for col, key in (("SEX", "sex"), ("EDUCATION", "edu"), ("MARRIAGE", "mar")):
+        if f.get(key):
+            m &= DF_FULL[col].isin(f[key])
+    if f.get("age"):
+        m &= DF_FULL["AGE"].between(*f["age"])
+    if f.get("lim"):
+        m &= DF_FULL["LIMIT_BAL"].between(*f["lim"])
+    sub = DF_FULL[m]
+    return sub if len(sub) >= EDA_MIN_ROWS else DF_FULL
+
+
+@contextmanager
+def filtrado(f):
+    global df
+    with _DF_LOCK:
+        df = aplicar_filtro(f)
+        try:
+            yield df
+        finally:
+            df = DF_FULL
+
 # Etiquetas de categorías (es, en)
 _CAT_LABELS = {
     "SEX": {1: ("Hombre", "Male"), 2: ("Mujer", "Female")},
@@ -1522,6 +1559,166 @@ def fig_best_cm():
     return fig
 
 
+# ----- Diagnóstico del modelo elegido, diagrama de diferencia crítica y SHAP global de CS-FOF y CatBoost -----
+# results/diagnosticos.json lo genera herramientas/diagnosticos_desde_proyecto.py a partir de las predicciones
+# fuera de pliegue del proyecto (mejor combinación de cada modelo, mismos 5 pliegues externos).
+DIAG = json.loads((BASE_DIR / "results" / "diagnosticos.json").read_text(encoding="utf-8"))
+DIAG_MODELS = list(DIAG["modelos"])
+
+
+def fig_diag(model):
+    """ROC, precisión-recall y calibración del modelo elegido frente a CS-FOF (o frente a CatBoost si se elige CS-FOF)."""
+    ref = "catboost" if model == "cs_fof" else "cs_fof"
+    fig = make_subplots(rows=1, cols=3, horizontal_spacing=0.09,
+                        subplot_titles=(tx("Curva ROC", "ROC curve"), tx("Precisión-recall", "Precision-recall"),
+                                        tx("Calibración (10 grupos)", "Calibration (10 bins)")))
+    for m, col, dash_ in ((ref, PALE_GOLD if ref == "cs_fof" else GREY_BLUE, "dot"), (model, WARM_GOLD if model == "cs_fof" else NAVY, "solid")):
+        d = DIAG["modelos"][m]; nm = minfo(m, "label")
+        fig.add_trace(go.Scatter(x=d["roc"][0], y=d["roc"][1], name=nm, legendgroup=m, line=dict(color=col, width=2.5, dash=dash_),
+                                 hovertemplate=nm + "<br>FPR %{x:.2f} · TPR %{y:.2f}<extra></extra>"), 1, 1)
+        fig.add_trace(go.Scatter(x=d["pr"][0], y=d["pr"][1], name=nm, legendgroup=m, showlegend=False,
+                                 line=dict(color=col, width=2.5, dash=dash_),
+                                 hovertemplate=nm + "<br>Recall %{x:.2f} · " + tx("precisión", "precision") + " %{y:.2f}<extra></extra>"), 1, 2)
+        cal = d["cal"]
+        fig.add_trace(go.Scatter(x=[c[0] for c in cal], y=[c[1] for c in cal], name=nm, legendgroup=m, showlegend=False,
+                                 mode="lines+markers", line=dict(color=col, width=2.5, dash=dash_), customdata=[c[2] for c in cal],
+                                 hovertemplate=nm + "<br>" + tx("Predicho", "Predicted") + " %{x:.2f} · " + tx("observado", "observed")
+                                 + " %{y:.2f}<br>%{customdata:,} " + tx("clientes", "clients") + "<extra></extra>"), 1, 3)
+    for c in (1, 3):
+        fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode="lines", line=dict(color=GREY_BLUE, width=1, dash="dash"),
+                                 showlegend=False, hoverinfo="skip"), 1, c)
+    fig.add_hline(y=DIAG["tasa"], line=dict(color=GREY_BLUE, width=1, dash="dash"), row=1, col=2)
+    style_fig(fig, 380)
+    fig.update_xaxes(title_text=tx("Tasa de falsos positivos", "False positive rate"), row=1, col=1)
+    fig.update_yaxes(title_text=tx("Tasa de verdaderos positivos", "True positive rate"), row=1, col=1)
+    fig.update_xaxes(title_text="Recall", row=1, col=2); fig.update_yaxes(title_text=tx("Precisión", "Precision"), row=1, col=2)
+    fig.update_xaxes(title_text=tx("Probabilidad predicha", "Predicted probability"), range=[0, 1], row=1, col=3)
+    fig.update_yaxes(title_text=tx("Tasa real de impago", "Observed default rate"), range=[0, 1], row=1, col=3)
+    fig.update_layout(margin=dict(l=60, r=20, t=50, b=95),
+                      legend=dict(orientation="h", x=0.5, xanchor="center", y=-0.28, yanchor="top"))
+    return fig
+
+
+def diag_interp(model):
+    d = DIAG["modelos"][model]; cs = DIAG["modelos"]["cs_fof"]; nm = minfo(model, "label")
+    c = d["cm"]; pos = c["tp"] + c["fn"]
+    base = tx(f"{nm}: AUC-ROC {d['auc']:.3f}, precisión media (AUC-PR) {d['ap']:.3f}, Brier {d['brier']:.3f} y error de "
+              f"calibración ECE {d['ece']:.3f}. Con umbral 0.5 detecta {c['tp']:,} de {pos:,} incumplimientos con "
+              f"{c['fp']:,} falsas alarmas.",
+              f"{nm}: ROC-AUC {d['auc']:.3f}, average precision (PR-AUC) {d['ap']:.3f}, Brier {d['brier']:.3f} and "
+              f"calibration error ECE {d['ece']:.3f}. At the 0.5 threshold it detects {c['tp']:,} of {pos:,} defaults "
+              f"with {c['fp']:,} false alarms.")
+    if model != "cs_fof":
+        base += " " + tx(f"CS-FOF (línea punteada): AUC-ROC {cs['auc']:.3f} y ECE {cs['ece']:.3f}.",
+                         f"CS-FOF (dotted line): ROC-AUC {cs['auc']:.3f} and ECE {cs['ece']:.3f}.")
+    tech = tx("Predicciones fuera de pliegue de los 29,965 clientes: cada modelo se reentrenó con los hiperparámetros que "
+              "eligió en cada pliegue externo. Las curvas ROC y precisión-recall miden cómo ordena a los clientes, sin "
+              "depender del umbral; la de calibración compara la probabilidad predicha con la tasa real en 10 grupos (la "
+              "diagonal es la calibración perfecta). Todos los modelos con pesos de clase o SMOTE quedan por debajo de la "
+              "diagonal: sobreestiman el riesgo. El reajuste de LightGBM rinde algo menos que su validación anidada.",
+              "Out-of-fold predictions for the 29,965 clients: each model was refit with the hyperparameters it chose in "
+              "each outer fold. The ROC and precision-recall curves measure how it ranks clients, regardless of the "
+              "threshold; the calibration curve compares the predicted probability with the observed rate in 10 bins (the "
+              "diagonal is perfect calibration). All models with class weights or SMOTE fall below the diagonal: they "
+              "overestimate risk. LightGBM's refit performs slightly worse than its nested validation.")
+    return interp_block(base, tech)
+
+
+def fig_cd(fuente):
+    """Diagrama de diferencia crítica (Nemenyi) con CS-FOF incluido."""
+    F = DIAG["friedman"][fuente]
+    r = pd.Series(F["rangos"]).sort_values(); k = len(r); cd = F["cd"]
+    fig = go.Figure()
+    fig.add_shape(type="line", x0=1, x1=k, y0=0, y1=0, line=dict(color=GREY_BLUE, width=1.5))
+    # grupos sin diferencia significativa (barras)
+    vals = list(r.values); grupos = []
+    for a in range(k):
+        b = max(j for j in range(k) if vals[j] - vals[a] <= cd)
+        if b > a and (not grupos or b > grupos[-1][1]):
+            grupos.append((a, b))
+    for g, (a, b) in enumerate(grupos):
+        fig.add_shape(type="line", x0=vals[a] - .05, x1=vals[b] + .05, y0=-0.35 - 0.18 * g, y1=-0.35 - 0.18 * g,
+                      line=dict(color=NAVY, width=6))
+    fig.add_shape(type="line", x0=1, x1=1 + cd, y0=0.9, y1=0.9, line=dict(color=WARM_GOLD, width=4))
+    fig.add_annotation(x=1 + cd / 2, y=1.05, text=tx(f"Diferencia crítica = {cd:.2f}", f"Critical difference = {cd:.2f}"),
+                       showarrow=False, font=dict(color=WARM_GOLD, size=12))
+    fig.add_trace(go.Scatter(
+        x=list(r.values), y=[0] * k, mode="markers+text", text=[minfo(m, "label") for m in r.index],
+        textposition=["top center" if i % 2 == 0 else "bottom center" for i in range(k)],
+        marker=dict(size=[16 if m == "cs_fof" else 11 for m in r.index],
+                    color=[WARM_GOLD if m == "cs_fof" else NAVY for m in r.index], line=dict(width=1.5, color=WHITE)),
+        textfont=dict(size=11), customdata=list(r.values),
+        hovertemplate="%{text}<br>" + tx("Rango medio", "Mean rank") + ": %{customdata:.2f}<extra></extra>", showlegend=False))
+    style_fig(fig, 340, legend_top=False)
+    fig.update_xaxes(range=[0.5, k + 0.5], dtick=1, title_text=tx("Rango medio (1 = mejor)", "Mean rank (1 = best)"), showgrid=False)
+    fig.update_yaxes(visible=False, range=[-0.35 - 0.18 * len(grupos) - 0.2, 1.2])
+    fig.update_layout(margin=dict(l=30, r=30, t=30, b=50))
+    return fig
+
+
+def cd_interp(fuente):
+    F = DIAG["friedman"][fuente]; r = pd.Series(F["rangos"]).sort_values()
+    if fuente == "taiwan":
+        base = tx(f"CS-FOF tiene rango medio {r['cs_fof']:.1f}, detrás solo de CatBoost ({r['catboost']:.1f}). Las barras "
+                  "azules unen modelos que no se distinguen: CS-FOF queda en el mismo grupo que CatBoost, XGBoost, Random "
+                  "Forest y LightGBM.",
+                  f"CS-FOF has mean rank {r['cs_fof']:.1f}, behind only CatBoost ({r['catboost']:.1f}). The blue bars join "
+                  "models that cannot be told apart: CS-FOF is in the same group as CatBoost, XGBoost, Random Forest and "
+                  "LightGBM.")
+        tech = tx(f"Friedman sobre los 5 pliegues externos de Taiwán: χ² = {F['chi2']:.1f}, p = {F['p']:.1e}; diferencia "
+                  f"crítica de Nemenyi {F['cd']:.2f}. Con un solo conjunto los pliegues no son bloques independientes, así "
+                  "que esta vista es descriptiva; la comparación entre conjuntos es la que usa bloques independientes.",
+                  f"Friedman over the 5 outer folds of Taiwan: χ² = {F['chi2']:.1f}, p = {F['p']:.1e}; Nemenyi critical "
+                  f"difference {F['cd']:.2f}. With a single dataset the folds are not independent blocks, so this view is "
+                  "descriptive; the across-datasets comparison is the one with independent blocks.")
+    else:
+        base = tx(f"En los 4 conjuntos (Taiwán, German, Australian y Polish), CatBoost es primero ({r['catboost']:.2f}) y CS-FOF "
+                  f"empata en el tercer lugar ({r['cs_fof']:.2f}) con Random Forest y LightGBM: pierde terreno en Polish, con "
+                  "4 % de quiebras.",
+                  f"Across the 4 datasets (Taiwan, German, Australian and Polish), CatBoost is first ({r['catboost']:.2f}) and "
+                  f"CS-FOF ties for third ({r['cs_fof']:.2f}) with Random Forest and LightGBM: it loses ground on Polish, "
+                  "with 4% bankruptcies.")
+        tech = tx(f"Friedman con corrección de Iman-Davenport, cada conjunto como bloque: F = {F['F']:.2f}, p = {F['p']:.4f}; "
+                  f"diferencia crítica de Nemenyi {F['cd']:.2f}. Con 4 conjuntos la potencia es baja.",
+                  f"Friedman with the Iman-Davenport correction, each dataset as a block: F = {F['F']:.2f}, p = {F['p']:.4f}; "
+                  f"Nemenyi critical difference {F['cd']:.2f}. With 4 datasets the power is low.")
+    return interp_block(base, tech)
+
+
+def fig_shap_global(model):
+    """SHAP por permutación (300 clientes del pliegue externo 1) de CS-FOF o CatBoost; el otro como referencia."""
+    S = DIAG["shap_global"]; otro = "catboost" if model == "cs_fof" else "cs_fof"
+    d = pd.DataFrame({"f": S["variables"], "m": S[model], "o": S[otro]}).sort_values("m").tail(10)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(y=[feat_lbl(f) for f in d.f], x=d.o, orientation="h", name=minfo(otro, "label"),
+                         marker_color=PALE_GOLD if otro == "cs_fof" else GREY_BLUE, opacity=.55,
+                         hovertemplate="%{y}: %{x:.4f}<extra>" + minfo(otro, "label") + "</extra>"))
+    fig.add_trace(go.Bar(y=[feat_lbl(f) for f in d.f], x=d.m, orientation="h", name=minfo(model, "label"),
+                         marker_color=WARM_GOLD if model == "cs_fof" else NAVY,
+                         hovertemplate="%{y}: %{x:.4f}<extra>" + minfo(model, "label") + "</extra>"))
+    style_fig(fig, 400)
+    fig.update_layout(barmode="group", margin=dict(l=170, r=20, t=40, b=46),
+                      xaxis_title=tx("Importancia media |SHAP| (probabilidad)", "Mean |SHAP| importance (probability)"))
+    return fig
+
+
+def shap_global_interp(model):
+    S = DIAG["shap_global"]
+    return interp_block(
+        tx(f"CS-FOF y CatBoost usan casi las mismas variables (correlación de Spearman {S['spearman']:.2f} entre sus "
+           "importancias): el atraso de septiembre (PAY_0) y el cupo dominan. CS-FOF reparte más peso entre meses de atraso "
+           "(PAY_2 pesa 38 % de PAY_0, frente a 23 % en CatBoost), como se espera de un corte oblicuo que combina meses.",
+           f"CS-FOF and CatBoost use almost the same variables (Spearman correlation {S['spearman']:.2f} between their "
+           "importances): the September delay (PAY_0) and the limit dominate. CS-FOF spreads more weight across delay "
+           "months (PAY_2 weighs 38% of PAY_0, versus 23% in CatBoost), as expected from an oblique cut that combines months."),
+        tx("SHAP por permutación (el mismo explicador para los dos, porque CS-FOF no es un árbol de scikit-learn) en 300 "
+           "clientes de prueba del pliegue externo 1, con 50 clientes de fondo; los valores suman exactamente la "
+           "probabilidad de cada cliente. Las barras tenues son el otro modelo.",
+           "Permutation SHAP (the same explainer for both, because CS-FOF is not a scikit-learn tree) on 300 test clients "
+           "of outer fold 1, with 50 background clients; the values add up exactly to each client's probability. The faint "
+           "bars are the other model."))
+
+
 # ----- Interpretabilidad en los 5 folds (06_interpretability, secciones 5 y 6) -----
 SHAP_FOLDS = pd.read_csv(BASE_DIR / "results" / "shap_by_fold.csv")
 LIME_SHAP = pd.read_csv(BASE_DIR / "results" / "lime_vs_shap.csv")
@@ -2128,10 +2325,44 @@ ALL_VARS = ["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BIL
 # =============================================================================
 # 6. PÁGINAS
 # =============================================================================
+def eda_filter_card():
+    """Filtros globales del EDA: actualizan todos los gráficos de la página (y se conservan entre páginas)."""
+    k = tx("mil", "k")
+    return card(tx("Filtros globales", "Global filters"), [
+        html.Div([
+            control(tx("Sexo", "Sex"), dcc.Checklist(
+                id="ef-sex", value=[1, 2], inline=True, className="radio",
+                options=[{"label": L(t[1]), "value": t[0]} for t in SEX_TILES if t[0] in (1, 2)], **KEEP)),
+            control(tx("Educación", "Education"), dcc.Checklist(
+                id="ef-edu", value=[1, 2, 3, 4], inline=True, className="radio",
+                options=[{"label": L(t[1]), "value": t[0]} for t in EDU_TILES], **KEEP)),
+            control(tx("Estado civil", "Marital status"), dcc.Checklist(
+                id="ef-mar", value=[1, 2, 3], inline=True, className="radio",
+                options=[{"label": L(t[1]), "value": t[0]} for t in MAR_TILES], **KEEP)),
+        ], className="controls"),
+        html.Div([
+            control(tx("Edad (años)", "Age (years)"), dcc.RangeSlider(
+                id="ef-age", min=21, max=79, step=1, value=[21, 79], allowCross=False,
+                marks={i: str(i) for i in range(21, 80, 10)}, tooltip={"placement": "bottom"}, **KEEP)),
+            control(tx("Cupo de crédito (NT$)", "Credit limit (NT$)"), dcc.RangeSlider(
+                id="ef-lim", min=10000, max=1000000, step=10000, value=[10000, 1000000], allowCross=False,
+                marks={10000: f"10 {k}", 250000: f"250 {k}", 500000: f"500 {k}", 750000: f"750 {k}", 1000000: "1 M"},
+                tooltip={"placement": "bottom"}, **KEEP)),
+        ], className="grid g2"),
+        html.Div([html.Span(id="ef-info"), html.Button(tx("Quitar filtros", "Clear filters"), id="ef-reset", className="btn")],
+                 className="ef-bar"),
+        html.P(tx("Los filtros actualizan todos los gráficos de esta página y de la otra página del EDA. Las tarjetas de "
+                  "cifras y los textos fijos describen siempre a todos los clientes.",
+                  "The filters update every chart on this page and on the other EDA page. The figure cards and the fixed "
+                  "texts always describe all clients."), className="muted"),
+    ])
+
+
 def page_uni():
     b_t, t_t = interp_target()
     return html.Div([
         page_title(tx("EDA Univariado", "Univariate EDA"), ""),
+        eda_filter_card(),
         html.Div([
             kpi(tx("Total de registros", "Total records"), f"{len(df):,}",
                 tx("tras eliminar duplicados", "after removing duplicates"), ico="users"),
@@ -2176,6 +2407,7 @@ def page_multi():
     num_opts = var_options(NUM_COLS)
     return html.Div([
         page_title(tx("EDA Multivariado", "Multivariate EDA"), ""),
+        eda_filter_card(),
         card(tx("Matriz de correlación de Spearman", "Spearman correlation matrix"),
              [dcc.Graph(id="corr-graph", figure=fig_corr(), config={"displaylogo": False}),
               interp_block(*interp_corr())]),
@@ -3810,11 +4042,13 @@ def page_models():
                        "probabilities are not calibrated (ECE = 0.204) because balancing inflates the positive class. "
                        "Tuning the threshold to the cost of each type of error is the natural next step.")),
             ]),
-            card(tx("Qué variables pesan más: SHAP en los 5 folds", "Which variables matter most: SHAP across 5 folds"), [
+            card(tx("Qué variables pesan más: SHAP global", "Which variables matter most: global SHAP"), [
                 html.Div([control(tx("Modelo", "Model"), dcc.RadioItems(
                     id="shap-model", value="xgboost", className="radio",
                     options=[{"label": "XGBoost", "value": "xgboost"},
-                             {"label": "Random Forest", "value": "random_forest"}]))], className="controls"),
+                             {"label": "Random Forest", "value": "random_forest"},
+                             {"label": "CatBoost", "value": "catboost"},
+                             {"label": "CS-FOF", "value": "cs_fof"}]))], className="controls"),
                 dcc.Graph(id="shap-graph", config=gcfg),
                 html.Div(id="shap-interp"),
                 html.P(tx("Coincide con el EDA: el historial de pagos (PAY_0 primero) es la señal más fuerte del "
@@ -3824,6 +4058,21 @@ def page_models():
                        className="callout"),
             ]),
         ], className="grid g2"),
+        card(tx("Diagnóstico del modelo seleccionado", "Diagnostics of the selected model"), [
+            html.Div([control(tx("Modelo", "Model"), dcc.RadioItems(
+                id="diag-model", value="catboost", className="radio",
+                options=[{"label": minfo(m, "label"), "value": m} for m in DIAG_MODELS]))], className="controls"),
+            dcc.Graph(id="diag-graph", config=gcfg),
+            html.Div(id="diag-interp"),
+        ]),
+        card(tx("Comparación estadística: diagrama de diferencia crítica", "Statistical comparison: critical difference diagram"), [
+            html.Div([control(tx("Comparar sobre", "Compare over"), dcc.RadioItems(
+                id="cd-src", value="taiwan", className="radio",
+                options=[{"label": tx("Taiwán (5 pliegues)", "Taiwan (5 folds)"), "value": "taiwan"},
+                         {"label": tx("4 conjuntos de datos", "4 datasets"), "value": "conjuntos"}]))], className="controls"),
+            dcc.Graph(id="cd-graph", config=gcfg),
+            html.Div(id="cd-interp"),
+        ]),
         card(tx("¿LIME y SHAP explican lo mismo?", "Do LIME and SHAP explain the same thing?"), [
             html.Div([
                 html.Div([lime_shap_table()]),
@@ -5114,6 +5363,8 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-hint { font-size:12.5px; color:var(--muted); } .pf-note { margin:6px 0 12px; } .pf-row { margin-bottom:14px; }
 .pf-slider { padding-top:34px; }
 .pf-thr-info { margin-top:10px; }
+.ef-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 0 4px; flex-wrap:wrap; }
+.ef-bar #ef-info { font-weight:600; color:var(--text); }
 .pf-thr-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:8px; }
 .pf-thr-k { border:1px solid var(--line); border-radius:12px; padding:8px 12px; display:flex; flex-direction:column; }
 .pf-thr-k b { font-size:22px; color:var(--accent-2, #B88F3D); line-height:1.2; }
@@ -5768,6 +6019,7 @@ app.layout = html.Div([
     sidebar,
     html.Div([topbar, html.Div(id="page", className="content"), footer], className="main"),
     dcc.Store(id="bot-store", storage_type="session", data=[]),
+    dcc.Store(id="eda-filter", storage_type="session", data=None),
     bot_panel(),
 ], id="shell", className="app")
 
@@ -5838,19 +6090,48 @@ def cb_home():
     return fig_home()
 
 
-@graph_cb(Output("target-graph", "figure"), mono=True)
-def cb_target():
-    return fig_target()
+@app.callback(Output("eda-filter", "data"), Output("ef-info", "children"),
+              Input("ef-sex", "value"), Input("ef-edu", "value"), Input("ef-mar", "value"),
+              Input("ef-age", "value"), Input("ef-lim", "value"), Input("lang", "data"))
+def cb_eda_filter(sex, edu, mar, age, lim, lang):
+    set_lang(lang)
+    f = {"sex": sex or [], "edu": edu or [], "mar": mar or [], "age": age, "lim": lim}
+    todos = (set(sex or []) >= {1, 2} and set(edu or []) >= {1, 2, 3, 4} and set(mar or []) >= {1, 2, 3}
+             and (not age or list(age) == [21, 79]) and (not lim or list(lim) == [10000, 1000000]))
+    if todos:
+        return None, tx(f"Mostrando a todos los clientes ({len(DF_FULL):,}).", f"Showing all clients ({len(DF_FULL):,}).")
+    sub = aplicar_filtro(f)
+    if sub is DF_FULL:
+        return None, tx(f"El filtro deja menos de {EDA_MIN_ROWS} clientes: se muestran todos.",
+                        f"The filter leaves fewer than {EDA_MIN_ROWS} clients: showing all of them.")
+    return f, tx(f"Mostrando {len(sub):,} de {len(DF_FULL):,} clientes ({len(sub) / len(DF_FULL):.0%}); tasa de impago "
+                 f"{sub[TARGET].mean():.1%} (global {GLOBAL_RATE:.1%}).",
+                 f"Showing {len(sub):,} of {len(DF_FULL):,} clients ({len(sub) / len(DF_FULL):.0%}); default rate "
+                 f"{sub[TARGET].mean():.1%} (overall {GLOBAL_RATE:.1%}).")
 
 
-@graph_cb(Output("rates-graph", "figure"))
-def cb_rates():
-    return fig_rates()
+@app.callback(Output("ef-sex", "value"), Output("ef-edu", "value"), Output("ef-mar", "value"),
+              Output("ef-age", "value"), Output("ef-lim", "value"), Input("ef-reset", "n_clicks"), prevent_initial_call=True)
+def cb_eda_reset(_):
+    return [1, 2], [1, 2, 3, 4], [1, 2, 3], [21, 79], [10000, 1000000]
 
 
-@graph_cb(Output("corr-graph", "figure"))
-def cb_corr():
-    return fig_corr()
+@graph_cb(Output("target-graph", "figure"), Input("eda-filter", "data"), mono=True)
+def cb_target(f):
+    with filtrado(f):
+        return fig_target()
+
+
+@graph_cb(Output("rates-graph", "figure"), Input("eda-filter", "data"))
+def cb_rates(f):
+    with filtrado(f):
+        return fig_rates()
+
+
+@graph_cb(Output("corr-graph", "figure"), Input("eda-filter", "data"))
+def cb_corr(f):
+    with filtrado(f):
+        return fig_corr()
 
 
 # ---------- Callbacks: Modelos ------------------------------------------------
@@ -5897,7 +6178,21 @@ def cb_lime_cells():
 
 @graph_cb(Output("shap-graph", "figure"), Output("shap-interp", "children"), Input("shap-model", "value"))
 def cb_shap(model):
+    if model in ("cs_fof", "catboost"):
+        return fig_shap_global(model), shap_global_interp(model)
     return fig_shap_folds(model), interp_block(*interp_shap_folds(model))
+
+
+@graph_cb(Output("diag-graph", "figure"), Output("diag-interp", "children"), Input("diag-model", "value"))
+def cb_diag(model):
+    model = model if model in DIAG["modelos"] else "catboost"
+    return fig_diag(model), diag_interp(model)
+
+
+@graph_cb(Output("cd-graph", "figure"), Output("cd-interp", "children"), Input("cd-src", "value"))
+def cb_cd(fuente):
+    fuente = fuente if fuente in DIAG["friedman"] else "taiwan"
+    return fig_cd(fuente), cd_interp(fuente)
 
 
 @graph_cb(Output("any-graph", "figure"), Output("any-table", "children"), Output("any-interp", "children"),
@@ -6059,38 +6354,50 @@ def _route(path):
 
 # ---------- Callbacks: Univariado (gráficas de un solo color) ------------------
 @graph_cb(Output("uni-graph", "figure"), Output("uni-interp", "children"),
-          Input("uni-var", "value"), mono=True)
-def cb_uni(var):
-    return fig_uni(var), interp_block(*interp_uni(var))
+          Input("uni-var", "value"), Input("eda-filter", "data"), mono=True)
+def cb_uni(var, f):
+    with filtrado(f):
+        return fig_uni(var), interp_block(*interp_uni(var))
 
 
 @graph_cb(Output("q-graph", "figure"), Output("q-interp", "children"),
-          Input("q-family", "value"), Input("q-kind", "value"),
-          mono=lambda family, kind: family in ("LIMIT_BAL", "AGE"))
-def cb_quant(family, kind):
-    return fig_quant(family, kind), interp_block(*interp_quant(family))
+          Input("q-family", "value"), Input("q-kind", "value"), Input("eda-filter", "data"),
+          mono=lambda family, kind, f: family in ("LIMIT_BAL", "AGE"))
+def cb_quant(family, kind, f):
+    with filtrado(f):
+        return fig_quant(family, kind), interp_block(*interp_quant(family))
 
 
 # ---------- Callbacks: Multivariado -------------------------------------------
-@graph_cb(Output("lim-graph", "figure"), Input("lim-scale", "value"))
-def cb_limit(scale):
-    return fig_limit_box(scale)
+@graph_cb(Output("lim-graph", "figure"), Input("lim-scale", "value"), Input("eda-filter", "data"))
+def cb_limit(scale, f):
+    with filtrado(f):
+        return fig_limit_box(scale)
 
 
-@graph_cb(Output("age-graph", "figure"), Output("age-interp", "children"), Input("age-view", "value"))
-def cb_age(view):
-    return fig_age(view), interp_block(*interp_age(view))
+@graph_cb(Output("age-graph", "figure"), Output("age-interp", "children"), Input("age-view", "value"),
+          Input("eda-filter", "data"))
+def cb_age(view, f):
+    with filtrado(f):
+        return fig_age(view), interp_block(*interp_age(view))
 
 
 @graph_cb(Output("x-graph", "figure"), Output("x-interp", "children"),
-          Input("x-var", "value"), Input("y-var", "value"), Input("c-var", "value"))
-def cb_cross(x, y, c):
-    fig, b, t = cross_fig(x, y, c)
+          Input("x-var", "value"), Input("y-var", "value"), Input("c-var", "value"), Input("eda-filter", "data"))
+def cb_cross(x, y, c, f):
+    with filtrado(f):
+        fig, b, t = cross_fig(x, y, c)
     return fig, interp_block(b, t)
 
 
-@graph_cb(Output("s-graph", "figure"), Output("s-interp", "children"), Input("s-vars", "value"))
-def cb_splom(vars_):
+@graph_cb(Output("s-graph", "figure"), Output("s-interp", "children"), Input("s-vars", "value"),
+          Input("eda-filter", "data"))
+def cb_splom(vars_, f):
+    with filtrado(f):
+        return _cb_splom(vars_)
+
+
+def _cb_splom(vars_):
     vars_ = (vars_ or [])[:6]
     if len(vars_) < 2:
         fig = go.Figure()
