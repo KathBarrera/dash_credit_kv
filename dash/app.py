@@ -292,6 +292,43 @@ AGE_LABELS = ["21-25", "26-30", "31-35", "36-40", "41-45",
               "46-50", "51-55", "56-60", "61+"]
 df["AGE_GRP"] = pd.cut(df["AGE"], bins=AGE_BINS, labels=AGE_LABELS)
 
+# ----- Filtros globales del EDA ------------------------------------------------
+# Los gráficos del EDA leen la variable global `df`. Para filtrarlos todos a la vez, cada callback del EDA
+# calcula su figura dentro de `filtrado(f)`, que cambia `df` por el subconjunto filtrado y lo restaura al
+# terminar. El candado evita que dos peticiones se crucen; en Render, gunicorn usa además un solo hilo.
+import threading
+from contextlib import contextmanager
+DF_FULL = df
+_DF_LOCK = threading.RLock()
+EDA_MIN_ROWS = 200
+
+
+def aplicar_filtro(f):
+    """Subconjunto de DF_FULL según el filtro global del EDA (None o vacío = todos los clientes)."""
+    if not f:
+        return DF_FULL
+    m = pd.Series(True, index=DF_FULL.index)
+    for col, key in (("SEX", "sex"), ("EDUCATION", "edu"), ("MARRIAGE", "mar")):
+        if f.get(key):
+            m &= DF_FULL[col].isin(f[key])
+    if f.get("age"):
+        m &= DF_FULL["AGE"].between(*f["age"])
+    if f.get("lim"):
+        m &= DF_FULL["LIMIT_BAL"].between(*f["lim"])
+    sub = DF_FULL[m]
+    return sub if len(sub) >= EDA_MIN_ROWS else DF_FULL
+
+
+@contextmanager
+def filtrado(f):
+    global df
+    with _DF_LOCK:
+        df = aplicar_filtro(f)
+        try:
+            yield df
+        finally:
+            df = DF_FULL
+
 # Etiquetas de categorías (es, en)
 _CAT_LABELS = {
     "SEX": {1: ("Hombre", "Male"), 2: ("Mujer", "Female")},
@@ -2288,10 +2325,44 @@ ALL_VARS = ["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BIL
 # =============================================================================
 # 6. PÁGINAS
 # =============================================================================
+def eda_filter_card():
+    """Filtros globales del EDA: actualizan todos los gráficos de la página (y se conservan entre páginas)."""
+    k = tx("mil", "k")
+    return card(tx("Filtros globales", "Global filters"), [
+        html.Div([
+            control(tx("Sexo", "Sex"), dcc.Checklist(
+                id="ef-sex", value=[1, 2], inline=True, className="radio",
+                options=[{"label": L(t[1]), "value": t[0]} for t in SEX_TILES if t[0] in (1, 2)], **KEEP)),
+            control(tx("Educación", "Education"), dcc.Checklist(
+                id="ef-edu", value=[1, 2, 3, 4], inline=True, className="radio",
+                options=[{"label": L(t[1]), "value": t[0]} for t in EDU_TILES], **KEEP)),
+            control(tx("Estado civil", "Marital status"), dcc.Checklist(
+                id="ef-mar", value=[1, 2, 3], inline=True, className="radio",
+                options=[{"label": L(t[1]), "value": t[0]} for t in MAR_TILES], **KEEP)),
+        ], className="controls"),
+        html.Div([
+            control(tx("Edad (años)", "Age (years)"), dcc.RangeSlider(
+                id="ef-age", min=21, max=79, step=1, value=[21, 79], allowCross=False,
+                marks={i: str(i) for i in range(21, 80, 10)}, tooltip={"placement": "bottom"}, **KEEP)),
+            control(tx("Cupo de crédito (NT$)", "Credit limit (NT$)"), dcc.RangeSlider(
+                id="ef-lim", min=10000, max=1000000, step=10000, value=[10000, 1000000], allowCross=False,
+                marks={10000: f"10 {k}", 250000: f"250 {k}", 500000: f"500 {k}", 750000: f"750 {k}", 1000000: "1 M"},
+                tooltip={"placement": "bottom"}, **KEEP)),
+        ], className="grid g2"),
+        html.Div([html.Span(id="ef-info"), html.Button(tx("Quitar filtros", "Clear filters"), id="ef-reset", className="btn")],
+                 className="ef-bar"),
+        html.P(tx("Los filtros actualizan todos los gráficos de esta página y de la otra página del EDA. Las tarjetas de "
+                  "cifras y los textos fijos describen siempre a todos los clientes.",
+                  "The filters update every chart on this page and on the other EDA page. The figure cards and the fixed "
+                  "texts always describe all clients."), className="muted"),
+    ])
+
+
 def page_uni():
     b_t, t_t = interp_target()
     return html.Div([
         page_title(tx("EDA Univariado", "Univariate EDA"), ""),
+        eda_filter_card(),
         html.Div([
             kpi(tx("Total de registros", "Total records"), f"{len(df):,}",
                 tx("tras eliminar duplicados", "after removing duplicates"), ico="users"),
@@ -2336,6 +2407,7 @@ def page_multi():
     num_opts = var_options(NUM_COLS)
     return html.Div([
         page_title(tx("EDA Multivariado", "Multivariate EDA"), ""),
+        eda_filter_card(),
         card(tx("Matriz de correlación de Spearman", "Spearman correlation matrix"),
              [dcc.Graph(id="corr-graph", figure=fig_corr(), config={"displaylogo": False}),
               interp_block(*interp_corr())]),
@@ -5291,6 +5363,8 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-hint { font-size:12.5px; color:var(--muted); } .pf-note { margin:6px 0 12px; } .pf-row { margin-bottom:14px; }
 .pf-slider { padding-top:34px; }
 .pf-thr-info { margin-top:10px; }
+.ef-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 0 4px; flex-wrap:wrap; }
+.ef-bar #ef-info { font-weight:600; color:var(--text); }
 .pf-thr-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:8px; }
 .pf-thr-k { border:1px solid var(--line); border-radius:12px; padding:8px 12px; display:flex; flex-direction:column; }
 .pf-thr-k b { font-size:22px; color:var(--accent-2, #B88F3D); line-height:1.2; }
@@ -5945,6 +6019,7 @@ app.layout = html.Div([
     sidebar,
     html.Div([topbar, html.Div(id="page", className="content"), footer], className="main"),
     dcc.Store(id="bot-store", storage_type="session", data=[]),
+    dcc.Store(id="eda-filter", storage_type="session", data=None),
     bot_panel(),
 ], id="shell", className="app")
 
@@ -6015,19 +6090,48 @@ def cb_home():
     return fig_home()
 
 
-@graph_cb(Output("target-graph", "figure"), mono=True)
-def cb_target():
-    return fig_target()
+@app.callback(Output("eda-filter", "data"), Output("ef-info", "children"),
+              Input("ef-sex", "value"), Input("ef-edu", "value"), Input("ef-mar", "value"),
+              Input("ef-age", "value"), Input("ef-lim", "value"), Input("lang", "data"))
+def cb_eda_filter(sex, edu, mar, age, lim, lang):
+    set_lang(lang)
+    f = {"sex": sex or [], "edu": edu or [], "mar": mar or [], "age": age, "lim": lim}
+    todos = (set(sex or []) >= {1, 2} and set(edu or []) >= {1, 2, 3, 4} and set(mar or []) >= {1, 2, 3}
+             and (not age or list(age) == [21, 79]) and (not lim or list(lim) == [10000, 1000000]))
+    if todos:
+        return None, tx(f"Mostrando a todos los clientes ({len(DF_FULL):,}).", f"Showing all clients ({len(DF_FULL):,}).")
+    sub = aplicar_filtro(f)
+    if sub is DF_FULL:
+        return None, tx(f"El filtro deja menos de {EDA_MIN_ROWS} clientes: se muestran todos.",
+                        f"The filter leaves fewer than {EDA_MIN_ROWS} clients: showing all of them.")
+    return f, tx(f"Mostrando {len(sub):,} de {len(DF_FULL):,} clientes ({len(sub) / len(DF_FULL):.0%}); tasa de impago "
+                 f"{sub[TARGET].mean():.1%} (global {GLOBAL_RATE:.1%}).",
+                 f"Showing {len(sub):,} of {len(DF_FULL):,} clients ({len(sub) / len(DF_FULL):.0%}); default rate "
+                 f"{sub[TARGET].mean():.1%} (overall {GLOBAL_RATE:.1%}).")
 
 
-@graph_cb(Output("rates-graph", "figure"))
-def cb_rates():
-    return fig_rates()
+@app.callback(Output("ef-sex", "value"), Output("ef-edu", "value"), Output("ef-mar", "value"),
+              Output("ef-age", "value"), Output("ef-lim", "value"), Input("ef-reset", "n_clicks"), prevent_initial_call=True)
+def cb_eda_reset(_):
+    return [1, 2], [1, 2, 3, 4], [1, 2, 3], [21, 79], [10000, 1000000]
 
 
-@graph_cb(Output("corr-graph", "figure"))
-def cb_corr():
-    return fig_corr()
+@graph_cb(Output("target-graph", "figure"), Input("eda-filter", "data"), mono=True)
+def cb_target(f):
+    with filtrado(f):
+        return fig_target()
+
+
+@graph_cb(Output("rates-graph", "figure"), Input("eda-filter", "data"))
+def cb_rates(f):
+    with filtrado(f):
+        return fig_rates()
+
+
+@graph_cb(Output("corr-graph", "figure"), Input("eda-filter", "data"))
+def cb_corr(f):
+    with filtrado(f):
+        return fig_corr()
 
 
 # ---------- Callbacks: Modelos ------------------------------------------------
@@ -6250,38 +6354,50 @@ def _route(path):
 
 # ---------- Callbacks: Univariado (gráficas de un solo color) ------------------
 @graph_cb(Output("uni-graph", "figure"), Output("uni-interp", "children"),
-          Input("uni-var", "value"), mono=True)
-def cb_uni(var):
-    return fig_uni(var), interp_block(*interp_uni(var))
+          Input("uni-var", "value"), Input("eda-filter", "data"), mono=True)
+def cb_uni(var, f):
+    with filtrado(f):
+        return fig_uni(var), interp_block(*interp_uni(var))
 
 
 @graph_cb(Output("q-graph", "figure"), Output("q-interp", "children"),
-          Input("q-family", "value"), Input("q-kind", "value"),
-          mono=lambda family, kind: family in ("LIMIT_BAL", "AGE"))
-def cb_quant(family, kind):
-    return fig_quant(family, kind), interp_block(*interp_quant(family))
+          Input("q-family", "value"), Input("q-kind", "value"), Input("eda-filter", "data"),
+          mono=lambda family, kind, f: family in ("LIMIT_BAL", "AGE"))
+def cb_quant(family, kind, f):
+    with filtrado(f):
+        return fig_quant(family, kind), interp_block(*interp_quant(family))
 
 
 # ---------- Callbacks: Multivariado -------------------------------------------
-@graph_cb(Output("lim-graph", "figure"), Input("lim-scale", "value"))
-def cb_limit(scale):
-    return fig_limit_box(scale)
+@graph_cb(Output("lim-graph", "figure"), Input("lim-scale", "value"), Input("eda-filter", "data"))
+def cb_limit(scale, f):
+    with filtrado(f):
+        return fig_limit_box(scale)
 
 
-@graph_cb(Output("age-graph", "figure"), Output("age-interp", "children"), Input("age-view", "value"))
-def cb_age(view):
-    return fig_age(view), interp_block(*interp_age(view))
+@graph_cb(Output("age-graph", "figure"), Output("age-interp", "children"), Input("age-view", "value"),
+          Input("eda-filter", "data"))
+def cb_age(view, f):
+    with filtrado(f):
+        return fig_age(view), interp_block(*interp_age(view))
 
 
 @graph_cb(Output("x-graph", "figure"), Output("x-interp", "children"),
-          Input("x-var", "value"), Input("y-var", "value"), Input("c-var", "value"))
-def cb_cross(x, y, c):
-    fig, b, t = cross_fig(x, y, c)
+          Input("x-var", "value"), Input("y-var", "value"), Input("c-var", "value"), Input("eda-filter", "data"))
+def cb_cross(x, y, c, f):
+    with filtrado(f):
+        fig, b, t = cross_fig(x, y, c)
     return fig, interp_block(b, t)
 
 
-@graph_cb(Output("s-graph", "figure"), Output("s-interp", "children"), Input("s-vars", "value"))
-def cb_splom(vars_):
+@graph_cb(Output("s-graph", "figure"), Output("s-interp", "children"), Input("s-vars", "value"),
+          Input("eda-filter", "data"))
+def cb_splom(vars_, f):
+    with filtrado(f):
+        return _cb_splom(vars_)
+
+
+def _cb_splom(vars_):
     vars_ = (vars_ or [])[:6]
     if len(vars_) < 2:
         fig = go.Figure()

@@ -5,8 +5,9 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    # 1 worker y sin --preload: el plan gratis tiene 512 MB y así el tablero usa ~350 MB
-    startCommand: gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+    # 1 worker, 1 hilo y sin --preload: el plan gratis tiene 512 MB (el tablero usa ~350 MB) y los filtros
+    # globales del EDA cambian la tabla de datos durante cada petición, así que se atienden de una en una
+    startCommand: gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 1 --threads 1 --timeout 120
     healthCheckPath: /ping
     autoDeploy: true
     envVars:
