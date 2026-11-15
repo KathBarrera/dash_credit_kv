@@ -1,13 +1,21 @@
 # =============================================================================
-# 7. PREDECIR: modelo serializado con saveRDS (modelo/modelo_credito.rds)
+# 7. PREDECIR: Random Forest serializado con saveRDS y CS-FOF (modelo original)
 # =============================================================================
-# El .rds lo genera `Rscript modelo/entrenar_modelo.R`: un Random Forest (ranger) con pesos
-# de clase sobre las variables de preparar_variables(). Aquí solo se CARGA y se usa.
+# - Random Forest: `Rscript modelo/entrenar_modelo.R` lo entrena (ranger, pesos de clase) y lo guarda en
+#   modelo/modelo_credito.rds; aquí solo se CARGA y se usa.
+# - CS-FOF: se recorre con los árboles exportados del modelo del Dash (R/06b_cs_fof.R).
+# Los dos usan la misma partición 80/20 del Dash, así que sus métricas de prueba son comparables.
 library(ranger)
 MODELO <- tryCatch(readRDS("modelo/modelo_credito.rds"), error = function(e) NULL)
 MODELO_META <- tryCatch(jsonlite::fromJSON("modelo/modelo_credito.json"), error = function(e) list())
 UMBRAL <- MODELO_META$umbral %||% 0.5
 N_TREES <- if (is.null(MODELO)) 0 else MODELO$num.trees
+# Selector de «Predecir»: Random Forest (el de siempre) y CS-FOF (original). Si falta CS-FOF, solo se ofrece RF.
+MODEL_LABELS <- list(rf = c("Random Forest", "Random Forest"), cs_fof = c("CS-FOF (modelo original)", "CS-FOF (original model)"))
+MODEL_KEYS <- c("rf", if (!is.null(CSFOF)) "cs_fof")
+.mk <- function(key) if (!is.null(key) && key %in% MODEL_KEYS) key else "rf"
+.meta <- function(key) if (.mk(key) == "cs_fof") CSFOF$meta else MODELO_META
+.rec_thr <- function(key) .meta(key)$umbral_ajustable$recomendado %||% 0.5
 
 PAY_CHRONO <- MONTH_ORDER                         # PAY_6 ... PAY_0 (abril → septiembre)
 BILL_CHRONO <- paste0("BILL_AMT", 6:1)
@@ -53,28 +61,64 @@ WHATIF <- list(
 PAY_SHORT <- list(`-2` = c("Sin uso", "No use"), `-1` = c("Al día", "Paid"), `0` = c("Mínimo", "Minimum"))
 pay_short <- function(v) if (as.character(v) %in% names(PAY_SHORT)) L(PAY_SHORT[[as.character(v)]]) else tx(paste(v, "m atraso"), paste(v, "m late"))
 
-# Lista de clientes (cada uno, lista con las 23 variables) -> puntajes 0–1.
+# Lista de clientes (cada uno, lista con las 23 variables) -> puntajes 0–1 del modelo elegido.
 # Con SEX = 3 («Otro») promedia las predicciones como hombre y como mujer.
-predict_scores <- function(rows) {
+.proba <- function(d, key) {
+  if (.mk(key) == "cs_fof") cs_fof_proba(d) else predict(MODELO, preparar_variables(d))$predictions[, "1"]
+}
+predict_scores <- function(rows, key = "rf") {
   d <- do.call(rbind, lapply(rows, function(r) as.data.frame(r[INPUT_COLS])))
   other <- d$SEX == SEX_OTHER
   d$SEX[other] <- 1
-  p <- predict(MODELO, preparar_variables(d))$predictions[, "1"]
+  p <- .proba(d, key)
   if (any(other)) {
     d2 <- d[other, , drop = FALSE]; d2$SEX <- 2
-    p[other] <- (p[other] + predict(MODELO, preparar_variables(d2))$predictions[, "1"]) / 2
+    p[other] <- (p[other] + .proba(d2, key)) / 2
   }
   p
 }
-predict_risk <- function(values) predict_scores(list(values))[1]
+predict_risk <- function(values, key = "rf") predict_scores(list(values), key)[1]
 
 # Cuántos árboles dan probabilidad ≥ 0.5 de incumplir (los «votos»)
-tree_votes <- function(values) {
+tree_votes <- function(values, key = "rf") {
   rows <- if (values$SEX != SEX_OTHER) list(values) else list(modifyList(values, list(SEX = 1)), modifyList(values, list(SEX = 2)))
   d <- do.call(rbind, lapply(rows, function(r) as.data.frame(r[INPUT_COLS])))
+  if (.mk(key) == "cs_fof") {
+    H <- cs_fof_hojas(cs_fof_matriz(d)); nt <- ncol(H)
+    return(c(round(mean(colMeans(H >= 0.5)) * nt), nt))
+  }
   pa <- predict(MODELO, preparar_variables(d), predict.all = TRUE)$predictions   # [cliente, clase, árbol]
   yes <- mean(apply(pa[, 2, , drop = FALSE] >= 0.5, 1, mean)) * MODELO$num.trees
   c(round(yes), MODELO$num.trees)
+}
+
+# ---------- SHAP por grupo de variables (valores de Shapley exactos) ----------
+# Con 5 grupos hay 2^5 = 32 coaliciones. v(S) es el puntaje medio cuando el cliente conserva sus valores en los
+# grupos de S y toma los de cada cliente del fondo (40 clientes reales) en el resto.
+# phi_g = sum_S |S|!(5-|S|-1)!/5! [v(S + g) - v(S)]; por construcción, base + sum(phi) = puntaje.
+SHAP_BG <- local({ set.seed(42); lapply(sample(nrow(df), 40), function(i) as.list(df[i, INPUT_COLS])) })
+shap_groups <- function(values, key = "rf") {
+  G <- length(DRIVER_GROUPS)
+  coal <- unlist(lapply(0:G, function(r) utils::combn(G, r, simplify = FALSE)), recursive = FALSE)
+  coal[[1]] <- integer(0)
+  rows <- list()
+  for (S in coal) {
+    keep <- unlist(lapply(S, function(g) DRIVER_GROUPS[[g]][[2]]))
+    for (b in SHAP_BG) rows[[length(rows) + 1]] <- modifyList(b, values[keep])
+  }
+  p <- matrix(predict_scores(rows, key), nrow = length(SHAP_BG))
+  v <- colMeans(p)
+  idx <- function(S) which(vapply(coal, function(c) identical(sort(as.integer(c)), sort(as.integer(S))), TRUE))
+  phi <- vapply(seq_len(G), function(g) {
+    tot <- 0
+    for (k in seq_along(coal)) {
+      S <- coal[[k]]; if (g %in% S) next
+      w <- factorial(length(S)) * factorial(G - length(S) - 1) / factorial(G)
+      tot <- tot + w * (v[idx(c(S, g))] - v[k])
+    }
+    tot
+  }, 0)
+  list(base = v[1], phi = phi, full = v[length(v)])
 }
 
 fig_client_history <- function(values) {
@@ -101,29 +145,30 @@ fig_client_history <- function(values) {
   style_fig(p, 340, margin = list(l = 60, r = 70, t = 40, b = 36))
 }
 
-fig_drivers <- function(values, score) {
-  typical <- PROFILES$tipico[[2]]
-  rows <- lapply(DRIVER_GROUPS, function(g) modifyList(values, typical[g[[2]]]))
-  alt <- predict_scores(rows)
-  d <- data.frame(grupo = vapply(DRIVER_GROUPS, function(g) L(g[[1]]), ""), aporte = (score - alt) * 100)
+fig_drivers <- function(values, score, key = "rf") {
+  s <- shap_groups(values, key)
+  d <- data.frame(grupo = vapply(DRIVER_GROUPS, function(g) L(g[[1]]), ""), aporte = s$phi * 100)
   d <- d[order(abs(d$aporte)), ]
   lim <- max(5, max(abs(d$aporte)) * 1.6)
   p <- plot_ly(x = d$aporte, y = d$grupo, type = "bar", orientation = "h",
                marker = list(color = ifelse(d$aporte > 0, WARM_GOLD, NAVY)),
                text = sprintf("%+.1f pts", d$aporte), textposition = "outside", cliponaxis = FALSE,
-               hovertemplate = paste0("%{y}: %{x:+.1f} ", tx("puntos frente a un cliente típico", "points vs. a typical client"), "<extra></extra>"))
+               hovertemplate = paste0("%{y}: %{x:+.1f} ", tx("puntos (valor SHAP)", "points (SHAP value)"), "<extra></extra>"))
   p <- layout(p, showlegend = FALSE, shapes = list(vline(0, color = GREY_BLUE, dash = "solid", width = 1)),
+              title = list(text = tx(sprintf("Puntaje medio %.1f + aportes = %.1f", s$base * 100, s$full * 100),
+                                     sprintf("Average score %.1f + contributions = %.1f", s$base * 100, s$full * 100)),
+                           font = list(size = 13), x = 0.5),
               xaxis = list(title = tx("Puntos de riesgo que suma (+) o resta (−)", "Risk points added (+) or removed (−)"),
                            range = c(-lim, lim), zeroline = FALSE),
               yaxis = list(title = "", categoryorder = "array", categoryarray = d$grupo))
-  style_fig(p, 340, legend_top = FALSE, margin = list(l = 150, r = 30, t = 20, b = 46))
+  style_fig(p, 340, legend_top = FALSE, margin = list(l = 150, r = 30, t = 34, b = 46))
 }
 
-fig_whatif <- function(values, var, score) {
+fig_whatif <- function(values, var, score, key = "rf", thr = NULL) {
   w <- WHATIF[[var]]; lbl <- L(w[[1]]); grid <- w[[2]]; xtitle <- L(w[[3]])
   rows <- lapply(grid, function(x) { v <- values; v[[var]] <- x; v })
-  pr <- predict_scores(rows) * 100
-  thr <- UMBRAL * 100
+  pr <- predict_scores(rows, key) * 100
+  thr <- (thr %||% (.meta(key)$umbral %||% 0.5)) * 100
   is_pay <- var == "PAY_0"
   xs <- if (is_pay) vapply(grid, pay_short, "") else grid
   cur <- values[[var]]
@@ -198,8 +243,34 @@ risk_card <- function(score, thr) {
       div(class = "rc-piece", style = right, face(rc_clip("r"), hidden = TRUE)))
 }
 
-predict_verdict <- function(values, score) {
-  pr <- MODELO_META$prueba
+# Conjunto de predicción conforme (90 %) a partir de los cuantiles guardados en el .json del modelo
+conformal_block <- function(score, key = "rf") {
+  cf <- .meta(key)$conformal
+  if (is.null(cf)) return(NULL)
+  no <- score <= cf$q0; si <- 1 - score <= cf$q1
+  etiquetas <- c(if (no) tx("no incumple", "no default"), if (si) tx("incumple", "default"))
+  txt <- if (length(etiquetas) == 2) tx("El modelo no puede decidir con 90 % de confianza.", "The model cannot decide with 90% confidence.") else
+    if (!length(etiquetas)) tx("Conjunto vacío (caso atípico).", "Empty set (unusual case).") else ""
+  div(class = "pf-conformal",
+      tags$b(tx("Conjunto de predicción (90 %): ", "Prediction set (90%): ")), tags$span(paste0("{", paste(etiquetas, collapse = ", "), "}")),
+      if (nzchar(txt)) tagList(tags$br(), tags$span(txt)), tags$br(),
+      tags$small(tx(sprintf("Predicción conforme. Cobertura real %s en %s clientes de prueba. Bajo %s: «no incumple»; sobre %s: «incumple»; entre ambos, las dos.",
+                            pct(cf$cobertura_empirica), num(cf$n_verificacion), pct(cf$solo_no_incumple_si_p_menor_que, 0), pct(cf$solo_incumple_si_p_mayor_que, 0)),
+                    sprintf("Conformal prediction. Actual coverage %s on %s test clients. Below %s: “no default”; above %s: “default”; in between, both.",
+                            pct(cf$cobertura_empirica), num(cf$n_verificacion), pct(cf$solo_no_incumple_si_p_menor_que, 0), pct(cf$solo_incumple_si_p_mayor_que, 0)))))
+}
+
+# Recall, precisión y falsas alarmas del umbral elegido, medidos en la mitad de verificación de la prueba
+threshold_stats <- function(key, thr) {
+  curva <- .meta(key)$umbral_ajustable$curva
+  if (is.null(curva)) return(NULL)
+  if (is.data.frame(curva)) curva <- lapply(seq_len(nrow(curva)), function(i) as.list(curva[i, ]))
+  curva[[which.min(vapply(curva, function(c) abs(c$umbral - thr), 0))]]
+}
+
+predict_verdict <- function(values, score, key = "rf", thr = NULL) {
+  thr <- thr %||% (.meta(key)$umbral %||% 0.5)
+  pr <- threshold_stats(key, thr)
   late <- month_lbl()[vapply(PAY_CHRONO, function(c) (values[[c]] %||% 0) >= 1, TRUE)]
   signals <- list()
   if ((values$PAY_0 %||% 0) >= 1) {
@@ -220,18 +291,19 @@ predict_verdict <- function(values, score) {
   signals[[length(signals) + 1]] <- list("card", tx(sprintf("Su cupo supera al de %s de los clientes.", pct(qq, 0)),
                                                     sprintf("Their limit is higher than that of %s of clients.", pct(qq, 0))))
   lectura <- paste0(
-    if (!is.null(pr)) tx(sprintf("Con el umbral de 50 %% el modelo detecta %s de quienes incumplen y acierta en %s de los clientes que marca como riesgosos (datos de prueba). ", pct(pr$recall, 0), pct(pr$precision, 0)),
-                         sprintf("With the 50%% threshold the model detects %s of defaulters and is right about %s of the clients it flags as risky (test data). ", pct(pr$recall, 0), pct(pr$precision, 0))) else "",
+    if (!is.null(pr)) tx(sprintf("Con el umbral de %s el modelo detecta %s de quienes incumplen y acierta en %s de los clientes que marca como riesgosos (datos de prueba). ", pct(thr, 0), pct(pr$recall, 0), pct(pr$precision, 0)),
+                         sprintf("With the %s threshold the model detects %s of defaulters and is right about %s of the clients it flags as risky (test data). ", pct(thr, 0), pct(pr$recall, 0), pct(pr$precision, 0))) else "",
     tx("No es una probabilidad calibrada: el modelo se entrenó con pesos de clase, que lo hacen sobrestimar el riesgo frente a la tasa real (22 %). Sirve para ordenar y clasificar clientes.",
        "It is not a calibrated probability: the model was trained with class weights, which make it overestimate the risk compared with the real rate (22%). It is useful to rank and classify clients."))
   tagList(
-    div(class = "rc-wrap", risk_card(score, UMBRAL)),
+    div(class = "rc-wrap", risk_card(score, thr)),
     tags$ul(class = "pf-signals", lapply(signals, function(s) tags$li(icon_(s[[1]]), tags$span(s[[2]])))),
+    conformal_block(score, key),
     tags$details(class = "pf-details", tags$summary(tx("¿Cómo leer el puntaje?", "How to read the score?")), tags$p(lectura)))
 }
 
-trees_block <- function(values) {
-  v <- tree_votes(values); yes <- v[1]; n <- v[2]
+trees_block <- function(values, key = "rf") {
+  v <- tree_votes(values, key); yes <- v[1]; n <- v[2]
   share <- if (n) yes / n else 0; cells <- round(share * 100)
   div(class = "pf-trees",
       div(class = "pf-trees-h", icon_("tree"), tags$b(tx(sprintf("%d de %d árboles votan «incumple»", yes, n),
@@ -240,6 +312,32 @@ trees_block <- function(values) {
           lapply(0:99, function(i) tags$span(class = paste0("pf-cell", if (i < cells) " on" else "")))),
       tags$p(class = "muted", tx("Cada cuadro es 1 % del bosque. El puntaje promedia las probabilidades de todos los árboles, por eso puede diferir un poco de esta proporción.",
                                  "Each square is 1% of the forest. The score averages the probabilities of all the trees, so it may differ slightly from this proportion.")))
+}
+
+model_info <- function(key) {
+  m <- .meta(key); pr <- m$prueba
+  if (is.null(pr)) return("")
+  nombre <- if (.mk(key) == "cs_fof") "CS-FOF" else "Random Forest"
+  tx(sprintf("%s: en %s clientes de prueba (20 %%, nunca vistos al entrenar) logra F1 %.3f, recall %.3f, precisión %.3f y AUC-ROC %.3f. Los dos modelos usan la misma partición, las mismas variables y pesos de clase.",
+             nombre, num(pr$n), pr$f1, pr$recall, pr$precision, pr$roc_auc),
+     sprintf("%s: on %s test clients (20%%, never seen in training) it reaches F1 %.3f, recall %.3f, precision %.3f and ROC-AUC %.3f. Both models use the same split, the same variables and class weights.",
+             nombre, num(pr$n), pr$f1, pr$recall, pr$precision, pr$roc_auc))
+}
+
+thr_info <- function(key, thr) {
+  st <- threshold_stats(key, thr)
+  if (is.null(st)) return(NULL)
+  rec <- .rec_thr(key)
+  k <- function(a, b, c) div(class = "pf-thr-k", tags$small(a), tags$b(b), tags$small(c))
+  tagList(
+    div(class = "pf-thr-kpis",
+        k(tx("Detecta", "Detects"), pct(st$recall, 0), tx("de quienes incumplen", "of defaulters")),
+        k(tx("Acierta en", "Right about"), pct(st$precision, 0), tx("de los que marca", "of those flagged")),
+        k(tx("Marca como riesgo", "Flags as risky"), pct(st$marcados, 0), tx("de los clientes", "of clients")),
+        k(tx("Falsas alarmas", "False alarms"), sprintf("%.1f", st$falsas_alarmas_por_100), tx("por cada 100 clientes", "per 100 clients")),
+        k("F1", sprintf("%.3f", st$f1), tx("clase de impago", "default class"))),
+    tags$p(class = "muted", tx(sprintf("Umbral recomendado para este modelo: %s (máximo F1, elegido con una mitad de la prueba y medido con la otra; las cifras de arriba son de esa otra mitad). Bajar el umbral detecta más incumplimientos a cambio de más falsas alarmas; subirlo hace lo contrario. El banco lo fija según cuánto le cuesta cada tipo de error.", pct(rec, 0)),
+                               sprintf("Recommended threshold for this model: %s (maximum F1, chosen with one half of the test set and measured on the other; the figures above come from that other half). Lowering the threshold catches more defaults at the cost of more false alarms; raising it does the opposite. The bank sets it according to how much each kind of error costs.", pct(rec, 0)))))
 }
 
 # ---------- Formulario -------------------------------------------------------------
@@ -275,7 +373,9 @@ model_info_card <- function() {
     list(tx("Prueba (20 %)", "Test (20%)"), if (!is.null(pr)) sprintf("F1 %.3f · recall %.3f · %s %.3f · ROC-AUC %.3f", pr$f1, pr$recall,
                                                                       tx("precisión", "precision"), pr$precision, pr$roc_auc) else "—"),
     list(tx("Entrenado", "Trained"), sprintf("%s %s · %s", num(m$n_entrenamiento %||% 0), tx("clientes", "clients"), m$fecha %||% "—")),
-    list(tx("Versiones", "Versions"), sprintf("R %s · ranger %s", ver$R %||% "—", ver$ranger %||% "—")))
+    list(tx("Versiones", "Versions"), sprintf("R %s · ranger %s", ver$R %||% "—", ver$ranger %||% "—")),
+    list("CS-FOF", tx("Se entrenó en Python (tablero Dash). herramientas/exportar_cs_fof.py exporta sus 359 árboles y R/06b_cs_fof.R los recorre: da la misma probabilidad que Python en 300 clientes de prueba (diferencia máxima < 10⁻¹⁵).",
+                      "It was trained in Python (Dash dashboard). herramientas/exportar_cs_fof.py exports its 359 trees and R/06b_cs_fof.R traverses them: it gives the same probability as Python on 300 test clients (maximum difference < 10⁻¹⁵).")))
   steps <- list(list(tx("Entrenar", "Train"), tx("Se ajusta el bosque con los datos históricos (modelo/entrenar_modelo.R).",
                                                  "The forest is fitted on the historical data (modelo/entrenar_modelo.R)."), "tree"),
                 list(tx("Guardar", "Save"), tx("saveRDS escribe el modelo en un archivo .rds.", "saveRDS writes the model to an .rds file."), "save"),
@@ -332,7 +432,8 @@ pf_flow <- function() {
 }
 
 # `base`: valores con los que se dibuja el formulario (se conservan al cambiar de idioma)
-page_predict <- function(base = PROFILES$tipico[[2]], whatif = "PAY_0") {
+page_predict <- function(base = PROFILES$tipico[[2]], whatif = "PAY_0", key = "rf", thr = NULL) {
+  key <- .mk(key); thr <- thr %||% .rec_thr(key)
   head <- page_title(tx("Predecir", "Predict"))
   if (is.null(MODELO)) return(tagList(head, card(tx("El modelo no está disponible", "The model is not available"),
     tags$p(tx("No se encontró modelo/modelo_credito.rds. Para generarlo, desde la carpeta shiny/ ejecuta ",
@@ -371,9 +472,20 @@ page_predict <- function(base = PROFILES$tipico[[2]], whatif = "PAY_0") {
         tags$span(class = "pf-rh", tx("Facturado", "Billed")), lapply(BILL_CHRONO, function(c) num_in(c, base[[c]])),
         tags$span(class = "pf-rh", tx("Pagado", "Paid")), lapply(PAYAMT_CHRONO, function(c) num_in(c, base[[c]], min = 0)))))
   result <- card(tx("Resultado", "Result"), cls = "pf-result", uiOutput("pf-verdict"), uiOutput("pf-trees"))
+  # Selector de modelo y umbral plegable: arranca cerrado y su cabecera muestra el umbral elegido. El deslizador
+  # y las cifras siguen en la página aunque esté cerrado (los oculta <details>).
+  selector <- card(tx("Modelo", "Model"),
+    tiles("pf_model", lapply(MODEL_KEYS, function(k) list(k, MODEL_LABELS[[k]], NULL)), key, cls = "pf-tiles pf-seg"),
+    uiOutput("pf_model_info", class = "muted"),
+    tags$details(id = "pf-thr-fold", class = "thr-fold",
+      tags$summary(class = "pf-h thr-summary", icon_("target"), tags$span(class = "thr-tt", tx("Umbral de decisión", "Decision threshold")),
+                   uiOutput("pf_thr_sum", inline = TRUE, class = "thr-sum"),
+                   tags$span(class = "ef-toggle", `aria-hidden` = "true", icon_("chevron", "thr-chev"))),
+      div(class = "pf-slider", sliderInput("pf_thr", NULL, min = 0.05, max = 0.95, step = 0.01, value = thr, ticks = FALSE, width = "100%")),
+      uiOutput("pf_thr_info", class = "pf-thr-info")))
   whatif_opts <- lapply(names(WHATIF), function(v) list(v, WHATIF[[v]][[1]], NULL))
   tagList(
-    head, pf_flow(),
+    head, pf_flow(), selector,
     div(class = "pf-layout", form, div(class = "pf-side", result)),
     div(class = "grid g2",
         card(tx("Historial del cliente", "Client history"), grafica("pf_history", 340),
@@ -382,12 +494,12 @@ page_predict <- function(base = PROFILES$tipico[[2]], whatif = "PAY_0") {
                   "The bars compare what was billed with what was paid each month; the gold line shows the repayment status. When the line rises above 0 there is a delay, and when the gold bars are much lower than the blue ones, the client is paying little of their debt."),
                tx("El modelo no usa las seis facturas por separado: las resume en nivel medio (log con signo), tendencia mensual y número de meses con saldo a favor, como en el proyecto. Los estados de pago (PAY_0 … PAY_6) sí entran uno por uno y son las variables más importantes según SHAP.",
                   "The model does not use the six bills separately: it summarizes them as average level (signed log), monthly trend and number of months with a credit balance, as in the project. The repayment statuses (PAY_0 … PAY_6) do enter one by one and are the most important variables according to SHAP."))),
-        card(tx("¿Qué empuja su riesgo?", "What drives their risk?"), grafica("pf_drivers", 340),
+        card(tx("¿Qué empuja su riesgo? (SHAP)", "What drives their risk? (SHAP)"), grafica("pf_drivers", 340),
              interp_block(
-               tx("Cada barra responde: «si en este grupo de datos el cliente fuera como un cliente típico, ¿cuánto cambiaría su puntaje?». Las barras doradas suben el riesgo y las azules lo bajan.",
-                  "Each bar answers: “if, in this group of data, the client were like a typical client, how much would their score change?”. Gold bars raise the risk and blue ones lower it."),
-               tx("Explicación local por sustitución: se reemplaza cada grupo de variables por los valores del cliente típico (mediana o moda) y se mide la diferencia en el puntaje. Es aproximada: no suma exactamente el total porque los grupos interactúan dentro del bosque (a diferencia de SHAP).",
-                  "Local explanation by substitution: each group of variables is replaced by the typical client's values (median or mode) and the difference in the score is measured. It is approximate: it does not add up exactly to the total because the groups interact inside the forest (unlike SHAP).")))),
+               tx("Cada barra es el valor SHAP de un grupo de variables: cuántos puntos de riesgo suma (dorado) o resta (azul) frente al puntaje medio de 40 clientes reales. El título muestra que el puntaje medio más todos los aportes da exactamente el puntaje del cliente.",
+                  "Each bar is the SHAP value of a group of variables: how many risk points it adds (gold) or removes (blue) compared with the average score of 40 real clients. The title shows that the average score plus all contributions gives exactly the client's score."),
+               tx("Valores de Shapley exactos por grupo (SHAP intervencional): con 5 grupos se evalúan las 32 coaliciones posibles, cada una promediada sobre los 40 clientes de fondo (1,280 predicciones). Se agrupa por tema porque las variables de un mismo grupo (por ejemplo, los seis estados de pago) están muy correlacionadas, y repartir el aporte entre ellas una por una sería inestable.",
+                  "Exact Shapley values by group (interventional SHAP): with 5 groups the 32 possible coalitions are evaluated, each averaged over the 40 background clients (1,280 predictions). Variables are grouped by topic because those in the same group (for example, the six repayment statuses) are highly correlated, and splitting the contribution among them one by one would be unstable.")))),
     card(tx("¿Qué pasaría si…?", "What if…?"),
          tiles("pf_whatif_var", whatif_opts, whatif, cls = "pf-tiles pf-seg"),
          grafica("pf_whatif", 360),

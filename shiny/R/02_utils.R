@@ -37,11 +37,17 @@ icon_ <- function(name, cls = "") tags$span(class = trimws(paste("ico", paste0("
                                             `aria-hidden` = "true")
 
 # ---------- Componentes ------------------------------------------------------------
+# Botón de «ampliar» de la esquina superior derecha (modo foco). www/card_focus.js lo cambia por «cerrar» al ampliar.
+zoom_btn <- function() {
+  abrir <- tx("Ampliar tarjeta", "Enlarge card"); cerrar <- tx("Cerrar (Esc)", "Close (Esc)")
+  tags$button(type = "button", class = "card-zoom", title = abrir, `aria-label` = abrir, `aria-expanded` = "false",
+              `data-label-open` = abrir, `data-label-close` = cerrar, icon_("expand", "zb-open"), icon_("close", "zb-close"))
+}
 card <- function(title, ..., cls = "") {
-  div(class = trimws(paste("card", cls)), tags$h3(class = "card-title", title), ...)
+  div(class = trimws(paste("card", cls)), zoom_btn(), tags$h3(class = "card-title", title), ...)
 }
 kpi <- function(label, value, note = "", ico = NULL) {
-  div(class = "kpi",
+  div(class = "kpi", zoom_btn(),
       div(class = "kpi-head", if (!is.null(ico)) icon_(ico), div(class = "kpi-label", label)),
       div(class = "kpi-value", value),
       div(class = "kpi-note", note))
@@ -54,7 +60,19 @@ interp_block <- function(basic, tech) {
         div(class = "interp basic", tags$b(tx("Básica", "Basic")), tags$p(basic)),
         div(class = "interp tech", tags$b(tx("Técnica", "Technical")), tags$p(tech))))
 }
-control <- function(label, comp) div(class = "control", tags$label(class = "ctl-label", label), comp)
+control <- function(label, comp, ico = NULL) {
+  div(class = "control", tags$label(class = paste0("ctl-label", if (!is.null(ico)) " ctl-label-ico" else ""),
+                                    if (!is.null(ico)) icon_(ico), label), comp)
+}
+# Casillas con el mismo estilo de radio_; cada opción lleva su ícono. tiles: list(list(valor, c(es, en), ícono), ...)
+check_ <- function(id, tiles, selected, cls = "radio") {
+  div(id = id, class = paste("shiny-input-checkboxgroup", cls),
+      lapply(tiles, function(t) {
+        v <- as.character(t[[1]])
+        tags$label(tags$input(type = "checkbox", name = id, value = v, checked = if (v %in% as.character(selected)) NA else NULL),
+                   tags$span(class = "opt-ico", icon_(t[[3]]), L(t[[2]])))
+      }))
+}
 PAGE_ICONS <- c("Introducción" = "info", "Problema y Objetivos" = "target", "Marco Teórico" = "book",
                 "EDA Univariado" = "bars", "EDA Multivariado" = "scatter", "Modelos" = "layers",
                 "Predecir" = "gauge", "Conclusiones" = "flag", "Enlaces" = "link", "Equipo" = "users",

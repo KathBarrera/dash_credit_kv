@@ -207,7 +207,7 @@
      "hallazgos principales",
      "qué es lo más importante del análisis"
     ],
-    "texto": "El tablero estudia **29,965 clientes** de tarjeta de crédito de un banco de Taiwán (abril a septiembre 2005) para entender quién deja de pagar el mes siguiente (22.1% lo hizo). Lo más importante:\n\n1. **El historial de pagos domina.** PAY_0 es la variable más asociada al default (ρ de Spearman = +0.29). Los clientes con ≥1 mes de atraso en PAY_0 incumplen en 50.4% de los casos, frente a 13.8% de quienes están al día.\n2. **Menor cupo, más riesgo.** Mediana de LIMIT_BAL: NT$90,000 (default) vs. NT$150,000 (no default). Un menor cupo se asocia con mayor riesgo.\n3. **Lo demográfico pesa poco.** Las tasas por educación van de 7.1% a 25.2%: diferencias significativas pero con tamaño de efecto pequeño. La edad tampoco separa por sí sola.\n4. **Las facturas son redundantes.** Las seis BILL_AMT se correlacionan (Spearman) entre 0.73 y 0.91. Para modelos lineales conviene resumirlas (promedio + tendencia) o usar PCA.\n5. **Modelos:** el mejor es CatBoost con pesos de clase (F1 0.548 frente a 0.378 de la línea base); balancear las clases es lo que más ayuda.",
+    "texto": "El tablero estudia **29,965 clientes** de tarjeta de crédito de un banco de Taiwán (abril a septiembre 2005) para entender quién deja de pagar el mes siguiente (22.1% lo hizo). Lo más importante:\n\n1. **El historial de pagos domina.** PAY_0 es la variable más asociada al default (ρ de Spearman = +0.29). Los clientes con ≥1 mes de atraso en PAY_0 incumplen en 50.4% de los casos, frente a 13.8% de quienes están al día.\n2. **Menor cupo, más riesgo.** Mediana de LIMIT_BAL: NT$90,000 (default) vs. NT$150,000 (no default). Un menor cupo se asocia con mayor riesgo.\n3. **Lo demográfico pesa poco.** Las tasas por educación van de 7.1% a 25.2%: diferencias significativas pero con tamaño de efecto pequeño. La edad tampoco separa por sí sola.\n4. **Las facturas son redundantes.** Las seis BILL_AMT se correlacionan (Spearman) entre 0.73 y 0.91. Para modelos lineales conviene resumirlas (promedio + tendencia) o usar PCA.\n5. **Modelos:** el mejor es CS-FOF (original) con pesos de clase (F1 0.548 frente a 0.378 de la línea base); balancear las clases es lo que más ayuda.",
     "tecnico": null,
     "pagina": null,
     "sug": [
@@ -252,7 +252,7 @@
      "para qué es este tablero",
      "cuál es el contexto"
     ],
-    "texto": "La **Introducción** da el contexto:\n\n- **Vistazo rápido:** una gráfica que muestra que el atraso de septiembre anticipa el incumplimiento.\n- **KPIs:** 29,965 clientes, 24 variables (23 predictoras + 1 objetivo), 22.1% de default y el periodo abril a septiembre 2005.\n- **Introducción:** el problema del riesgo en tarjetas de crédito y el recorrido del proyecto: EDA, comparación de 112 combinaciones de modelos (la mejor, CatBoost con pesos de clase, F1 0.548) y la página Predecir.\n- **Fuentes:** el artículo de Yeh & Lien (2009) y los datos del repositorio UCI; montos en NT$.",
+    "texto": "La **Introducción** da el contexto:\n\n- **Vistazo rápido:** una gráfica que muestra que el atraso de septiembre anticipa el incumplimiento.\n- **KPIs:** 29,965 clientes, 24 variables (23 predictoras + 1 objetivo), 22.1% de default y el periodo abril a septiembre 2005.\n- **Introducción:** el problema del riesgo en tarjetas de crédito y el recorrido del proyecto: EDA, comparación de 112 combinaciones de modelos (la mejor, CS-FOF (original) con pesos de clase, F1 0.548) y la página Predecir.\n- **Fuentes:** el artículo de Yeh & Lien (2009) y los datos del repositorio UCI; montos en NT$.",
     "tecnico": null,
     "pagina": "/introduccion",
     "sug": [
@@ -1146,7 +1146,7 @@
      "qué clasificadores probaron",
      "112 combinaciones"
     ],
-    "texto": "**Modelos** resume **112 combinaciones de modelos tradicionales** (diseño factorial: 7 clasificadores × 4 técnicas de balanceo × 4 métodos de optimización) y, aparte, **36 corridas** de LightGBM, CatBoost y el modelo original CS-FOF, que buscan superar el mejor F1 de esas 112. Todo con validación cruzada anidada.\n\n- **KPIs:** mejor F1 0.548 (CatBoost), mejora de +0.170 sobre la línea base y 63% de incumplimientos detectados.\n- **Carrusel:** la mejor combinación de cada modelo.\n- El modelo original **CS-FOF** tiene su propia página: **Modelo original**.\n- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
+    "texto": "**Modelos** resume **112 combinaciones de modelos tradicionales** (diseño factorial: 7 clasificadores × 4 técnicas de balanceo × 4 métodos de optimización) y, aparte, **4 corridas** de el modelo original CS-FOF, que busca superar el mejor F1 de esas 112. Todo con validación cruzada anidada.\n\n- **KPIs:** mejor F1 0.548 (CS-FOF (original)), mejora de +0.170 sobre la línea base y 59% de incumplimientos detectados.\n- **Carrusel:** la mejor combinación de cada modelo.\n- El modelo original **CS-FOF** tiene su propia página: **Modelo original**.\n- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1175,8 +1175,8 @@
      "cuál es la metodología del modelo original",
      "dónde está el pseudocódigo"
     ],
-    "texto": "**Modelo original** presenta **CS-FOF**, el bosque aleatorio propuesto en el proyecto, en cuatro pestañas:\n\n1. **Teoría:** con clientes reales, un árbol clásico necesita una escalera de cortes rectos y CS-FOF traza un solo **corte oblicuo** (en diagonal) en la dirección de Fisher, pesando más a quienes incumplen. Con 1 corte separa 58 % más; con 3, solo 5 % más, porque la escalera se acerca a la diagonal.\n2. **Metodología:** los 8 pasos de la guía del curso, las ecuaciones numeradas con su justificación, el pseudocódigo, la complejidad, la ablación y la lista de verificación.\n3. **Código:** los fragmentos reales del archivo original_model.py y sus pruebas.\n4. **Resultados:** una gráfica animada frente a **Random Forest** (gana en 4 de 5 pliegues), las pruebas frente a los 10 modelos y los otros tres conjuntos de crédito.\n\nVeredicto: F1 0.548, empatado con CatBoost y con el mayor ROC-AUC, pero **no es superior de forma significativa**.",
-    "tecnico": "Validación anidada 5×5. Frente a Random Forest: Nadeau-Bengio con Holm p = 1.000, δ de Cliff 0.36, DeLong p = 0.171. Friedman sobre 10 modelos χ² = 40.3; rangos medios CatBoost 2.0 y CS-FOF 2.4.",
+    "texto": "**Modelo original** presenta **CS-FOF**, el bosque aleatorio propuesto en el proyecto, en cuatro pestañas:\n\n1. **Teoría:** con clientes reales, un árbol clásico necesita una escalera de cortes rectos y CS-FOF traza un solo **corte oblicuo** (en diagonal) en la dirección de Fisher, pesando más a quienes incumplen. Con 1 corte separa 58 % más; con 3, solo 5 % más, porque la escalera se acerca a la diagonal.\n2. **Metodología:** los 8 pasos de la guía del curso, las ecuaciones numeradas con su justificación, el pseudocódigo, la complejidad, la ablación y la lista de verificación.\n3. **Código:** los fragmentos reales del archivo original_model.py y sus pruebas.\n4. **Resultados:** una gráfica animada frente a **Random Forest** (gana en 4 de 5 pliegues), las pruebas frente a los 7 modelos de referencia y los otros tres conjuntos de crédito.\n\nVeredicto: F1 0.548, el mayor de los 8 modelos (XGBoost 0.547), y el mayor ROC-AUC. **No es superior de forma significativa**.",
+    "tecnico": "Validación anidada 5×5. Frente a Random Forest: Nadeau-Bengio con Holm p = 0.619, δ de Cliff 0.36, DeLong p = 0.171. Friedman sobre 8 modelos χ² = 32.9; rangos medios CS-FOF 1.4 y XGBoost 2.2.",
     "pagina": "/modelo-original",
     "sug": [
      "¿Cuál es el mejor modelo?",
@@ -1200,8 +1200,8 @@
      "cuál dio mejores resultados",
      "el modelo ganador"
     ],
-    "texto": "El mejor es **CatBoost** con **pesos de clase** y optimización **random search**:\n\n- **F1:** 0.548 ± 0.009 (línea base: 0.378, +0.170)\n- **Recall:** 63.2% · **Precisión:** 48.4%\n- **ROC-AUC:** 0.784 · **PR-AUC:** 0.559\n\nLa mejor de las 112 combinaciones tradicionales es XGBoost (F1 0.547). Ojo: el mejor global está prácticamente **empatado** con el modelo original CS-FOF (a 0.0001), XGBoost, LightGBM y Random Forest; la diferencia es menor que 0.002 y ninguna prueba estadística los separa.",
-    "tecnico": "Validación cruzada anidada 5×5. Friedman sobre los 10 modelos: χ² = 40.3, p = 6.7·10⁻⁶; rangos medios CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 y LightGBM 3.8. Ni Nadeau-Bengio ni Wilcoxon ni DeLong separan a CS-FOF de CatBoost, XGBoost, LightGBM o Random Forest.",
+    "texto": "El mejor es **CS-FOF (original)** con **pesos de clase** y optimización **random search**:\n\n- **F1:** 0.548 ± 0.005 (línea base: 0.378, +0.170)\n- **Recall:** 58.6% · **Precisión:** 51.5%\n- **ROC-AUC:** 0.785 · **PR-AUC:** 0.561\n\nLa mejor de las 112 combinaciones tradicionales es XGBoost (F1 0.547). Ojo: CS-FOF está prácticamente **empatado** con XGBoost y Random Forest; la diferencia es menor que 0.003 y ninguna prueba estadística los separa.",
+    "tecnico": "Validación cruzada anidada 5×5. Friedman sobre los 8 modelos: χ² = 32.9, p = 2.7·10⁻⁵; rangos medios CS-FOF 1.4, XGBoost 2.2 y Random Forest 2.4. Ni Nadeau-Bengio ni Wilcoxon ni DeLong separan a CS-FOF de XGBoost o Random Forest.",
     "pagina": "/modelos",
     "sug": [
      "Explícame la matriz de confusión",
@@ -1222,7 +1222,7 @@
      "comparación de modelos",
      "ranking de modelos"
     ],
-    "texto": "El **carrusel** muestra una tarjeta por modelo, con su **mejor combinación**, ordenadas por F1:\n\n- puesto, familia del modelo y F1 ± desviación estándar;\n- la técnica de balanceo y el método de optimización que lo lograron;\n- barras de precisión, recall, ROC-AUC y PR-AUC;\n- su mejor F1 con cada técnica de balanceo;\n- una descripción y una nota.\n\nEl **borde dorado** marca el mejor. Ranking: 1. CatBoost (0.548), 2. CS-FOF (original) (0.548), 3. XGBoost (0.547), 4. LightGBM (0.546), 5. Random Forest (0.545), 6. SVM (0.539), 7. KNN (0.526), 8. Árbol de decisión (0.525), 9. Regresión logística (0.518), 10. Naive Bayes (0.499).",
+    "texto": "El **carrusel** muestra una tarjeta por modelo, con su **mejor combinación**, ordenadas por F1:\n\n- puesto, familia del modelo y F1 ± desviación estándar;\n- la técnica de balanceo y el método de optimización que lo lograron;\n- barras de precisión, recall, ROC-AUC y PR-AUC;\n- su mejor F1 con cada técnica de balanceo;\n- una descripción y una nota.\n\nEl **borde dorado** marca el mejor. Ranking: 1. CS-FOF (original) (0.548), 2. XGBoost (0.547), 3. Random Forest (0.545), 4. SVM (0.539), 5. KNN (0.526), 6. Árbol de decisión (0.525), 7. Regresión logística (0.518), 8. Naive Bayes (0.499).",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1243,7 +1243,7 @@
      "sin balanceo vs pesos de clase",
      "heatmap de modelos"
     ],
-    "texto": "Cada celda es el **mejor F1** de un modelo con una técnica de balanceo. Sin balanceo todos rinden peor porque casi no detectan a quienes incumplen; con **pesos de clase**, los cinco mejores llegan a 0.55.",
+    "texto": "Cada celda es el **mejor F1** de un modelo con una técnica de balanceo. Sin balanceo todos rinden peor porque casi no detectan a quienes incumplen; con **pesos de clase**, los tres mejores llegan a 0.55.",
     "tecnico": "Friedman (28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. F1 medio: 0.455 sin balanceo, 0.526 pesos de clase, 0.520 SMOTE y 0.513 ADASYN. «Sin balanceo» es peor que las tres (Nemenyi p ≤ 0.010); pesos de clase supera a ADASYN (p < 10⁻⁴) y empata con SMOTE (p = 0.35). Naive Bayes casi no cambia.",
     "pagina": "/modelos",
     "sug": [
@@ -1286,8 +1286,8 @@
      "cuántos morosos detecta el modelo",
      "verdaderos positivos"
     ],
-    "texto": "La **matriz de confusión** cruza lo real con lo que predijo CatBoost (umbral 0.5) sobre 29,965 clientes:\n\n- **Detectados:** 4,178 de 6,630 que incumplieron (63%).\n- **No detectados** (falsos negativos): 2,452.\n- **Falsas alarmas** (falsos positivos): 4,467.\n- **Bien clasificados que pagan:** 18,868.\n\nDe los 8,645 que marca como riesgosos, 48% sí incumple.",
-    "tecnico": "Predicciones out-of-fold de los cinco modelos de los folds externos (AUC agrupado 0.782). Las probabilidades no están calibradas (ECE = 0.196) porque el balanceo infla la clase positiva; una recalibración isotónica la baja de 0.180 a 0.013 en un fold. Ajustar el umbral según el costo de cada error es el siguiente paso.",
+    "texto": "La **matriz de confusión** cruza lo real con lo que predijo CS-FOF (original) (umbral 0.5) sobre 29,965 clientes:\n\n- **Detectados:** 3,893 de 6,630 que incumplieron (59%).\n- **No detectados** (falsos negativos): 2,737.\n- **Falsas alarmas** (falsos positivos): 3,675.\n- **Bien clasificados que pagan:** 19,660.\n\nDe los 7,568 que marca como riesgosos, 51% sí incumple.",
+    "tecnico": "Predicciones out-of-fold de los cinco modelos de los folds externos (AUC agrupado 0.783). Las probabilidades no están calibradas (ECE = 0.180) porque el peso de costo infla la clase positiva; una recalibración isotónica lo baja a 0.003. Ajustar el umbral según el costo de cada error es el siguiente paso.",
     "pagina": "/modelos",
     "sug": [
      "¿Qué es el recall?",
@@ -1477,26 +1477,6 @@
     "mood": "explaining"
    },
    {
-    "id": "m_catboost",
-    "titulo": "CatBoost",
-    "ejemplos": [
-     "qué es catboost",
-     "cómo le fue a catboost",
-     "resultados de catboost",
-     "explícame catboost",
-     "en qué puesto quedó catboost",
-     "F1 de catboost"
-    ],
-    "texto": "**CatBoost** · Boosting reciente (árboles simétricos) · puesto **#1** de 10.\n\nBoosting con árboles simétricos y un orden aleatorio de los datos que reduce el sobreajuste.\n\nMejor combinación: pesos de clase + random search → **F1 0.548** ± 0.009, recall 0.632, precisión 0.484, ROC-AUC 0.784.\n\nMétodo reciente del estado del arte (2018). Tiene el mayor F1 medio, pero solo 0.0001 por encima de CS-FOF; ninguna prueba los separa. Es el más consistente en los tres conjuntos adicionales. Con sus 16 combinaciones, pesos de clase es su mejor técnica.",
-    "tecnico": null,
-    "pagina": "/modelos",
-    "sug": [
-     "¿Cuál es el mejor modelo?",
-     "Explícame el carrusel de modelos"
-    ],
-    "mood": "proud"
-   },
-   {
     "id": "m_cs_fof",
     "titulo": "CS-FOF (original)",
     "ejemplos": [
@@ -1519,14 +1499,14 @@
      "en qué puesto quedó cs-fof",
      "F1 de cs-fof"
     ],
-    "texto": "**CS-FOF (original)** · Modelo original · bosque oblicuo con costo · puesto **#2** de 10.\n\nBosque aleatorio propio: en cada nodo compara los cortes de una variable con un corte oblicuo en la dirección de Fisher, ponderada por el costo de no detectar a quien incumple.\n\nMejor combinación: pesos de clase + random search → **F1 0.548** ± 0.005, recall 0.586, precisión 0.515, ROC-AUC 0.785.\n\nProgramado desde cero con numpy. Empata con CatBoost en F1 (−0.0001), con el mayor ROC-AUC y la menor variación entre folds (± 0.005). No es superior de forma significativa.",
+    "texto": "**CS-FOF (original)** · Modelo original · bosque oblicuo con costo · puesto **#1** de 8.\n\nBosque aleatorio propio: en cada nodo compara los cortes de una variable con un corte oblicuo en la dirección de Fisher, ponderada por el costo de no detectar a quien incumple.\n\nMejor combinación: pesos de clase + random search → **F1 0.548** ± 0.005, recall 0.586, precisión 0.515, ROC-AUC 0.785.\n\nProgramado desde cero con numpy. Tiene el mayor F1 medio (+0.0014 sobre XGBoost) y el mayor ROC-AUC, pero la diferencia con XGBoost y Random Forest no es significativa.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
      "¿Cuál es el mejor modelo?",
      "Explícame el carrusel de modelos"
     ],
-    "mood": "explaining"
+    "mood": "proud"
    },
    {
     "id": "m_xgboost",
@@ -1547,31 +1527,7 @@
      "en qué puesto quedó xgboost",
      "F1 de xgboost"
     ],
-    "texto": "**XGBoost** · Ensamble de árboles (boosting) · puesto **#3** de 10.\n\nConstruye árboles en secuencia: cada uno corrige los errores del anterior.\n\nMejor combinación: pesos de clase + bayesiana (optuna) → **F1 0.547** ± 0.009, recall 0.615, precisión 0.493, ROC-AUC 0.783.\n\nMayor F1 de los siete modelos base. Con CatBoost, LightGBM, CS-FOF y Random Forest forma un grupo de cinco que las pruebas no separan: en la práctica empatan.",
-    "tecnico": null,
-    "pagina": "/modelos",
-    "sug": [
-     "¿Cuál es el mejor modelo?",
-     "Explícame el carrusel de modelos"
-    ],
-    "mood": "explaining"
-   },
-   {
-    "id": "m_lightgbm",
-    "titulo": "LightGBM",
-    "ejemplos": [
-     "qué es lightgbm",
-     "cómo le fue a lightgbm",
-     "resultados de lightgbm",
-     "explícame lightgbm",
-     "qué es light gbm",
-     "cómo le fue a light gbm",
-     "resultados de light gbm",
-     "explícame light gbm",
-     "en qué puesto quedó lightgbm",
-     "F1 de lightgbm"
-    ],
-    "texto": "**LightGBM** · Boosting reciente (por hojas) · puesto **#4** de 10.\n\nBoosting que hace crecer cada árbol por la hoja que más reduce el error; muy rápido.\n\nMejor combinación: pesos de clase + bayesiana (optuna) → **F1 0.546** ± 0.009, recall 0.621, precisión 0.488, ROC-AUC 0.784.\n\nMétodo reciente del estado del arte (2017). Queda a 0.0018 del mejor. Con sus 16 combinaciones, pesos de clase es su mejor técnica; su PR-AUC no se calculó.",
+    "texto": "**XGBoost** · Ensamble de árboles (boosting) · puesto **#2** de 8.\n\nConstruye árboles en secuencia: cada uno corrige los errores del anterior.\n\nMejor combinación: pesos de clase + bayesiana (optuna) → **F1 0.547** ± 0.009, recall 0.615, precisión 0.493, ROC-AUC 0.783.\n\nMayor F1 de los siete modelos de referencia. Con CS-FOF y Random Forest forma un grupo de tres que las pruebas no separan: en la práctica empatan.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1595,7 +1551,7 @@
      "en qué puesto quedó bosque aleatorio",
      "F1 de bosque aleatorio"
     ],
-    "texto": "**Random Forest** · Ensamble de árboles (bagging) · puesto **#5** de 10.\n\nPromedia muchos árboles entrenados sobre muestras distintas de clientes; capta relaciones no lineales entre el historial de pagos y el riesgo.\n\nMejor combinación: pesos de clase + random search → **F1 0.545** ± 0.008, recall 0.604, precisión 0.497, ROC-AUC 0.783.\n\nA solo 0.0028 del mejor: una diferencia menor que la variación entre folds. Con sus 16 combinaciones tiene el mejor rango medio de los siete modelos base, y es el que usa la página Predecir. CS-FOF parte de él y le agrega cortes oblicuos.",
+    "texto": "**Random Forest** · Ensamble de árboles (bagging) · puesto **#3** de 8.\n\nPromedia muchos árboles entrenados sobre muestras distintas de clientes; capta relaciones no lineales entre el historial de pagos y el riesgo.\n\nMejor combinación: pesos de clase + random search → **F1 0.545** ± 0.008, recall 0.604, precisión 0.497, ROC-AUC 0.783.\n\nA solo 0.0027 de CS-FOF: una diferencia menor que la variación entre folds. Con sus 16 combinaciones tiene el mejor rango medio de los siete modelos base, y es el que usa la página Predecir. CS-FOF parte de él y le agrega cortes oblicuos.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1623,7 +1579,7 @@
      "en qué puesto quedó svm",
      "F1 de svm"
     ],
-    "texto": "**SVM** · Máquina de vectores de soporte (kernel RBF) · puesto **#6** de 10.\n\nBusca la frontera que separa mejor a quienes pagan de quienes incumplen, con un margen máximo.\n\nMejor combinación: smote + random search → **F1 0.539** ± 0.005, recall 0.615, precisión 0.479, ROC-AUC 0.764.\n\nCorrió en Colab con GPU (cuML). Al reajustarlo en CPU con ranger (R), con los mismos hiperparámetros y folds, el F1 sube en promedio 0.009: su mejor combinación pasa de 0.539 a 0.545, a 0.002 de XGBoost. Aquí se muestra el valor de Colab, tal como se reportó.",
+    "texto": "**SVM** · Máquina de vectores de soporte (kernel RBF) · puesto **#4** de 8.\n\nBusca la frontera que separa mejor a quienes pagan de quienes incumplen, con un margen máximo.\n\nMejor combinación: smote + random search → **F1 0.539** ± 0.005, recall 0.615, precisión 0.479, ROC-AUC 0.764.\n\nCorrió en Colab con GPU (cuML). Al reajustarlo en CPU con ranger (R), con los mismos hiperparámetros y folds, el F1 sube en promedio 0.009: su mejor combinación pasa de 0.539 a 0.545, a 0.002 de XGBoost. Aquí se muestra el valor de Colab, tal como se reportó.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1651,7 +1607,7 @@
      "en qué puesto quedó knn",
      "F1 de knn"
     ],
-    "texto": "**KNN** · Vecinos más cercanos · puesto **#7** de 10.\n\nClasifica a cada cliente según lo que hicieron los clientes más parecidos a él.\n\nMejor combinación: pesos de clase + random search → **F1 0.526** ± 0.012, recall 0.621, precisión 0.457, ROC-AUC 0.763.\n\nCon pesos de clase usa un ajuste propio del proyecto (el voto de cada vecino se pondera por la rareza de su clase), no un mecanismo estándar de ranger (R). Corrió en GPU (cuML), pero sus predicciones coinciden con las de ranger (R) en 99.98 % a 100 % de los casos.",
+    "texto": "**KNN** · Vecinos más cercanos · puesto **#5** de 8.\n\nClasifica a cada cliente según lo que hicieron los clientes más parecidos a él.\n\nMejor combinación: pesos de clase + random search → **F1 0.526** ± 0.012, recall 0.621, precisión 0.457, ROC-AUC 0.763.\n\nCon pesos de clase usa un ajuste propio del proyecto (el voto de cada vecino se pondera por la rareza de su clase), no un mecanismo estándar de ranger (R). Corrió en GPU (cuML), pero sus predicciones coinciden con las de ranger (R) en 99.98 % a 100 % de los casos.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1679,7 +1635,7 @@
      "en qué puesto quedó árbol de decisión",
      "F1 de árbol de decisión"
     ],
-    "texto": "**Árbol de decisión** · Árbol de clasificación · puesto **#8** de 10.\n\nUna secuencia de preguntas sí/no sobre las variables; fácil de leer, pero inestable.\n\nMejor combinación: pesos de clase + bayesiana (optuna) → **F1 0.525** ± 0.004, recall 0.585, precisión 0.479, ROC-AUC 0.757.\n\nQueda por debajo del grupo superior, aunque la diferencia con Random Forest está justo en el límite de la significancia (Nemenyi, p = 0.050) y con XGBoost no lo es (p = 0.12).",
+    "texto": "**Árbol de decisión** · Árbol de clasificación · puesto **#6** de 8.\n\nUna secuencia de preguntas sí/no sobre las variables; fácil de leer, pero inestable.\n\nMejor combinación: pesos de clase + bayesiana (optuna) → **F1 0.525** ± 0.004, recall 0.585, precisión 0.479, ROC-AUC 0.757.\n\nQueda por debajo del grupo superior, aunque la diferencia con Random Forest está justo en el límite de la significancia (Nemenyi, p = 0.050) y con XGBoost no lo es (p = 0.12).",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1707,7 +1663,7 @@
      "en qué puesto quedó regresión logística",
      "F1 de regresión logística"
     ],
-    "texto": "**Regresión logística** · Modelo lineal · línea base · puesto **#9** de 10.\n\nModelo de referencia: combina las variables de forma lineal para estimar la probabilidad de default.\n\nMejor combinación: pesos de clase + genética (deap) → **F1 0.518** ± 0.010, recall 0.614, precisión 0.448, ROC-AUC 0.745.\n\nSin balanceo es la combinación con menor F1 (0.378): solo detecta 27 % de quienes incumplen. Con SMOTE o pesos de clase sube a 0.516, con un ROC-AUC casi igual.",
+    "texto": "**Regresión logística** · Modelo lineal · línea base · puesto **#7** de 8.\n\nModelo de referencia: combina las variables de forma lineal para estimar la probabilidad de default.\n\nMejor combinación: pesos de clase + genética (deap) → **F1 0.518** ± 0.010, recall 0.614, precisión 0.448, ROC-AUC 0.745.\n\nSin balanceo es la combinación con menor F1 (0.378): solo detecta 27 % de quienes incumplen. Con SMOTE o pesos de clase sube a 0.516, con un ROC-AUC casi igual.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1731,7 +1687,7 @@
      "en qué puesto quedó naive bayes",
      "F1 de naive bayes"
     ],
-    "texto": "**Naive Bayes** · Probabilístico (gaussiano) · puesto **#10** de 10.\n\nAplica el teorema de Bayes suponiendo que las variables son independientes entre sí.\n\nMejor combinación: smote + grid search → **F1 0.499** ± 0.008, recall 0.628, precisión 0.414, ROC-AUC 0.745.\n\nEse supuesto no se cumple con el historial de pagos, muy correlacionado mes a mes; por eso el balanceo casi no lo cambia (F1 entre 0.495 y 0.499).",
+    "texto": "**Naive Bayes** · Probabilístico (gaussiano) · puesto **#8** de 8.\n\nAplica el teorema de Bayes suponiendo que las variables son independientes entre sí.\n\nMejor combinación: smote + grid search → **F1 0.499** ± 0.008, recall 0.628, precisión 0.414, ROC-AUC 0.745.\n\nEse supuesto no se cumple con el historial de pagos, muy correlacionado mes a mes; por eso el balanceo casi no lo cambia (F1 entre 0.495 y 0.499).",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1755,7 +1711,7 @@
      "respuesta a la pregunta de investigación",
      "veredicto de las hipótesis"
     ],
-    "texto": "**Conclusiones** cierra el proyecto en cuatro bloques:\n\n1. **Respuesta a la pregunta de investigación:** el atraso reciente (sobre todo PAY_0) es lo que más anticipa el default; le sigue el límite de crédito; lo demográfico aporta poco.\n2. **Veredicto de las hipótesis:** las cinco (H1 a H5) se cumplen, cada una con su evidencia.\n3. **Qué significa para el banco:** usar el atraso como alerta temprana, revisar los cupos bajos y usar el modelo (CatBoost, F1 0.548) como filtro para un analista, no como decisión final.\n4. **Limitaciones y próximos pasos:** datos de 2005 y de un solo banco, análisis asociativo, umbral fijo en 0.5 que conviene ajustar según el costo de cada error.",
+    "texto": "**Conclusiones** cierra el proyecto en cuatro bloques:\n\n1. **Respuesta a la pregunta de investigación:** el atraso reciente (sobre todo PAY_0) es lo que más anticipa el default; le sigue el límite de crédito; lo demográfico aporta poco.\n2. **Veredicto de las hipótesis:** las cinco (H1 a H5) se cumplen, cada una con su evidencia.\n3. **Qué significa para el banco:** usar el atraso como alerta temprana, revisar los cupos bajos y usar el modelo (CS-FOF (original), F1 0.548) como filtro para un analista, no como decisión final.\n4. **Limitaciones y próximos pasos:** datos de 2005 y de un solo banco, análisis asociativo, umbral fijo en 0.5 que conviene ajustar según el costo de cada error.",
     "tecnico": null,
     "pagina": "/conclusiones",
     "sug": [
@@ -1832,7 +1788,7 @@
      "por qué se parte la tarjeta",
      "la tarjeta de crédito del resultado"
     ],
-    "texto": "La **tarjeta de crédito** del resultado muestra el puntaje de 0 a 100 %. Desde el **umbral de 50%** el veredicto es «riesgo alto: probable incumplimiento» (dorado); por debajo, «riesgo bajo» (azul).\n\nAdemás se rompe según el riesgo: está intacta con riesgo bajo; **desde 30 %** aparece una fractura por la mitad que crece hasta cruzarla, y **desde el umbral (50 %)** la tarjeta se abre por ahí, más cuanto más alto es el puntaje.\n\nDebajo aparecen **señales** en lenguaje simple: atrasos, qué parte de lo facturado pagó y cómo es su cupo frente a los demás.\n\nCon ese umbral el modelo detecta 60% de quienes incumplen y acierta en 48% de los que marca (datos de prueba). No es una probabilidad calibrada: sirve para **ordenar y clasificar** clientes.",
+    "texto": "La **tarjeta de crédito** del resultado muestra el puntaje de 0 a 100 %. Desde el **umbral de decisión** el veredicto es «riesgo alto: probable incumplimiento» (dorado); por debajo, «riesgo bajo» (azul).\n\n**El umbral no es fijo:** se mueve con el control «Umbral de decisión» y arranca en el recomendado de cada modelo (el de máximo F1, cerca de 52 %). Bajarlo detecta más incumplimientos a cambio de más falsas alarmas; subirlo hace lo contrario. Debajo del control se ven el recall, la precisión y las falsas alarmas de ese umbral en clientes de prueba.\n\nAdemás la tarjeta se rompe según el riesgo: aparece una fractura 20 puntos antes del umbral y, **desde el umbral**, se abre por ahí, más cuanto más alto es el puntaje.\n\nDebajo aparecen **señales** en lenguaje simple: atrasos, qué parte de lo facturado pagó y cómo es su cupo frente a los demás.\n\nCon el umbral de 50% el modelo detecta 60% de quienes incumplen y acierta en 48% de los que marca (datos de prueba). No es una probabilidad calibrada: sirve para **ordenar y clasificar** clientes.",
     "tecnico": "El Random Forest se entrenó con class_weight='balanced', lo que desplaza las probabilidades hacia la clase positiva: sobrestima el riesgo frente a la tasa real (22.1%). Para usar el puntaje como probabilidad habría que calibrarlo (p. ej., regresión isotónica).",
     "pagina": "/predecir",
     "sug": [
@@ -1894,8 +1850,8 @@
      "qué explica el riesgo de este cliente",
      "qué lo hace riesgoso"
     ],
-    "texto": "Cada barra responde: «si en este grupo de datos el cliente fuera como un **cliente típico**, ¿cuánto cambiaría su puntaje?». Los grupos son historial de pagos, montos pagados, facturación, cupo y perfil demográfico. Barras **doradas** suben el riesgo; **azules** lo bajan.",
-    "tecnico": "Explicación local por sustitución: se reemplaza cada grupo por la mediana/moda del cliente típico y se mide la diferencia en el puntaje. Es aproximada: no suma exactamente el total porque los grupos interactúan dentro del bosque (a diferencia de SHAP).",
+    "texto": "Cada barra es el **valor SHAP** de un grupo de variables: cuántos puntos de riesgo suma o resta frente al puntaje medio de 40 clientes reales. Los grupos son historial de pagos, montos pagados, facturación, cupo y perfil demográfico. Barras **doradas** suben el riesgo; **azules** lo bajan, y todas suman exactamente el puntaje del cliente.",
+    "tecnico": "Valores de Shapley exactos por grupo (SHAP intervencional): se evalúan las 32 coaliciones de los 5 grupos, cada una promediada sobre 40 clientes de fondo. Se agrupa porque las variables de un mismo grupo están muy correlacionadas.",
     "pagina": "/predecir",
     "sug": [
      "Explícame «¿Qué pasaría si…?»",
@@ -1968,7 +1924,7 @@
      "cómo reproduzco el análisis",
      "enlaces"
     ],
-    "texto": "**Enlaces** reúne:\n\n- **Sobre el proyecto:** resumen del Jupyter Book.\n- **Tarjetas de enlaces:** Libro del proyecto, Notebook del EDA, Repositorio del proyecto, Repositorio del tablero, Datos originales (UCI).\n- **Pipeline completo:** los siete notebooks en orden.\n- **Reproducir el análisis:** clonar, instalar con `install.packages()` y correr `shiny::runApp()`.",
+    "texto": "**Enlaces** reúne:\n\n- **Sobre el proyecto:** resumen del Jupyter Book.\n- **Tarjetas de enlaces:** Libro del proyecto, Notebook del EDA, Ficha del modelo (model card), Declaración de los datos, Repositorio del proyecto, Repositorio del tablero, Datos originales (UCI).\n- **Pipeline completo:** los siete notebooks en orden.\n- **Reproducir el análisis:** clonar, instalar con `install.packages()` y correr `shiny::runApp()`.",
     "tecnico": null,
     "pagina": "/enlaces",
     "sug": [
@@ -2324,7 +2280,7 @@
      "main findings",
      "what is the most important result"
     ],
-    "texto": "The dashboard studies **29,965 credit card clients** of a Taiwanese bank (April to September 2005) to understand who stops paying the following month (22.1% did). The key points:\n\n1. **Payment history dominates.** PAY_0 is the variable most associated with default (Spearman ρ = +0.29). Clients with ≥1 month of delay in PAY_0 default in 50.4% of cases, versus 13.8% of those who are up to date.\n2. **Lower limit, higher risk.** Median LIMIT_BAL: NT$90,000 (default) vs. NT$150,000 (no default). A lower limit is associated with higher risk.\n3. **Demographics matter little.** Rates by education range from 7.1% to 25.2%: significant differences but with a small effect size. Age alone does not separate either.\n4. **Bills are redundant.** The six BILL_AMT correlate (Spearman) between 0.73 and 0.91. For linear models it is better to summarize them (average + trend) or use PCA.\n5. **Models:** the best is CatBoost with class weights (F1 0.548 vs. 0.378 for the baseline); balancing the classes helps the most.",
+    "texto": "The dashboard studies **29,965 credit card clients** of a Taiwanese bank (April to September 2005) to understand who stops paying the following month (22.1% did). The key points:\n\n1. **Payment history dominates.** PAY_0 is the variable most associated with default (Spearman ρ = +0.29). Clients with ≥1 month of delay in PAY_0 default in 50.4% of cases, versus 13.8% of those who are up to date.\n2. **Lower limit, higher risk.** Median LIMIT_BAL: NT$90,000 (default) vs. NT$150,000 (no default). A lower limit is associated with higher risk.\n3. **Demographics matter little.** Rates by education range from 7.1% to 25.2%: significant differences but with a small effect size. Age alone does not separate either.\n4. **Bills are redundant.** The six BILL_AMT correlate (Spearman) between 0.73 and 0.91. For linear models it is better to summarize them (average + trend) or use PCA.\n5. **Models:** the best is CS-FOF (original) with class weights (F1 0.548 vs. 0.378 for the baseline); balancing the classes helps the most.",
     "tecnico": null,
     "pagina": null,
     "sug": [
@@ -2368,7 +2324,7 @@
      "what is this dashboard for",
      "what is the context"
     ],
-    "texto": "The **Introduction** gives the context:\n\n- **Quick look:** a chart showing that September's delay anticipates default.\n- **KPIs:** 29,965 clients, 24 variables (23 predictors + 1 target), 22.1% default and the April to September 2005 period.\n- **Introduction:** the credit card risk problem and the project's path: EDA, a comparison of 112 model combinations (the best, CatBoost with class weights, F1 0.548) and the Predict page.\n- **Sources:** the Yeh & Lien (2009) article and the UCI repository data; amounts in NT$.",
+    "texto": "The **Introduction** gives the context:\n\n- **Quick look:** a chart showing that September's delay anticipates default.\n- **KPIs:** 29,965 clients, 24 variables (23 predictors + 1 target), 22.1% default and the April to September 2005 period.\n- **Introduction:** the credit card risk problem and the project's path: EDA, a comparison of 112 model combinations (the best, CS-FOF (original) with class weights, F1 0.548) and the Predict page.\n- **Sources:** the Yeh & Lien (2009) article and the UCI repository data; amounts in NT$.",
     "tecnico": null,
     "pagina": "/introduccion",
     "sug": [
@@ -3257,7 +3213,7 @@
      "which classifiers did they try",
      "112 combinations"
     ],
-    "texto": "**Models** summarizes **112 traditional model combinations** (factorial design: 7 classifiers × 4 balancing techniques × 4 optimization methods) and, separately, **36 runs** of LightGBM, CatBoost and the original model CS-FOF, which try to beat the best F1 of those 112. All with nested cross-validation.\n\n- **KPIs:** best F1 0.548 (CatBoost), +0.170 over the baseline and 63% of defaults detected.\n- **Carousel:** the best combination of each model.\n- The original model **CS-FOF** has its own page: **Original model**.\n- **F1 by model and technique** (heatmap) and **F1 vs. ROC-AUC** (scatter).\n- **Confusion matrix** of the best model and **SHAP summary**.",
+    "texto": "**Models** summarizes **112 traditional model combinations** (factorial design: 7 classifiers × 4 balancing techniques × 4 optimization methods) and, separately, **4 runs** of the original model CS-FOF, which tries to beat the best F1 of those 112. All with nested cross-validation.\n\n- **KPIs:** best F1 0.548 (CS-FOF (original)), +0.170 over the baseline and 59% of defaults detected.\n- **Carousel:** the best combination of each model.\n- The original model **CS-FOF** has its own page: **Original model**.\n- **F1 by model and technique** (heatmap) and **F1 vs. ROC-AUC** (scatter).\n- **Confusion matrix** of the best model and **SHAP summary**.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3286,8 +3242,8 @@
      "what is the methodology of the original model",
      "where is the pseudocode"
     ],
-    "texto": "**Original model** presents **CS-FOF**, the random forest proposed in the project, in four tabs:\n\n1. **Theory:** with real clients, a classic tree needs a staircase of straight cuts while CS-FOF draws a single **oblique (diagonal) cut** along the Fisher direction, weighting defaulters more. With 1 cut it separates 58% more; with 3, only 5% more, because the staircase approaches the diagonal.\n2. **Methodology:** the 8 steps of the course guide, numbered equations with their justification, the pseudocode, complexity, ablation and the checklist.\n3. **Code:** the real excerpts of original_model.py and its tests.\n4. **Results:** an animated chart against **Random Forest** (it wins in 4 of 5 folds), the tests against the 10 models and the three other credit datasets.\n\nVerdict: F1 0.548, tied with CatBoost and with the highest ROC-AUC, but **not significantly superior**.",
-    "tecnico": "Nested 5×5 validation. Against Random Forest: Nadeau-Bengio with Holm p = 1.000, Cliff's δ 0.36, DeLong p = 0.171. Friedman over 10 models χ² = 40.3; mean ranks CatBoost 2.0 and CS-FOF 2.4.",
+    "texto": "**Original model** presents **CS-FOF**, the random forest proposed in the project, in four tabs:\n\n1. **Theory:** with real clients, a classic tree needs a staircase of straight cuts while CS-FOF draws a single **oblique (diagonal) cut** along the Fisher direction, weighting defaulters more. With 1 cut it separates 58% more; with 3, only 5% more, because the staircase approaches the diagonal.\n2. **Methodology:** the 8 steps of the course guide, numbered equations with their justification, the pseudocode, complexity, ablation and the checklist.\n3. **Code:** the real excerpts of original_model.py and its tests.\n4. **Results:** an animated chart against **Random Forest** (it wins in 4 of 5 folds), the tests against the 7 baseline models and the three other credit datasets.\n\nVerdict: F1 0.548, the highest of the 8 models (XGBoost 0.547), and the highest ROC-AUC. **Not significantly superior**.",
+    "tecnico": "Nested 5×5 validation. Against Random Forest: Nadeau-Bengio with Holm p = 0.619, Cliff's δ 0.36, DeLong p = 0.171. Friedman over 8 models χ² = 32.9; mean ranks CS-FOF 1.4 and XGBoost 2.2.",
     "pagina": "/modelo-original",
     "sug": [
      "Which is the best model?",
@@ -3311,8 +3267,8 @@
      "which model worked best",
      "the winning model"
     ],
-    "texto": "The best is **CatBoost** with **class weights** and **random search** optimization:\n\n- **F1:** 0.548 ± 0.009 (baseline: 0.378, +0.170)\n- **Recall:** 63.2% · **Precision:** 48.4%\n- **ROC-AUC:** 0.784 · **PR-AUC:** 0.559\n\nThe best of the 112 traditional combinations is XGBoost (F1 0.547). Note: the best overall is practically **tied** with the original model CS-FOF (0.0001 behind), XGBoost, LightGBM and Random Forest; the difference is below 0.002 and no statistical test separates them.",
-    "tecnico": "Nested 5×5 cross-validation. Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 and LightGBM 3.8. Neither Nadeau-Bengio nor Wilcoxon nor DeLong separates CS-FOF from CatBoost, XGBoost, LightGBM or Random Forest.",
+    "texto": "The best is **CS-FOF (original)** with **class weights** and **random search** optimization:\n\n- **F1:** 0.548 ± 0.005 (baseline: 0.378, +0.170)\n- **Recall:** 58.6% · **Precision:** 51.5%\n- **ROC-AUC:** 0.785 · **PR-AUC:** 0.561\n\nThe best of the 112 traditional combinations is XGBoost (F1 0.547). Note: CS-FOF is practically **tied** with XGBoost and Random Forest; the difference is below 0.003 and no statistical test separates them.",
+    "tecnico": "Nested 5×5 cross-validation. Friedman over the 8 models: χ² = 32.9, p = 2.7·10⁻⁵; mean ranks CS-FOF 1.4, XGBoost 2.2 and Random Forest 2.4. Neither Nadeau-Bengio nor Wilcoxon nor DeLong separates CS-FOF from XGBoost or Random Forest.",
     "pagina": "/modelos",
     "sug": [
      "Explain the confusion matrix",
@@ -3333,7 +3289,7 @@
      "model comparison",
      "model ranking"
     ],
-    "texto": "The **carousel** shows one card per model, with its **best combination**, ordered by F1:\n\n- rank, model family and F1 ± standard deviation;\n- the balancing technique and optimization method that achieved it;\n- precision, recall, ROC-AUC and PR-AUC bars;\n- its best F1 with each balancing technique;\n- a description and a note.\n\nThe **gold border** marks the best. Ranking: 1. CatBoost (0.548), 2. CS-FOF (original) (0.548), 3. XGBoost (0.547), 4. LightGBM (0.546), 5. Random Forest (0.545), 6. SVM (0.539), 7. KNN (0.526), 8. Decision tree (0.525), 9. Logistic regression (0.518), 10. Naive Bayes (0.499).",
+    "texto": "The **carousel** shows one card per model, with its **best combination**, ordered by F1:\n\n- rank, model family and F1 ± standard deviation;\n- the balancing technique and optimization method that achieved it;\n- precision, recall, ROC-AUC and PR-AUC bars;\n- its best F1 with each balancing technique;\n- a description and a note.\n\nThe **gold border** marks the best. Ranking: 1. CS-FOF (original) (0.548), 2. XGBoost (0.547), 3. Random Forest (0.545), 4. SVM (0.539), 5. KNN (0.526), 6. Decision tree (0.525), 7. Logistic regression (0.518), 8. Naive Bayes (0.499).",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3354,7 +3310,7 @@
      "no balancing vs class weights",
      "models heatmap"
     ],
-    "texto": "Each cell is a model's **best F1** with a balancing technique. Without balancing all of them perform worse because they barely detect defaulters; with **class weights**, the top five reach 0.55.",
+    "texto": "Each cell is a model's **best F1** with a balancing technique. Without balancing all of them perform worse because they barely detect defaulters; with **class weights**, the top three reach 0.55.",
     "tecnico": "Friedman (28 model × method blocks): χ² = 76.0, p ≈ 2·10⁻¹⁶. Mean F1: 0.455 no balancing, 0.526 class weights, 0.520 SMOTE and 0.513 ADASYN. “No balancing” is worse than all three (Nemenyi p ≤ 0.010); class weights beat ADASYN (p < 10⁻⁴) and tie with SMOTE (p = 0.35). Naive Bayes barely changes.",
     "pagina": "/modelos",
     "sug": [
@@ -3397,8 +3353,8 @@
      "how many defaulters does the model detect",
      "true positives"
     ],
-    "texto": "The **confusion matrix** crosses reality with what CatBoost predicted (threshold 0.5) on 29,965 clients:\n\n- **Detected:** 4,178 of 6,630 who defaulted (63%).\n- **Missed** (false negatives): 2,452.\n- **False alarms** (false positives): 4,467.\n- **Correctly classified payers:** 18,868.\n\nOf the 8,645 it flags as risky, 48% actually default.",
-    "tecnico": "Out-of-fold predictions from the five outer-fold models (pooled AUC 0.782). The probabilities are not calibrated (ECE = 0.196) because balancing inflates the positive class; isotonic recalibration lowers it from 0.180 to 0.013 on one fold. Tuning the threshold to the cost of each error is the next step.",
+    "texto": "The **confusion matrix** crosses reality with what CS-FOF (original) predicted (threshold 0.5) on 29,965 clients:\n\n- **Detected:** 3,893 of 6,630 who defaulted (59%).\n- **Missed** (false negatives): 2,737.\n- **False alarms** (false positives): 3,675.\n- **Correctly classified payers:** 19,660.\n\nOf the 7,568 it flags as risky, 51% actually default.",
+    "tecnico": "Out-of-fold predictions from the five outer-fold models (pooled AUC 0.783). The probabilities are not calibrated (ECE = 0.180) because the cost weight inflates the positive class; isotonic recalibration lowers it to 0.003. Tuning the threshold to the cost of each error is the next step.",
     "pagina": "/modelos",
     "sug": [
      "What is recall?",
@@ -3589,26 +3545,6 @@
     "mood": "explaining"
    },
    {
-    "id": "m_catboost",
-    "titulo": "CatBoost",
-    "ejemplos": [
-     "what is catboost",
-     "how did catboost do",
-     "catboost results",
-     "explain catboost",
-     "what rank did catboost get",
-     "F1 of catboost"
-    ],
-    "texto": "**CatBoost** · Recent boosting (symmetric trees) · rank **#1** of 10.\n\nBoosting with symmetric trees and a random ordering of the data that reduces overfitting.\n\nBest combination: class weights + random search → **F1 0.548** ± 0.009, recall 0.632, precision 0.484, ROC-AUC 0.784.\n\nRecent state-of-the-art method (2018). It has the highest mean F1, but only 0.0001 above CS-FOF; no test separates them. It is the most consistent across the three additional datasets. Across its 16 combinations, class weights is its best technique.",
-    "tecnico": null,
-    "pagina": "/modelos",
-    "sug": [
-     "Which is the best model?",
-     "Explain the model carousel"
-    ],
-    "mood": "proud"
-   },
-   {
     "id": "m_cs_fof",
     "titulo": "CS-FOF (original)",
     "ejemplos": [
@@ -3631,14 +3567,14 @@
      "what rank did cs-fof get",
      "F1 of cs-fof"
     ],
-    "texto": "**CS-FOF (original)** · Original model · cost-sensitive oblique forest · rank **#2** of 10.\n\nOur own random forest: at each node it compares single-variable splits with an oblique split along the Fisher direction, weighted by the cost of missing a defaulter.\n\nBest combination: class weights + random search → **F1 0.548** ± 0.005, recall 0.586, precision 0.515, ROC-AUC 0.785.\n\nProgrammed from scratch with numpy. It ties with CatBoost in F1 (−0.0001), with the highest ROC-AUC and the lowest variation between folds (± 0.005). It is not significantly superior.",
+    "texto": "**CS-FOF (original)** · Original model · cost-sensitive oblique forest · rank **#1** of 8.\n\nOur own random forest: at each node it compares single-variable splits with an oblique split along the Fisher direction, weighted by the cost of missing a defaulter.\n\nBest combination: class weights + random search → **F1 0.548** ± 0.005, recall 0.586, precision 0.515, ROC-AUC 0.785.\n\nProgrammed from scratch with numpy. It has the highest mean F1 (+0.0014 over XGBoost) and the highest ROC-AUC, but the difference with XGBoost and Random Forest is not significant.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
      "Which is the best model?",
      "Explain the model carousel"
     ],
-    "mood": "explaining"
+    "mood": "proud"
    },
    {
     "id": "m_xgboost",
@@ -3659,31 +3595,7 @@
      "what rank did xgboost get",
      "F1 of xgboost"
     ],
-    "texto": "**XGBoost** · Tree ensemble (boosting) · rank **#3** of 10.\n\nBuilds trees in sequence: each one corrects the errors of the previous one.\n\nBest combination: class weights + bayesian (optuna) → **F1 0.547** ± 0.009, recall 0.615, precision 0.493, ROC-AUC 0.783.\n\nHighest F1 of the seven base models. With CatBoost, LightGBM, CS-FOF and Random Forest it forms a group of five that the tests do not separate: in practice they tie.",
-    "tecnico": null,
-    "pagina": "/modelos",
-    "sug": [
-     "Which is the best model?",
-     "Explain the model carousel"
-    ],
-    "mood": "explaining"
-   },
-   {
-    "id": "m_lightgbm",
-    "titulo": "LightGBM",
-    "ejemplos": [
-     "what is lightgbm",
-     "how did lightgbm do",
-     "lightgbm results",
-     "explain lightgbm",
-     "what is light gbm",
-     "how did light gbm do",
-     "light gbm results",
-     "explain light gbm",
-     "what rank did lightgbm get",
-     "F1 of lightgbm"
-    ],
-    "texto": "**LightGBM** · Recent boosting (leaf-wise) · rank **#4** of 10.\n\nBoosting that grows each tree from the leaf that most reduces the error; very fast.\n\nBest combination: class weights + bayesian (optuna) → **F1 0.546** ± 0.009, recall 0.621, precision 0.488, ROC-AUC 0.784.\n\nRecent state-of-the-art method (2017). It is 0.0018 behind the best. Across its 16 combinations, class weights is its best technique; its PR-AUC was not computed.",
+    "texto": "**XGBoost** · Tree ensemble (boosting) · rank **#2** of 8.\n\nBuilds trees in sequence: each one corrects the errors of the previous one.\n\nBest combination: class weights + bayesian (optuna) → **F1 0.547** ± 0.009, recall 0.615, precision 0.493, ROC-AUC 0.783.\n\nHighest F1 of the seven baseline models. With CS-FOF and Random Forest it forms a group of three that the tests do not separate: in practice they tie.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3703,7 +3615,7 @@
      "what rank did random forest get",
      "F1 of random forest"
     ],
-    "texto": "**Random Forest** · Tree ensemble (bagging) · rank **#5** of 10.\n\nAverages many trees trained on different samples of clients; captures non-linear relationships between payment history and risk.\n\nBest combination: class weights + random search → **F1 0.545** ± 0.008, recall 0.604, precision 0.497, ROC-AUC 0.783.\n\nOnly 0.0028 behind the best: a difference smaller than the variation between folds. Across its 16 combinations it has the best mean rank of the seven base models, and it is the one used by the Predict page. CS-FOF starts from it and adds oblique splits.",
+    "texto": "**Random Forest** · Tree ensemble (bagging) · rank **#3** of 8.\n\nAverages many trees trained on different samples of clients; captures non-linear relationships between payment history and risk.\n\nBest combination: class weights + random search → **F1 0.545** ± 0.008, recall 0.604, precision 0.497, ROC-AUC 0.783.\n\nOnly 0.0027 behind CS-FOF: a difference smaller than the variation between folds. Across its 16 combinations it has the best mean rank of the seven base models, and it is the one used by the Predict page. CS-FOF starts from it and adds oblique splits.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3727,7 +3639,7 @@
      "what rank did svm get",
      "F1 of svm"
     ],
-    "texto": "**SVM** · Support vector machine (RBF kernel) · rank **#6** of 10.\n\nLooks for the boundary that best separates payers from defaulters, with maximum margin.\n\nBest combination: smote + random search → **F1 0.539** ± 0.005, recall 0.615, precision 0.479, ROC-AUC 0.764.\n\nRun on Colab with a GPU (cuML). Refitting it on CPU with ranger (R), with the same hyperparameters and folds, raises F1 by 0.009 on average: its best combination goes from 0.539 to 0.545, 0.002 behind XGBoost. The Colab value is shown here, as reported.",
+    "texto": "**SVM** · Support vector machine (RBF kernel) · rank **#4** of 8.\n\nLooks for the boundary that best separates payers from defaulters, with maximum margin.\n\nBest combination: smote + random search → **F1 0.539** ± 0.005, recall 0.615, precision 0.479, ROC-AUC 0.764.\n\nRun on Colab with a GPU (cuML). Refitting it on CPU with ranger (R), with the same hyperparameters and folds, raises F1 by 0.009 on average: its best combination goes from 0.539 to 0.545, 0.002 behind XGBoost. The Colab value is shown here, as reported.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3755,7 +3667,7 @@
      "what rank did knn get",
      "F1 of knn"
     ],
-    "texto": "**KNN** · Nearest neighbors · rank **#7** of 10.\n\nClassifies each client according to what the most similar clients did.\n\nBest combination: class weights + random search → **F1 0.526** ± 0.012, recall 0.621, precision 0.457, ROC-AUC 0.763.\n\nWith class weights it uses a project-specific adjustment (each neighbor's vote is weighted by the rarity of its class), not a standard ranger (R) mechanism. It ran on a GPU (cuML), but its predictions match ranger (R)'s in 99.98% to 100% of cases.",
+    "texto": "**KNN** · Nearest neighbors · rank **#5** of 8.\n\nClassifies each client according to what the most similar clients did.\n\nBest combination: class weights + random search → **F1 0.526** ± 0.012, recall 0.621, precision 0.457, ROC-AUC 0.763.\n\nWith class weights it uses a project-specific adjustment (each neighbor's vote is weighted by the rarity of its class), not a standard ranger (R) mechanism. It ran on a GPU (cuML), but its predictions match ranger (R)'s in 99.98% to 100% of cases.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3779,7 +3691,7 @@
      "what rank did decision tree get",
      "F1 of decision tree"
     ],
-    "texto": "**Decision tree** · Classification tree · rank **#8** of 10.\n\nA sequence of yes/no questions about the variables; easy to read, but unstable.\n\nBest combination: class weights + bayesian (optuna) → **F1 0.525** ± 0.004, recall 0.585, precision 0.479, ROC-AUC 0.757.\n\nIt falls below the top group, although the difference with Random Forest is right at the edge of significance (Nemenyi, p = 0.050) and with XGBoost it is not significant (p = 0.12).",
+    "texto": "**Decision tree** · Classification tree · rank **#6** of 8.\n\nA sequence of yes/no questions about the variables; easy to read, but unstable.\n\nBest combination: class weights + bayesian (optuna) → **F1 0.525** ± 0.004, recall 0.585, precision 0.479, ROC-AUC 0.757.\n\nIt falls below the top group, although the difference with Random Forest is right at the edge of significance (Nemenyi, p = 0.050) and with XGBoost it is not significant (p = 0.12).",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3803,7 +3715,7 @@
      "what rank did logistic regression get",
      "F1 of logistic regression"
     ],
-    "texto": "**Logistic regression** · Linear model · baseline · rank **#9** of 10.\n\nReference model: combines the variables linearly to estimate the probability of default.\n\nBest combination: class weights + genetic (deap) → **F1 0.518** ± 0.010, recall 0.614, precision 0.448, ROC-AUC 0.745.\n\nWithout balancing it is the combination with the lowest F1 (0.378): it detects only 27% of defaulters. With SMOTE or class weights it rises to 0.516, with almost the same ROC-AUC.",
+    "texto": "**Logistic regression** · Linear model · baseline · rank **#7** of 8.\n\nReference model: combines the variables linearly to estimate the probability of default.\n\nBest combination: class weights + genetic (deap) → **F1 0.518** ± 0.010, recall 0.614, precision 0.448, ROC-AUC 0.745.\n\nWithout balancing it is the combination with the lowest F1 (0.378): it detects only 27% of defaulters. With SMOTE or class weights it rises to 0.516, with almost the same ROC-AUC.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3823,7 +3735,7 @@
      "what rank did naive bayes get",
      "F1 of naive bayes"
     ],
-    "texto": "**Naive Bayes** · Probabilistic (Gaussian) · rank **#10** of 10.\n\nApplies Bayes' theorem assuming the variables are independent of each other.\n\nBest combination: smote + grid search → **F1 0.499** ± 0.008, recall 0.628, precision 0.414, ROC-AUC 0.745.\n\nThat assumption does not hold for payment history, which is highly correlated month to month; that is why balancing barely changes it (F1 between 0.495 and 0.499).",
+    "texto": "**Naive Bayes** · Probabilistic (Gaussian) · rank **#8** of 8.\n\nApplies Bayes' theorem assuming the variables are independent of each other.\n\nBest combination: smote + grid search → **F1 0.499** ± 0.008, recall 0.628, precision 0.414, ROC-AUC 0.745.\n\nThat assumption does not hold for payment history, which is highly correlated month to month; that is why balancing barely changes it (F1 between 0.495 and 0.499).",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3847,7 +3759,7 @@
      "answer to the research question",
      "hypothesis verdicts"
     ],
-    "texto": "**Conclusions** closes the project in four blocks:\n\n1. **Answer to the research question:** recent delay (especially PAY_0) best anticipates default; the credit limit follows; demographics add little.\n2. **Hypothesis verdicts:** all five (H1 to H5) are supported, each with its evidence.\n3. **What it means for the bank:** use delay as an early warning, review low limits and use the model (CatBoost, F1 0.548) as a filter for an analyst, not as the final decision.\n4. **Limitations and next steps:** data from 2005 and a single bank, associative analysis, a threshold fixed at 0.5 that should be tuned to the cost of each error.",
+    "texto": "**Conclusions** closes the project in four blocks:\n\n1. **Answer to the research question:** recent delay (especially PAY_0) best anticipates default; the credit limit follows; demographics add little.\n2. **Hypothesis verdicts:** all five (H1 to H5) are supported, each with its evidence.\n3. **What it means for the bank:** use delay as an early warning, review low limits and use the model (CS-FOF (original), F1 0.548) as a filter for an analyst, not as the final decision.\n4. **Limitations and next steps:** data from 2005 and a single bank, associative analysis, a threshold fixed at 0.5 that should be tuned to the cost of each error.",
     "tecnico": null,
     "pagina": "/conclusiones",
     "sug": [
@@ -3930,7 +3842,7 @@
      "when is a client considered high risk",
      "which score means high risk"
     ],
-    "texto": "The result's **credit card** shows the score from 0 to 100%. From the **50% threshold** the verdict is “high risk: likely default” (gold); below it, “low risk” (blue).\n\nIt also breaks according to the risk: it is intact with low risk; **from 30%** a crack appears in the middle and grows until it crosses the card, and **from the threshold (50%)** the card splits open there, more the higher the score.\n\nBelow it there are **signals** in plain language: delays, what share of the bill was paid and how their limit compares with others.\n\nWith that threshold the model detects 60% of defaulters and is right about 48% of those it flags (test data). It is not a calibrated probability: it is useful to **rank and classify** clients.",
+    "texto": "The result's **credit card** shows the score from 0 to 100%. From the **decision threshold** the verdict is “high risk: likely default” (gold); below it, “low risk” (blue).\n\n**The threshold is not fixed:** it moves with the “Decision threshold” control and starts at each model's recommended value (maximum F1, about 52%). Lowering it catches more defaults at the cost of more false alarms; raising it does the opposite. Below the control you see the recall, precision and false alarms of that threshold on test clients.\n\nThe card also breaks according to the risk: a crack appears 20 points before the threshold and, **from the threshold**, it splits open there, more the higher the score.\n\nBelow it there are **signals** in plain language: delays, what share of the bill was paid and how their limit compares with others.\n\nWith the 50% threshold the model detects 60% of defaulters and is right about 48% of those it flags (test data). It is not a calibrated probability: it is useful to **rank and classify** clients.",
     "tecnico": "The Random Forest was trained with class_weight='balanced', which shifts probabilities toward the positive class: it overestimates risk compared with the real rate (22.1%). To use the score as a probability it would have to be calibrated (e.g. isotonic regression).",
     "pagina": "/predecir",
     "sug": [
@@ -3992,8 +3904,8 @@
      "what explains this client's risk",
      "what makes them risky"
     ],
-    "texto": "Each bar answers: “if, in this group of data, the client were like a **typical client**, how much would their score change?”. The groups are payment history, amounts paid, billing, limit and demographic profile. **Gold** bars raise the risk; **blue** ones lower it.",
-    "tecnico": "Local explanation by substitution: each group is replaced by the typical client's median/mode and the difference in the score is measured. It is approximate: it does not add up exactly to the total because the groups interact inside the forest (unlike SHAP).",
+    "texto": "Each bar is the **SHAP value** of a group of variables: how many risk points it adds or removes compared with the average score of 40 real clients. The groups are payment history, amounts paid, billing, limit and demographic profile. **Gold** bars raise the risk; **blue** ones lower it, and together they add up exactly to the client's score.",
+    "tecnico": "Exact Shapley values by group (interventional SHAP): the 32 coalitions of the 5 groups are evaluated, each averaged over 40 background clients. Variables are grouped because those in the same group are highly correlated.",
     "pagina": "/predecir",
     "sug": [
      "Explain “What if…?”",
@@ -4066,7 +3978,7 @@
      "how do I reproduce the analysis",
      "links"
     ],
-    "texto": "**Links** gathers:\n\n- **About the project:** summary of the Jupyter Book.\n- **Link cards:** Project book, EDA notebook, Project repository, Dashboard repository, Original data (UCI).\n- **Full pipeline:** the seven notebooks in order.\n- **Reproduce the analysis:** clone, install with `install.packages()` and run `shiny::runApp()`.",
+    "texto": "**Links** gathers:\n\n- **About the project:** summary of the Jupyter Book.\n- **Link cards:** Project book, EDA notebook, Model card, Data statement, Project repository, Dashboard repository, Original data (UCI).\n- **Full pipeline:** the seven notebooks in order.\n- **Reproduce the analysis:** clone, install with `install.packages()` and run `shiny::runApp()`.",
     "tecnico": null,
     "pagina": "/enlaces",
     "sug": [

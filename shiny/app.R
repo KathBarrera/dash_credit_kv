@@ -12,9 +12,10 @@
 #     R/02_utils.R        formato, estadísticos, componentes y tema de las figuras
 #     R/03_univariado.R   figuras e interpretaciones del EDA univariado
 #     R/04_multivariado.R figuras e interpretaciones del EDA multivariado
-#     R/05_modelos.R      resultados de las 141 combinaciones de modelos
+#     R/05_modelos.R      resultados de las combinaciones de modelos
 #     R/06_variables.R    variables del modelo (mismas transformaciones del proyecto)
-#     R/07_predecir.R     página Predecir (modelo serializado con saveRDS)
+#     R/06b_cs_fof.R      CS-FOF en R: recorre los árboles exportados del modelo del Dash
+#     R/07_predecir.R     página Predecir (Random Forest serializado con saveRDS y CS-FOF)
 #     R/08_paginas.R      páginas, menú y navegación
 #     R/09_kyo.R          asistente Kyo (TF-IDF + regresión logística)
 #     R/10_modelo_original.R  modelo original CS-FOF: teoría, metodología, código y resultados
@@ -87,6 +88,9 @@ ui <- tagList(
                                     "I answer with what I learned from this dashboard's content; I don't use external services."))),
   HTML(paste(readLines("kyo/walker.html", encoding = "UTF-8", warn = FALSE), collapse = "\n")),
   tags$script(src = "comun.js"),
+  tags$script(src = "leaderboard.js"),   # orden y filtro de la tabla de líderes (Modelos)
+  tags$script(src = "card_focus.js"),   # modo foco: ampliar una tarjeta al centro de la pantalla
+  tags$script(src = "ef_fold.js"),      # conserva plegados o desplegados los filtros del EDA entre páginas
   tags$script(src = "app.js")
 )
 
@@ -107,12 +111,14 @@ server <- function(input, output, session) {
       "/introduccion" = page_intro(),
       "/problema" = page_problem(),
       "/marco" = page_marco(),
-      "/univariado" = page_uni(list(uni_var = input$uni_var, q_family = input$q_family, q_kind = input$q_kind)),
+      "/univariado" = page_uni(list(uni_var = input$uni_var, q_family = input$q_family, q_kind = input$q_kind, ef = ef_sel())),
       "/multivariado" = page_multi(list(lim_scale = input$lim_scale, age_view = input$age_view, x_var = input$x_var,
-                                        y_var = input$y_var, c_var = input$c_var, s_vars = input$s_vars)),
-      "/modelos" = page_models(list(shap_model = input$shap_model, any_model = input$any_model)),
-      "/modelo-original" = page_original(list(csrf_scn = input$csrf_scn)),
-      "/predecir" = page_predict(pf_actual() %||% PROFILES$tipico[[2]], input$pf_whatif_var %||% "PAY_0"),
+                                        y_var = input$y_var, c_var = input$c_var, s_vars = input$s_vars, ef = ef_sel())),
+      "/modelos" = page_models(list(shap_model = input$shap_model, any_model = input$any_model,
+                                    diag_model = input$diag_model, cd_src = input$cd_src)),
+      "/modelo-original" = page_original(list(csrf_scn = input$csrf_scn, csrf_rival = input$csrf_rival)),
+      "/predecir" = page_predict(pf_actual() %||% PROFILES$tipico[[2]], input$pf_whatif_var %||% "PAY_0",
+                                 input$pf_model %||% "rf", input$pf_thr),
       "/conclusiones" = page_conclusions(),
       "/enlaces" = page_links(),
       "/equipo" = page_team(),
@@ -123,57 +129,116 @@ server <- function(input, output, session) {
   # ---------- Introducción ----------
   output$home_graph <- fig(fig_home, mono = TRUE)
 
-  # ---------- EDA univariado ----------
-  output$target_graph <- fig(fig_target, mono = TRUE)
-  output$uni_graph <- renderPlotly({ set_lang(lang()); req(input$uni_var); themed(fig_uni(input$uni_var), dark(), TRUE) })
-  output$uni_interp <- renderUI({ set_lang(lang()); req(input$uni_var); r <- interp_uni(input$uni_var); interp_block(r[[1]], r[[2]]) })
-  output$q_graph <- renderPlotly({
-    set_lang(lang()); req(input$q_family, input$q_kind)
-    themed(fig_quant(input$q_family, input$q_kind), dark(), input$q_family %in% c("LIMIT_BAL", "AGE"))
+  # ---------- Filtros globales del EDA ----------
+  # Lo elegido se guarda para volver a dibujar los controles igual al cambiar de página o de idioma
+  ef_sel <- reactiveVal(NULL)
+  observe({
+    v <- list(sex = as.numeric(input$ef_sex), edu = as.numeric(input$ef_edu), mar = as.numeric(input$ef_mar),
+              age = input$ef_age, lim = input$ef_lim)
+    if (!is.null(input$ef_age)) ef_sel(v)
   })
-  output$q_interp <- renderUI({ set_lang(lang()); req(input$q_family); r <- interp_quant(input$q_family); interp_block(r[[1]], r[[2]]) })
+  observeEvent(input$ef_reset, {
+    ef_sel(NULL)
+    updateCheckboxGroupInput(session, "ef_sex", selected = EF_DEF$sex)
+    updateCheckboxGroupInput(session, "ef_edu", selected = EF_DEF$edu)
+    updateCheckboxGroupInput(session, "ef_mar", selected = EF_DEF$mar)
+    updateSliderInput(session, "ef_age", value = EF_DEF$age)
+    updateSliderInput(session, "ef_lim", value = EF_DEF$lim)
+  })
+  # Filtro efectivo: NULL cuando están todos los clientes o cuando el filtro deja menos de EDA_MIN_ROWS
+  ef <- reactive({
+    v <- ef_sel(); if (is.null(v)) return(NULL)
+    todos <- all(EF_DEF$sex %in% v$sex) && all(EF_DEF$edu %in% v$edu) && all(EF_DEF$mar %in% v$mar) &&
+      isTRUE(all(v$age == EF_DEF$age)) && isTRUE(all(v$lim == EF_DEF$lim))
+    if (todos) return(NULL)
+    if (identical(aplicar_filtro(v), DF_FULL)) return(NULL)
+    v
+  })
+  output$ef_info <- renderUI({
+    set_lang(lang()); v <- ef_sel(); f <- ef()
+    if (is.null(f)) {
+      parcial <- !is.null(v) && !(all(EF_DEF$sex %in% v$sex) && all(EF_DEF$edu %in% v$edu) && all(EF_DEF$mar %in% v$mar) &&
+                                  isTRUE(all(v$age == EF_DEF$age)) && isTRUE(all(v$lim == EF_DEF$lim)))
+      if (parcial) return(tx(sprintf("El filtro deja menos de %d clientes: se muestran todos.", EDA_MIN_ROWS),
+                             sprintf("The filter leaves fewer than %d clients: showing all of them.", EDA_MIN_ROWS)))
+      return(tx(sprintf("Mostrando a todos los clientes (%s).", num(nrow(DF_FULL))), sprintf("Showing all clients (%s).", num(nrow(DF_FULL)))))
+    }
+    sub <- aplicar_filtro(f)
+    tx(sprintf("Mostrando %s de %s clientes (%s); tasa de impago %s (global %s).", num(nrow(sub)), num(nrow(DF_FULL)),
+               pct(nrow(sub) / nrow(DF_FULL), 0), pct(mean(sub[[TARGET]])), pct(GLOBAL_RATE)),
+       sprintf("Showing %s of %s clients (%s); default rate %s (overall %s).", num(nrow(sub)), num(nrow(DF_FULL)),
+               pct(nrow(sub) / nrow(DF_FULL), 0), pct(mean(sub[[TARGET]])), pct(GLOBAL_RATE)))
+  })
+  ffig <- function(fn, mono = FALSE) renderPlotly({ set_lang(lang()); f <- ef(); themed(con_filtro(f, fn), dark(), mono) })
+
+  # ---------- EDA univariado ----------
+  output$target_graph <- ffig(fig_target, mono = TRUE)
+  output$uni_graph <- renderPlotly({ set_lang(lang()); req(input$uni_var); f <- ef()
+    themed(con_filtro(f, function() fig_uni(input$uni_var)), dark(), TRUE) })
+  output$uni_interp <- renderUI({ set_lang(lang()); req(input$uni_var); f <- ef()
+    r <- con_filtro(f, function() interp_uni(input$uni_var)); interp_block(r[[1]], r[[2]]) })
+  output$q_graph <- renderPlotly({
+    set_lang(lang()); req(input$q_family, input$q_kind); f <- ef()
+    themed(con_filtro(f, function() fig_quant(input$q_family, input$q_kind)), dark(), input$q_family %in% c("LIMIT_BAL", "AGE"))
+  })
+  output$q_interp <- renderUI({ set_lang(lang()); req(input$q_family); f <- ef()
+    r <- con_filtro(f, function() interp_quant(input$q_family)); interp_block(r[[1]], r[[2]]) })
 
   # ---------- EDA multivariado ----------
-  output$corr_graph <- fig(fig_corr)
-  output$rates_graph <- fig(fig_rates)
-  output$lim_graph <- renderPlotly({ set_lang(lang()); req(input$lim_scale); themed(fig_limit_box(input$lim_scale), dark()) })
-  output$age_graph <- renderPlotly({ set_lang(lang()); req(input$age_view); themed(fig_age(input$age_view), dark()) })
-  output$age_interp <- renderUI({ set_lang(lang()); req(input$age_view); r <- interp_age(input$age_view); interp_block(r[[1]], r[[2]]) })
-  cruce <- reactive({ set_lang(lang()); req(input$x_var, input$y_var, input$c_var); cross_fig(input$x_var, input$y_var, input$c_var) })
+  output$corr_graph <- ffig(fig_corr)
+  output$rates_graph <- ffig(fig_rates)
+  output$lim_graph <- renderPlotly({ set_lang(lang()); req(input$lim_scale); f <- ef()
+    themed(con_filtro(f, function() fig_limit_box(input$lim_scale)), dark()) })
+  output$age_graph <- renderPlotly({ set_lang(lang()); req(input$age_view); f <- ef()
+    themed(con_filtro(f, function() fig_age(input$age_view)), dark()) })
+  output$age_interp <- renderUI({ set_lang(lang()); req(input$age_view); f <- ef()
+    r <- con_filtro(f, function() interp_age(input$age_view)); interp_block(r[[1]], r[[2]]) })
+  cruce <- reactive({ set_lang(lang()); req(input$x_var, input$y_var, input$c_var); f <- ef()
+    con_filtro(f, function() cross_fig(input$x_var, input$y_var, input$c_var)) })
   output$x_graph <- renderPlotly({ themed(cruce()[[1]], dark()) })
   output$x_interp <- renderUI({ r <- cruce(); interp_block(r[[2]], r[[3]]) })
   output$s_graph_box <- renderUI({ n <- max(2, length(input$s_vars)); grafica("s_graph", max(480, 170 * n + 120)) })
   output$s_graph <- renderPlotly({
     set_lang(lang())
-    v <- utils::head(input$s_vars, 6)
+    v <- utils::head(input$s_vars, 6); f <- ef()
     validate(need(length(v) >= 2, tx("Elige al menos dos variables numéricas.", "Choose at least two numeric variables.")))
-    themed(fig_splom(v), dark())
+    themed(con_filtro(f, function() fig_splom(v)), dark())
   })
   output$s_interp <- renderUI({
-    set_lang(lang()); v <- utils::head(input$s_vars, 6); req(length(v) >= 2)
-    r <- interp_splom(v); interp_block(r[[1]], r[[2]])
+    set_lang(lang()); v <- utils::head(input$s_vars, 6); req(length(v) >= 2); f <- ef()
+    r <- con_filtro(f, function() interp_splom(v)); interp_block(r[[1]], r[[2]])
   })
 
   # ---------- Modelos ----------
   # ---------- Modelo original (CS-FOF) ----------
   output$cs_toy_tree <- fig(function() fig_csfof_toy("tree"))
   output$cs_toy_obl <- fig(function() fig_csfof_toy("oblique"))
-  # un gráfico nuevo (id distinto) por escenario: así una animación en curso no sigue sobre el escenario nuevo
+  # un gráfico nuevo (id distinto) por escenario y rival: así una animación en curso no sigue sobre el nuevo
   output$csrf_box <- renderUI({
-    set_lang(lang()); s <- input$csrf_scn %||% "folds"
-    tagList(grafica(paste0("csrf_graph_", s), 400), cs_vs_rf_interp(s))
+    set_lang(lang()); s <- input$csrf_scn %||% "folds"; r <- .rival(input$csrf_rival)
+    tagList(grafica(paste0("csrf_graph_", s, "_", r), 400), cs_vs_rf_interp(s, r))
   })
-  for (s_ in c("folds", "size", "noise")) local({
-    s <- s_
-    output[[paste0("csrf_graph_", s)]] <- renderPlotly({ set_lang(lang()); themed(fig_cs_vs_rf(s), dark()) })
+  for (s_ in c("folds", "size", "noise")) for (r_ in CS_RIVALS) local({
+    s <- s_; r <- r_
+    output[[paste0("csrf_graph_", s, "_", r)]] <- renderPlotly({ set_lang(lang()); themed(fig_cs_vs_rf(s, r), dark()) })
   })
 
   output$mdl_heat <- fig(fig_models_heat)
   output$mdl_scatter <- fig(fig_models_scatter)
   output$mdl_cm <- fig(fig_best_cm)
   output$lime_graph <- fig(fig_lime_cells)
-  output$shap_graph <- renderPlotly({ set_lang(lang()); req(input$shap_model); themed(fig_shap_folds(input$shap_model), dark()) })
-  output$shap_interp <- renderUI({ set_lang(lang()); req(input$shap_model); r <- interp_shap_folds(input$shap_model); interp_block(r[[1]], r[[2]]) })
+  # SHAP: CS-FOF muestra el SHAP global por permutación (frente a XGBoost); los otros dos, el SHAP en los 5 folds
+  output$shap_graph <- renderPlotly({ set_lang(lang()); req(input$shap_model)
+    themed(if (input$shap_model == "cs_fof") fig_shap_global("cs_fof") else fig_shap_folds(input$shap_model), dark()) })
+  output$shap_interp <- renderUI({ set_lang(lang()); req(input$shap_model)
+    if (input$shap_model == "cs_fof") return(shap_global_interp("cs_fof"))
+    r <- interp_shap_folds(input$shap_model); interp_block(r[[1]], r[[2]]) })
+  output$diag_graph <- renderPlotly({ set_lang(lang()); m <- input$diag_model %||% "cs_fof"
+    if (!m %in% DIAG_MODELS) m <- "cs_fof"; themed(fig_diag(m), dark()) })
+  output$diag_interp <- renderUI({ set_lang(lang()); m <- input$diag_model %||% "cs_fof"
+    if (!m %in% DIAG_MODELS) m <- "cs_fof"; diag_interp(m) })
+  output$cd_graph <- renderPlotly({ set_lang(lang()); s <- input$cd_src %||% "taiwan"; themed(fig_cd(s), dark()) })
+  output$cd_interp <- renderUI({ set_lang(lang()); cd_interp(input$cd_src %||% "taiwan") })
   output$any_graph <- renderPlotly({ set_lang(lang()); req(input$any_model); themed(fig_anytime(input$any_model), dark()) })
   output$any_table <- renderUI({ set_lang(lang()); req(input$any_model); anytime_table(input$any_model) })
   output$any_interp <- renderUI({ set_lang(lang()); req(input$any_model); r <- interp_anytime(input$any_model); interp_block(r[[1]], r[[2]]) })
@@ -187,25 +252,32 @@ server <- function(input, output, session) {
   pf_actual <- reactiveVal(NULL)
   observe({ v <- pf_leer(); if (!any(vapply(v, function(x) length(x) == 0 || is.na(x), TRUE))) pf_actual(v) })
   pf <- debounce(pf_leer, 250)
+  pf_key <- reactive(.mk(input$pf_model))
+  pf_thr <- reactive(as.numeric(input$pf_thr %||% .rec_thr(pf_key())))
+  # al cambiar de modelo, el umbral vuelve al recomendado de ese modelo
+  observeEvent(input$pf_model, updateSliderInput(session, "pf_thr", value = .rec_thr(pf_key())), ignoreInit = TRUE)
   pf_ok <- reactive({
-    v <- pf()
+    v <- pf(); key <- pf_key()
     faltan <- INPUT_COLS[vapply(v, function(x) length(x) == 0 || is.na(x), TRUE)]
-    list(v = v, faltan = faltan, score = if (!length(faltan) && !is.null(MODELO)) predict_risk(v) else NA)
+    list(v = v, faltan = faltan, key = key, score = if (!length(faltan) && !is.null(MODELO)) predict_risk(v, key) else NA)
   })
   output$`pf-verdict` <- renderUI({
     set_lang(lang()); r <- pf_ok()
     if (length(r$faltan)) return(tags$p(class = "callout", paste0(tx("Completa los campos: ", "Fill in the fields: "),
                                                                   paste(vapply(utils::head(r$faltan, 4), pretty_var, ""), collapse = ", "),
                                                                   if (length(r$faltan) > 4) "…" else "")))
-    predict_verdict(r$v, r$score)
+    predict_verdict(r$v, r$score, r$key, pf_thr())
   })
-  output$`pf-trees` <- renderUI({ set_lang(lang()); r <- pf_ok(); req(!length(r$faltan)); trees_block(r$v) })
+  output$`pf-trees` <- renderUI({ set_lang(lang()); r <- pf_ok(); req(!length(r$faltan)); trees_block(r$v, r$key) })
   output$pf_history <- renderPlotly({ set_lang(lang()); r <- pf_ok(); req(!length(r$faltan)); themed(fig_client_history(r$v), dark()) })
-  output$pf_drivers <- renderPlotly({ set_lang(lang()); r <- pf_ok(); req(!length(r$faltan)); themed(fig_drivers(r$v, r$score), dark()) })
+  output$pf_drivers <- renderPlotly({ set_lang(lang()); r <- pf_ok(); req(!length(r$faltan)); themed(fig_drivers(r$v, r$score, r$key), dark()) })
   output$pf_whatif <- renderPlotly({
     set_lang(lang()); r <- pf_ok(); req(!length(r$faltan))
-    themed(fig_whatif(r$v, input$pf_whatif_var %||% "PAY_0", r$score), dark())
+    themed(fig_whatif(r$v, input$pf_whatif_var %||% "PAY_0", r$score, r$key, pf_thr()), dark())
   })
+  output$pf_model_info <- renderUI({ set_lang(lang()); model_info(pf_key()) })
+  output$pf_thr_sum <- renderUI({ paste0(round(pf_thr() * 100), " %") })
+  output$pf_thr_info <- renderUI({ set_lang(lang()); thr_info(pf_key(), pf_thr()) })
   aplicar_perfil <- function(key) {
     v <- PROFILES[[key]][[2]]
     updateSliderInput(session, "pf_LIMIT_BAL", value = v$LIMIT_BAL)

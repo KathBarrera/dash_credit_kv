@@ -85,10 +85,10 @@ page_intro <- function() {
                        sprintf("This dashboard walks through the whole project using the Default of Credit Card Clients dataset (UCI): %s clients observed between April and September 2005, with their credit limit, demographics, six-month payment history, billed and paid amounts, and whether they defaulted the following month.", num(I$filas_originales)))),
              tags$p(tx("Tras la limpieza quedan 24 variables (23 predictoras y 1 objetivo); el conjunto final de modelado tiene 21 columnas porque las 6 BILL_AMT se resumen en 3 variables derivadas.",
                        "After cleaning there are 24 variables (23 predictors and 1 target); the final modeling set has 21 columns because the 6 BILL_AMT are summarized into 3 derived variables.")),
-             tags$p(tx(sprintf("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables anticipan el incumplimiento. Luego se comparan %d combinaciones de modelos tradicionales (diseño factorial: 7 algoritmos × 4 técnicas de balanceo × 4 optimizadores) y, aparte, %d corridas de LightGBM, CatBoost y CS-FOF, el modelo original del proyecto, que buscan superar el mejor F1 de esas %d. La mejor de las %d es %s (F1 %.3f); la mejor en total es %s (F1 %.3f), empatada con CS-FOF: la diferencia es menor que 0.002 y ninguna prueba estadística las separa. Por último, la página Predecir usa un Random Forest con pesos de clase (estadísticamente empatado con el mejor) para estimar el riesgo de un cliente nuevo.",
-                               N_BASE, N_EXTRA, N_BASE, N_BASE, minfo(BEST_BASE$model, "label"), BEST_BASE$f1_mean, best_lbl, BEST$f1_mean),
-                       sprintf("First the data is explored (univariate and multivariate EDA) to see which variables anticipate default. Then %d traditional model combinations are compared (factorial design: 7 algorithms × 4 balancing techniques × 4 optimizers) and, separately, %d runs of LightGBM, CatBoost and CS-FOF, the project's original model, which try to beat the best F1 of those %d. The best of the %d is %s (F1 %.3f); the best overall is %s (F1 %.3f), tied with CS-FOF: the difference is below 0.002 and no statistical test separates them. Finally, the Predict page uses a Random Forest with class weights (statistically tied with the best) to estimate the risk of a new client.",
-                               N_BASE, N_EXTRA, N_BASE, N_BASE, minfo(BEST_BASE$model, "label"), BEST_BASE$f1_mean, best_lbl, BEST$f1_mean))),
+             tags$p(tx(sprintf("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables anticipan el incumplimiento. Luego se comparan %d combinaciones de modelos tradicionales (diseño factorial: 7 algoritmos × 4 técnicas de balanceo × 4 optimizadores) y, aparte, %d corridas de CS-FOF, el modelo original del proyecto, que busca superar el mejor F1 de esas %d. La mejor de las %d es %s (F1 %.3f). CS-FOF obtiene el mayor F1 medio (%.3f), pero la diferencia es menor que 0.002 y ninguna prueba estadística las separa. Por último, la página Predecir usa un Random Forest con pesos de clase (estadísticamente empatado con el mejor) para estimar el riesgo de un cliente nuevo.",
+                               N_BASE, N_EXTRA, N_BASE, N_BASE, minfo(BEST_BASE$model, "label"), BEST_BASE$f1_mean, BEST$f1_mean),
+                       sprintf("First the data is explored (univariate and multivariate EDA) to see which variables anticipate default. Then %d traditional model combinations are compared (factorial design: 7 algorithms × 4 balancing techniques × 4 optimizers) and, separately, %d runs of CS-FOF, the project's original model, which tries to beat the best F1 of those %d. The best of the %d is %s (F1 %.3f). CS-FOF has the highest mean F1 (%.3f), but the difference is below 0.002 and no statistical test separates them. Finally, the Predict page uses a Random Forest with class weights (statistically tied with the best) to estimate the risk of a new client.",
+                               N_BASE, N_EXTRA, N_BASE, N_BASE, minfo(BEST_BASE$model, "label"), BEST_BASE$f1_mean, BEST$f1_mean))),
              tags$p(tx("Cada gráfico trae una interpretación básica (lenguaje cotidiano) y una técnica (estadísticos y recomendaciones de modelado).",
                        "Each chart comes with a basic interpretation (everyday language) and a technical one (statistics and modeling recommendations)."))),
         card(tx("Fuentes", "Sources"),
@@ -103,7 +103,7 @@ page_intro <- function() {
 # ---------------------------------------------------------------- Problema y objetivos
 # KPI de un monto en millones de NT$ con su equivalente en dólares debajo (el valor no se parte en dos líneas)
 money_kpi <- function(label, amount, note) {
-  div(class = "kpi kpi-money",
+  div(class = "kpi kpi-money", zoom_btn(),
       div(class = "kpi-head", div(class = "kpi-label", label)),
       div(class = "kpi-value", sprintf("NT$\u00a0%s\u00a0M", num(amount / 1e6))),
       div(class = "kpi-usd", sprintf("≈ US$\u00a0%s\u00a0M", num(amount / TWD_PER_USD_2005 / 1e6, 1))),
@@ -280,14 +280,14 @@ page_marco <- function() {
                        "A model is calibrated if, among the clients it assigns a 30% risk, about 30% default. Ranking well (AUC) is not enough: class weights and oversampling inflate the minority-class probabilities. Calibration is measured with the Brier score and the expected calibration error (ECE):")),
              formula_("\\mathrm{Brier} = \\frac{1}{n} \\sum_{i=1}^{n} (\\hat p_i - y_i)^2"),
              formula_("\\mathrm{ECE} = \\sum_{b=1}^{B} \\frac{n_b}{n} \\,\\big|\\, \\bar y_b - \\bar p_b \\,\\big|"),
-             tags$p(tx("En el ECE las probabilidades se agrupan en B intervalos (10 en este proyecto); ȳ_b es la tasa real de incumplimiento y p̄_b la probabilidad media en el intervalo b. En ambos, menor es mejor. La página Modelos reporta el ECE del mejor modelo y la página Modelo original compara el Brier de los cinco mejores.",
-                       "In the ECE, probabilities are grouped into B bins (10 in this project); ȳ_b is the real default rate and p̄_b the mean probability in bin b. For both, lower is better. The Models page reports the best model's ECE and the Original model page compares the Brier score of the top five.")))),
+             tags$p(tx("En el ECE las probabilidades se agrupan en B intervalos (10 en este proyecto); ȳ_b es la tasa real de incumplimiento y p̄_b la probabilidad media en el intervalo b. En ambos, menor es mejor. La página Modelos reporta el ECE del mejor modelo y la página Modelo original compara el Brier de los tres mejores.",
+                       "In the ECE, probabilities are grouped into B bins (10 in this project); ȳ_b is the real default rate and p̄_b the mean probability in bin b. For both, lower is better. The Models page reports the best model's ECE and the Original model page compares the Brier score of the top three.")))),
     div(class = "grid",
         card(tx("Antecedentes", "Background"),
              tags$p(tx("Yeh y Lien (2009) [1] compararon seis técnicas de minería de datos (regresión logística, análisis discriminante, k vecinos, Naive Bayes, redes neuronales y árboles de clasificación) para predecir el incumplimiento con estos mismos datos, y propusieron un método de suavizado por ordenamiento (Sorting Smoothing Method) para estimar la probabilidad real de incumplimiento.",
                        "Yeh and Lien (2009) [1] compared six data mining techniques (logistic regression, discriminant analysis, k-nearest neighbors, Naive Bayes, neural networks and classification trees) to predict default with this same data, and proposed the Sorting Smoothing Method to estimate the real probability of default.")),
-             tags$p(tx("La sección Modelos retoma esa comparación con siete clasificadores, cuatro técnicas de balanceo y cuatro métodos de optimización de hiperparámetros, y la amplía con LightGBM, CatBoost y un modelo original propuesto en este proyecto (CS-FOF).",
-                       "The Models section revisits that comparison with seven classifiers, four balancing techniques and four hyperparameter optimization methods, and extends it with LightGBM, CatBoost and an original model proposed in this project (CS-FOF).")))),
+             tags$p(tx("La sección Modelos retoma esa comparación con siete clasificadores, cuatro técnicas de balanceo y cuatro métodos de optimización de hiperparámetros, y la amplía con un modelo original propuesto en este proyecto (CS-FOF).",
+                       "The Models section revisits that comparison with seven classifiers, four balancing techniques and four hyperparameter optimization methods, and extends it with an original model proposed in this project (CS-FOF).")))),
     card(tx("Diccionario de variables", "Variable dictionary"),
          tbl_(list("Variable", tx("Tipo", "Type"), tx("Descripción", "Description")),
               lapply(var_table, function(v) list(tags$code(v[[1]]), v[[2]], v[[3]])))),
@@ -297,10 +297,40 @@ page_marco <- function() {
 }
 
 # ---------------------------------------------------------------- EDA univariado
+# ---------------------------------------------------------------- Filtros globales del EDA
+# Actualizan todos los gráficos de las dos páginas del EDA (app.R los aplica con con_filtro). Arranca plegada
+# (www/ef_fold.js conserva el estado entre páginas) y no se amplía en modo foco (clase no-zoom).
+EF_DEF <- list(sex = c(1, 2), edu = c(1, 2, 3, 4), mar = c(1, 2, 3), age = c(21, 79), lim = c(10000, 1000000))
+eda_filter_card <- function(sel = list()) {
+  g <- function(k) sel[[k]] %||% EF_DEF[[k]]
+  k <- tx("mil", "k")
+  controles <- tagList(
+    div(class = "controls",
+        control(tx("Sexo", "Sex"), ico = "gender", check_("ef_sex", Filter(function(t) t[[1]] %in% c(1, 2), SEX_TILES), g("sex"))),
+        control(tx("Educación", "Education"), ico = "cap", check_("ef_edu", EDU_TILES, g("edu"))),
+        control(tx("Estado civil", "Marital status"), ico = "rings", check_("ef_mar", MAR_TILES, g("mar")))),
+    div(class = "grid g2",
+        control(tx("Edad (años)", "Age (years)"), ico = "calendar",
+                sliderInput("ef_age", NULL, min = 21, max = 79, value = g("age"), step = 1, width = "100%")),
+        control(tx("Cupo de crédito (NT$)", "Credit limit (NT$)"), ico = "card",
+                sliderInput("ef_lim", NULL, min = 10000, max = 1000000, value = g("lim"), step = 10000, width = "100%",
+                            sep = ",", pre = "NT$"))),
+    div(class = "ef-bar", actionButton("ef_reset", tx("Quitar filtros", "Clear filters"), class = "btn")),
+    tags$p(class = "muted", tx("Los filtros actualizan todos los gráficos de esta página y de la otra página del EDA. Las tarjetas de cifras y los textos fijos describen siempre a todos los clientes.",
+                               "The filters update every chart on this page and on the other EDA page. The figure cards and the fixed texts always describe all clients.")))
+  div(class = "card ef-card no-zoom",
+      tags$details(id = "ef-fold", class = "ef-fold",
+        tags$summary(class = "ef-summary", icon_("filter", "ef-ico"), tags$h3(class = "card-title", tx("Filtros globales", "Global filters")),
+                     uiOutput("ef_info", inline = TRUE, class = "ef-info"),
+                     tags$span(class = "ef-toggle", `aria-hidden` = "true", icon_("chevron", "ef-chev"))),
+        div(class = "ef-body", controles)))
+}
+
 page_uni <- function(sel = list()) {
   it <- interp_target()
   tagList(
     page_title(tx("EDA Univariado", "Univariate EDA")),
+    eda_filter_card(sel$ef),
     div(class = "kpi-row k4",
         kpi(tx("Total de registros", "Total records"), num(nrow(df)), tx("tras eliminar duplicados", "after removing duplicates"), "users"),
         kpi(tx("Tasa global de default", "Overall default rate"), pct(GLOBAL_RATE), paste(num(N_DEF), tx("clientes", "clients")), "alert"),
@@ -329,6 +359,7 @@ page_multi <- function(sel = list()) {
   ic <- interp_corr(); ir <- interp_rates(); il <- interp_limit()
   tagList(
     page_title(tx("EDA Multivariado", "Multivariate EDA")),
+    eda_filter_card(sel$ef),
     card(tx("Matriz de correlación de Spearman", "Spearman correlation matrix"), grafica("corr_graph", 740), interp_block(ic[[1]], ic[[2]])),
     div(class = "grid g2",
         card(tx("Incumplimiento por educación, estado civil y sexo", "Default by education, marital status and sex"),
@@ -369,7 +400,7 @@ page_conclusions <- function() {
   cv <- vapply(c(SEX = "SEX", EDUCATION = "EDUCATION", MARRIAGE = "MARRIAGE"), function(v) cramers_v(table(df[[v]], df[[TARGET]])), 0)
   bc <- triu(CORR[BILL_COLS, BILL_COLS])
   ratio <- (1 - GLOBAL_RATE) / GLOBAL_RATE
-  c <- BEST_CM; pos <- c$tp + c$fn; flagged <- c$tp + c$fp
+  c <- CSFOF_CM; pos <- c$tp + c$fn; flagged <- c$tp + c$fp
   best_lbl <- minfo(BEST$model, "label"); tech <- tolower(tech_lbl(BEST$technique))
   yes <- tags$span(class = "tag verdict", tx("Se cumple", "Supported"))
   hyp <- list(
@@ -393,30 +424,29 @@ page_conclusions <- function() {
     card(tx("Respuesta a la pregunta de investigación", "Answer to the research question"),
          div(class = "callout", tx("El incumplimiento del mes siguiente lo anticipa sobre todo el comportamiento de pago reciente: cuántos meses de atraso lleva el cliente, en especial en septiembre. Le sigue, con menos fuerza, el límite de crédito (a menor cupo, más riesgo). Los datos demográficos aportan muy poco.",
                                    "Next month's default is anticipated mainly by recent payment behavior: how many months late the client is, especially in September. It is followed, less strongly, by the credit limit (the lower the limit, the higher the risk). Demographics add very little.")),
-         tags$p(tx(sprintf("Con esas señales, el mejor modelo (%s con %s) logra un F1 medio de %.3f en la validación anidada 5 × 5. En sus predicciones fuera de pliegue (una sola corrida, umbral 0.5) detecta %s de los %s incumplimientos (%s) y, de cada dos clientes que marca como riesgo, uno realmente incumple (%s).", best_lbl, tech, BEST$f1_mean, num(c$tp), num(pos), pct(c$tp / pos, 0), pct(c$tp / (c$tp + c$fp), 0)),
-                   sprintf("With those signals, the best model (%s with %s) reaches a mean F1 of %.3f in the nested 5 × 5 validation. In its out-of-fold predictions (a single run, threshold 0.5) it detects %s of the %s defaults (%s) and, out of every two clients it flags as risky, one actually defaults (%s).", best_lbl, tech, BEST$f1_mean, num(c$tp), num(pos), pct(c$tp / pos, 0), pct(c$tp / (c$tp + c$fp), 0)))),
+         tags$p(tx(sprintf("Con esas señales, el modelo con mayor F1 medio (%s con %s) logra un F1 medio de %.3f en la validación anidada 5 × 5. En sus predicciones fuera de pliegue (una sola corrida, umbral 0.5) detecta %s de los %s incumplimientos (%s) y, de cada dos clientes que marca como riesgo, uno realmente incumple (%s).", best_lbl, tech, BEST$f1_mean, num(c$tp), num(pos), pct(c$tp / pos, 0), pct(c$tp / (c$tp + c$fp), 0)),
+                   sprintf("With those signals, the model with the highest mean F1 (%s with %s) reaches a mean F1 of %.3f in the nested 5 × 5 validation. In its out-of-fold predictions (a single run, threshold 0.5) it detects %s of the %s defaults (%s) and, out of every two clients it flags as risky, one actually defaults (%s).", best_lbl, tech, BEST$f1_mean, num(c$tp), num(pos), pct(c$tp / pos, 0), pct(c$tp / (c$tp + c$fp), 0)))),
          div(class = "kpi-row k3",
              kpi(tx("Señal más fuerte", "Strongest signal"), "PAY_0", tx(sprintf("ρ = %.2f con el default", rho[["PAY_0"]]), sprintf("ρ = %.2f with default", rho[["PAY_0"]])), "alert"),
-             kpi(tx("Mejor modelo", "Best model"), sprintf("F1 %.3f", BEST$f1_mean), paste(best_lbl, "·", tech), "trophy"),
+             kpi(tx("Mayor F1 medio", "Highest mean F1"), sprintf("F1 %.3f", BEST$f1_mean), paste(best_lbl, "·", tech), "trophy"),
              kpi(tx("Incumplimientos detectados", "Defaults detected"), pct(c$tp / pos, 0), tx(paste(num(c$tp), "de", num(pos)), paste(num(c$tp), "of", num(pos))), "target"))),
     card(tx("Veredicto de las hipótesis", "Hypothesis verdicts"),
          tbl_(list("#", tx("Hipótesis", "Hypothesis"), tx("Veredicto", "Verdict"), tx("Evidencia", "Evidence")),
               lapply(hyp, function(h) list(tags$b(h[[1]]), h[[2]], h[[3]], h[[4]])))),
     card(tx(sprintf("¿Superó CS-FOF a las %d combinaciones?", N_BASE), sprintf("Did CS-FOF beat the %d combinations?", N_BASE)),
-         div(class = "callout", tx("Respuesta honesta: no de forma significativa. CS-FOF empata con los mejores modelos; no los supera.",
-                                   "Honest answer: not significantly. CS-FOF ties with the best models; it does not beat them.")),
+         div(class = "callout", tx("CS-FOF obtiene el mayor F1 medio, pero no de forma significativa: en la práctica empata con XGBoost y Random Forest.",
+                                   "CS-FOF has the highest mean F1, but not significantly: in practice it ties with XGBoost and Random Forest.")),
          div(class = "kpi-row k3",
              kpi(tx(sprintf("Mejor de las %d", N_BASE), sprintf("Best of the %d", N_BASE)), sprintf("F1 %.3f", BEST_BASE$f1_mean),
                  paste(minfo(BEST_BASE$model, "label"), "·", tolower(tech_lbl(BEST_BASE$technique))), "layers"),
              kpi("CS-FOF", "F1 0.548", tx("+0.0014 sobre XGBoost; gana en 4 de 5 pliegues", "+0.0014 over XGBoost; wins in 4 of 5 folds"), "tree"),
-             kpi(tx("Mejor global", "Best overall"), sprintf("F1 %.3f", BEST$f1_mean),
-                 tx(sprintf("%s: solo 0.0001 por encima de CS-FOF", best_lbl), sprintf("%s: only 0.0001 above CS-FOF", best_lbl)), "trophy")),
-         ul_(list(tx("Frente a XGBoost, Random Forest, LightGBM y CatBoost, ni Nadeau-Bengio (p = 1.000 con Holm), ni Wilcoxon, ni DeLong encuentran diferencias significativas; la diferencia de F1 es menor que 0.002.",
-                     "Against XGBoost, Random Forest, LightGBM and CatBoost, neither Nadeau-Bengio (p = 1.000 with Holm), nor Wilcoxon, nor DeLong finds significant differences; the F1 difference is below 0.002."),
-                  tx("Sí es significativamente mejor que SVM, el árbol de decisión, la regresión logística y Naive Bayes, con tamaños de efecto grandes.",
-                     "It is significantly better than SVM, the decision tree, logistic regression and Naive Bayes, with large effect sizes."),
-                  tx("Aporta estabilidad (la menor variación entre pliegues) y las probabilidades mejor calibradas de los cinco mejores, pero en los otros conjuntos de crédito queda por detrás de CatBoost.",
-                     "It brings stability (the lowest variation between folds) and the best-calibrated probabilities of the top five, but on the other credit datasets it falls behind CatBoost."))),
+             kpi("Random Forest", "F1 0.545", tx("CS-FOF queda +0.0027 por encima; gana en 4 de 5 pliegues", "CS-FOF is +0.0027 above; it wins in 4 of 5 folds"), "layers")),
+         ul_(list(tx("Frente a XGBoost y Random Forest, ni Nadeau-Bengio (p > 0.6 con Holm), ni Wilcoxon, ni DeLong encuentran diferencias significativas; la diferencia de F1 es menor que 0.003.",
+                     "Against XGBoost and Random Forest, neither Nadeau-Bengio (p > 0.6 with Holm), nor Wilcoxon, nor DeLong finds significant differences; the F1 difference is below 0.003."),
+                  tx("Sí es significativamente mejor que SVM, KNN, el árbol de decisión, la regresión logística y Naive Bayes, con tamaños de efecto grandes.",
+                     "It is significantly better than SVM, KNN, the decision tree, logistic regression and Naive Bayes, with large effect sizes."),
+                  tx("Aporta estabilidad (la menor variación entre pliegues de los tres mejores) y las probabilidades mejor calibradas de esos tres, pero en los otros conjuntos de crédito queda por detrás de XGBoost.",
+                     "It brings stability (the lowest variation between folds of the top three) and the best-calibrated probabilities of those three, but on the other credit datasets it falls behind XGBoost."))),
          tags$a(class = "btn", href = "#/modelo-original", tx("Ver el detalle en Modelo original", "See the details in Original model"), icon_("arrow"))),
     div(class = "grid g2",
         card(tx("Qué significa para el banco", "What it means for the bank"), ul_(list(
@@ -428,11 +458,13 @@ page_conclusions <- function() {
           tx("No basar decisiones en sexo, edad o estado civil: aportan poco y crean riesgo de discriminación.",
              "Do not base decisions on sex, age or marital status: they add little and create a discrimination risk.")))),
         card(tx("Limitaciones y próximos pasos", "Limitations and next steps"), ul_(list(
+          tx("La comparación se limita a los siete modelos de referencia exigidos por el curso. Variantes recientes de boosting, como CatBoost y LightGBM, quedan fuera de su alcance.",
+             "The comparison is limited to the seven baseline models required by the course. Recent boosting variants, such as CatBoost and LightGBM, are outside its scope."),
           tx("Datos de un solo banco de Taiwán en 2005: antes de usarlo en otro mercado hay que reentrenarlo con datos actuales.",
              "Data from a single Taiwanese bank in 2005: before using it in another market it must be retrained with current data."),
           tx("El análisis es asociativo: muestra qué anticipa el default, no qué lo causa.", "The analysis is associative: it shows what anticipates default, not what causes it."),
-          tx("El umbral está fijo en 0.5. Ajustarlo según el costo real de cada error (un incumplimiento no detectado cuesta más que una falsa alarma) mejoraría el uso práctico.",
-             "The threshold is fixed at 0.5. Tuning it to the real cost of each error (a missed default costs more than a false alarm) would improve practical use."),
+          tx("Las métricas de la validación usan el umbral 0.5. En «Predecir» el umbral es ajustable y muestra su efecto en recall, precisión y falsas alarmas; fijarlo con el costo real de cada error (un incumplimiento no detectado cuesta más que una falsa alarma) es el paso siguiente para usarlo.",
+             "Validation metrics use the 0.5 threshold. In “Predict” the threshold is adjustable and shows its effect on recall, precision and false alarms; setting it with the real cost of each error (a missed default costs more than a false alarm) is the next step to use it."),
           tx("Sumar variables que hoy no están (ingresos, deudas en otras entidades) y vigilar que el modelo no pierda precisión con el tiempo.",
              "Add variables that are missing today (income, debts at other institutions) and monitor that the model does not lose accuracy over time."))))))
 }
@@ -455,8 +487,8 @@ page_links <- function() {
     card(tx("Sobre el proyecto", "About the project"),
          tags$p(tx("Flujo completo de ciencia de datos y aprendizaje automático para predecir el incumplimiento de pago en clientes de tarjetas de crédito, a partir de los 30,000 registros del repositorio UCI.",
                    "A complete data science and machine learning workflow to predict payment default among credit card clients, based on the 30,000 records of the UCI repository.")),
-         tags$p(tx("Incluye un pipeline de extracción, limpieza y transformación (ETL), un análisis exploratorio centrado en el desbalance de clases y la multicolinealidad severa entre los montos facturados, y un diseño factorial de 112 configuraciones que compara algoritmos, representaciones de variables, técnicas de balanceo y optimización (genética y bayesiana), y un modelo original (CS-FOF, un bosque con cortes oblicuos sensibles al costo) comparado con LightGBM y CatBoost. El resultado mejora el F1 de la clase minoritaria y reduce los falsos negativos frente a la regresión logística base.",
-                   "It includes an extraction, cleaning and transformation (ETL) pipeline, an exploratory analysis focused on class imbalance and the severe multicollinearity among billed amounts, and a factorial design of 112 configurations comparing algorithms, feature representations, balancing techniques and optimization (genetic and Bayesian), plus an original model (CS-FOF, a forest with cost-sensitive oblique splits) compared with LightGBM and CatBoost. The result improves the minority-class F1 and reduces false negatives compared with the baseline logistic regression."))),
+         tags$p(tx("Incluye un pipeline de extracción, limpieza y transformación (ETL), un análisis exploratorio centrado en el desbalance de clases y la multicolinealidad severa entre los montos facturados, y un diseño factorial de 112 configuraciones que compara algoritmos, representaciones de variables, técnicas de balanceo y optimización (genética y bayesiana), y un modelo original (CS-FOF, un bosque con cortes oblicuos sensibles al costo). El resultado mejora el F1 de la clase minoritaria y reduce los falsos negativos frente a la regresión logística base.",
+                   "It includes an extraction, cleaning and transformation (ETL) pipeline, an exploratory analysis focused on class imbalance and the severe multicollinearity among billed amounts, and a factorial design of 112 configurations comparing algorithms, feature representations, balancing techniques and optimization (genetic and Bayesian), plus an original model (CS-FOF, a forest with cost-sensitive oblique splits). The result improves the minority-class F1 and reduces false negatives compared with the baseline logistic regression."))),
     link_cards(),
     card(tx("Pipeline completo", "Full pipeline"), div(class = "nb-list", lapply(NOTEBOOKS, function(nb) {
       tags$a(class = "nb-row", href = if (startsWith(nb[[3]], "http")) nb[[3]] else paste0(BOOK_URL, "notebooks/", nb[[3]]),
