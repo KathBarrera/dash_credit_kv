@@ -66,4 +66,4 @@ def calibrar(clave, X_cal, X_ver, y_cal, y_ver):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or ["rf", "catboost", "cs_fof"])
+    main(sys.argv[1:] or ["rf", "cs_fof"])

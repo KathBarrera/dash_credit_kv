@@ -36,7 +36,7 @@ def _construir(A, EN):
     B, BL = A.BEST, A.BASELINE
     best_lbl = A.minfo(B["model"], "label")
     tech_b, meth_b = A.tech_lbl(B["technique"]).lower(), A.method_lbl(B["method"]).lower()
-    cm = A.BEST_CM
+    cm = A.CSFOF_CM   # matriz de confusión de CS-FOF, el modelo de mayor F1 medio
     pos, flagged = cm["tp"] + cm["fn"], cm["tp"] + cm["fp"]
     meta = A.MODELO_META or {}
     prueba = meta.get("prueba", {})
@@ -1064,8 +1064,8 @@ def _construir(A, EN):
           ["explain the models page", "what is in models", "models section", "which models did they use",
            "how many models did they compare", "which classifiers did they try", "112 combinations"]),
         t(f"**Modelos** resume **{A.N_BASE} combinaciones de modelos tradicionales** (diseño factorial: 7 clasificadores × "
-          f"4 técnicas de balanceo × 4 métodos de optimización) y, aparte, **{A.N_EXTRA} corridas** de LightGBM, CatBoost y "
-          f"el modelo original CS-FOF, que buscan superar el mejor F1 de esas {A.N_BASE}. Todo con validación cruzada "
+          f"4 técnicas de balanceo × 4 métodos de optimización) y, aparte, **{A.N_EXTRA} corridas** de "
+          f"el modelo original CS-FOF, que busca superar el mejor F1 de esas {A.N_BASE}. Todo con validación cruzada "
           "anidada.\n\n"
           f"- **KPIs:** mejor F1 {B['f1_mean']:.3f} ({best_lbl}), mejora de +{B['f1_mean'] - BL:.3f} sobre la línea "
           f"base y {B['recall_mean']:.0%} de incumplimientos detectados.\n"
@@ -1074,8 +1074,8 @@ def _construir(A, EN):
           "- **F1 por modelo y técnica** (mapa de calor) y **F1 vs. ROC-AUC** (dispersión).\n"
           "- **Matriz de confusión** del mejor modelo y **resumen SHAP**.",
           f"**Models** summarizes **{A.N_BASE} traditional model combinations** (factorial design: 7 classifiers × 4 "
-          f"balancing techniques × 4 optimization methods) and, separately, **{A.N_EXTRA} runs** of LightGBM, CatBoost and "
-          f"the original model CS-FOF, which try to beat the best F1 of those {A.N_BASE}. All with nested "
+          f"balancing techniques × 4 optimization methods) and, separately, **{A.N_EXTRA} runs** of "
+          f"the original model CS-FOF, which tries to beat the best F1 of those {A.N_BASE}. All with nested "
           "cross-validation.\n\n"
           f"- **KPIs:** best F1 {B['f1_mean']:.3f} ({best_lbl}), +{B['f1_mean'] - BL:.3f} over the baseline and "
           f"{B['recall_mean']:.0%} of defaults detected.\n"
@@ -1107,8 +1107,8 @@ def _construir(A, EN):
           "pseudocódigo, la complejidad, la ablación y la lista de verificación.\n"
           "3. **Código:** los fragmentos reales del archivo original_model.py y sus pruebas.\n"
           "4. **Resultados:** una gráfica animada frente a **Random Forest** (gana en 4 de 5 pliegues), las pruebas "
-          "frente a los 10 modelos y los otros tres conjuntos de crédito.\n\n"
-          "Veredicto: F1 0.548, el mayor entre los modelos exigidos (XGBoost 0.547) y con el mayor ROC-AUC; CatBoost, modelo adicional, queda 0.0001 por encima. **No es superior de forma "
+          "frente a los 7 modelos de referencia y los otros tres conjuntos de crédito.\n\n"
+          "Veredicto: F1 0.548, el mayor de los 8 modelos (XGBoost 0.547), y el mayor ROC-AUC. **No es superior de forma "
           "significativa**.",
           "**Original model** presents **CS-FOF**, the random forest proposed in the project, in four tabs:\n\n"
           "1. **Theory:** with real clients, a classic tree needs a staircase of straight cuts while CS-FOF draws a "
@@ -1118,12 +1118,12 @@ def _construir(A, EN):
           "pseudocode, complexity, ablation and the checklist.\n"
           "3. **Code:** the real excerpts of original_model.py and its tests.\n"
           "4. **Results:** an animated chart against **Random Forest** (it wins in 4 of 5 folds), the tests against "
-          "the 10 models and the three other credit datasets.\n\n"
-          "Verdict: F1 0.548, the highest among the required models (XGBoost 0.547) and with the highest ROC-AUC; CatBoost, an additional model, is 0.0001 above. **Not significantly superior**."),
-        tecnico=t("Validación anidada 5×5. Frente a Random Forest: Nadeau-Bengio con Holm p = 1.000, δ de Cliff 0.36, "
-                  "DeLong p = 0.171. Friedman sobre 10 modelos χ² = 40.3; rangos medios CatBoost 2.0 y CS-FOF 2.4.",
-                  "Nested 5×5 validation. Against Random Forest: Nadeau-Bengio with Holm p = 1.000, Cliff's δ 0.36, "
-                  "DeLong p = 0.171. Friedman over 10 models χ² = 40.3; mean ranks CatBoost 2.0 and CS-FOF 2.4."),
+          "the 7 baseline models and the three other credit datasets.\n\n"
+          "Verdict: F1 0.548, the highest of the 8 models (XGBoost 0.547), and the highest ROC-AUC. **Not significantly superior**."),
+        tecnico=t("Validación anidada 5×5. Frente a Random Forest: Nadeau-Bengio con Holm p = 0.619, δ de Cliff 0.36, "
+                  "DeLong p = 0.171. Friedman sobre 8 modelos χ² = 32.9; rangos medios CS-FOF 1.4 y XGBoost 2.2.",
+                  "Nested 5×5 validation. Against Random Forest: Nadeau-Bengio with Holm p = 0.619, Cliff's δ 0.36, "
+                  "DeLong p = 0.171. Friedman over 8 models χ² = 32.9; mean ranks CS-FOF 1.4 and XGBoost 2.2."),
         pagina="/modelo-original", sug=t(["¿Cuál es el mejor modelo?", "¿Cómo le fue a Random Forest?",
                                           "¿Qué es la validación cruzada anidada?"],
                                          ["Which is the best model?", "How did Random Forest do?",
@@ -1141,23 +1141,23 @@ def _construir(A, EN):
           f"- **Recall:** {B['recall_mean']:.1%} · **Precisión:** {B['precision_mean']:.1%}\n"
           f"- **ROC-AUC:** {B['roc_auc_mean']:.3f} · **PR-AUC:** {B['pr_auc_mean']:.3f}\n\n"
           f"La mejor de las {A.N_BASE} combinaciones tradicionales es {A.minfo(A.BEST_BASE['model'], 'label')} "
-          f"(F1 {A.BEST_BASE['f1_mean']:.3f}). Ojo: el mejor global está prácticamente **empatado** con el modelo "
-          "original CS-FOF (a 0.0001), XGBoost, LightGBM y Random Forest; la diferencia es menor que 0.002 y ninguna "
+          f"(F1 {A.BEST_BASE['f1_mean']:.3f}). Ojo: CS-FOF está prácticamente **empatado** con "
+          "XGBoost y Random Forest; la diferencia es menor que 0.003 y ninguna "
           "prueba estadística los separa.",
           f"The best is **{best_lbl}** with **{tech_b}** and **{meth_b}** optimization:\n\n"
           f"- **F1:** {B['f1_mean']:.3f} ± {B['f1_std']:.3f} (baseline: {BL:.3f}, +{B['f1_mean'] - BL:.3f})\n"
           f"- **Recall:** {B['recall_mean']:.1%} · **Precision:** {B['precision_mean']:.1%}\n"
           f"- **ROC-AUC:** {B['roc_auc_mean']:.3f} · **PR-AUC:** {B['pr_auc_mean']:.3f}\n\n"
           f"The best of the {A.N_BASE} traditional combinations is {A.minfo(A.BEST_BASE['model'], 'label')} "
-          f"(F1 {A.BEST_BASE['f1_mean']:.3f}). Note: the best overall is practically **tied** with the original model "
-          "CS-FOF (0.0001 behind), XGBoost, LightGBM and Random Forest; the difference is below 0.002 and no "
+          f"(F1 {A.BEST_BASE['f1_mean']:.3f}). Note: CS-FOF is practically **tied** with "
+          "XGBoost and Random Forest; the difference is below 0.003 and no "
           "statistical test separates them."),
-        tecnico=t("Validación cruzada anidada 5×5. Friedman sobre los 10 modelos: χ² = 40.3, p = 6.7·10⁻⁶; rangos "
-                  "medios CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 y LightGBM 3.8. Ni Nadeau-Bengio "
-                  "ni Wilcoxon ni DeLong separan a CS-FOF de CatBoost, XGBoost, LightGBM o Random Forest.",
-                  "Nested 5×5 cross-validation. Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks "
-                  "CatBoost 2.0, CS-FOF 2.4, XGBoost 3.2, Random Forest 3.6 and LightGBM 3.8. Neither Nadeau-Bengio "
-                  "nor Wilcoxon nor DeLong separates CS-FOF from CatBoost, XGBoost, LightGBM or Random Forest."),
+        tecnico=t("Validación cruzada anidada 5×5. Friedman sobre los 8 modelos: χ² = 32.9, p = 2.7·10⁻⁵; rangos "
+                  "medios CS-FOF 1.4, XGBoost 2.2 y Random Forest 2.4. Ni Nadeau-Bengio "
+                  "ni Wilcoxon ni DeLong separan a CS-FOF de XGBoost o Random Forest.",
+                  "Nested 5×5 cross-validation. Friedman over the 8 models: χ² = 32.9, p = 2.7·10⁻⁵; mean ranks "
+                  "CS-FOF 1.4, XGBoost 2.2 and Random Forest 2.4. Neither Nadeau-Bengio "
+                  "nor Wilcoxon nor DeLong separates CS-FOF from XGBoost or Random Forest."),
         pagina="/modelos", sug=t(["Explícame la matriz de confusión", "¿Qué es el F1?", "¿Cómo le fue a Random Forest?"],
                                  ["Explain the confusion matrix", "What is F1?", "How did Random Forest do?"]),
         mood="proud"))
@@ -1478,8 +1478,6 @@ def _construir(A, EN):
                  "logistic_regression": (["regresión logística", "línea base", "logistic regression"],
                                          ["logistic regression", "baseline"]),
                  "naive_bayes": (["naive bayes", "bayes ingenuo"], ["naive bayes"]),
-                 "catboost": (["catboost"], ["catboost"]),
-                 "lightgbm": (["lightgbm", "light gbm"], ["lightgbm", "light gbm"]),
                  "cs_fof": (["cs-fof", "modelo original", "bosque oblicuo", "modelo propio"],
                             ["cs-fof", "original model", "oblique forest", "our own model"])}[m]
         al = t(*alias)

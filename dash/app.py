@@ -1281,9 +1281,8 @@ def key_findings():
 # =============================================================================
 # 4a. MODELOS (resultados del repositorio Credit_Card_Project, notebooks 04, 05 y 07)
 # =============================================================================
-# results/model_results.csv resume 122 combinaciones con validación cruzada anidada 5 x 5:
+# results/model_results.csv resume las combinaciones evaluadas con validación cruzada anidada 5 x 5. El tablero usa:
 #   - 112 de los 7 modelos base (4 técnicas de balanceo x 4 métodos de optimización);
-#   - 6 de LightGBM y CatBoost (pesos de clase con malla, aleatoria y Optuna);
 #   - 4 del modelo original CS-FOF (pesos de clase con los 4 métodos).
 # Sale de results/master_table_e3.csv del proyecto (src/build_master_table_e3.py). Las 112 base vienen de
 # results/master_table_112.csv (notebook 08_tabla_maestra_svm):
@@ -1298,7 +1297,10 @@ def key_findings():
 #   - anytime_curves.csv / anytime_summary.csv: curvas anytime y costo de los optimizadores.
 MODEL_RESULTS_PATH = BASE_DIR / "results" / "model_results.csv"
 MR = pd.read_csv(MODEL_RESULTS_PATH)
-# El PR-AUC de CS-FOF y CatBoost (búsqueda aleatoria) sale del reajuste fuera de pliegue
+# Alcance del tablero: el modelo original (CS-FOF) frente a los siete modelos de referencia exigidos por el curso.
+# El archivo conserva las corridas de CatBoost y LightGBM, que quedan fuera de la comparación.
+MR = MR[~MR["model"].isin(["catboost", "lightgbm"])].reset_index(drop=True)
+# El PR-AUC de CS-FOF (búsqueda aleatoria) sale del reajuste fuera de pliegue
 # (experiments/comparacion_final/delong.py); el de las demás combinaciones nuevas no se calculó (n/d).
 
 MODEL_INFO = {   # textos bilingües (es, en): se leen con minfo(modelo, campo)
@@ -1320,21 +1322,10 @@ MODEL_INFO = {   # textos bilingües (es, en): se leen con minfo(modelo, campo)
         "family": ("Ensamble de árboles (boosting)", "Tree ensemble (boosting)"),
         "desc": ("Construye árboles en secuencia: cada uno corrige los errores del anterior.",
                  "Builds trees in sequence: each one corrects the errors of the previous one."),
-        "note": ("Mayor F1 de los siete modelos exigidos. Con CS-FOF, Random Forest y los dos modelos adicionales "
-                 "(CatBoost y LightGBM) forma un grupo de cinco que las pruebas no separan: en la práctica empatan.",
-                 "Highest F1 of the seven required models. With CS-FOF, Random Forest and the two additional models "
-                 "(CatBoost and LightGBM) it forms a group of five that the tests do not separate: in practice they tie.")},
-    "catboost": {
-        "label": ("CatBoost (adicional)", "CatBoost (additional)"),
-        "family": ("Boosting reciente (árboles simétricos)", "Recent boosting (symmetric trees)"),
-        "desc": ("Boosting con árboles simétricos y un orden aleatorio de los datos que reduce el sobreajuste.",
-                 "Boosting with symmetric trees and a random ordering of the data that reduces overfitting."),
-        "note": ("Método reciente del estado del arte (2018). Tiene el mayor F1 medio, pero solo 0.0001 por "
-                 "encima de CS-FOF; ninguna prueba los separa. Es el más consistente en los tres conjuntos "
-                 "adicionales. Con sus 16 combinaciones, pesos de clase es su mejor técnica.",
-                 "Recent state-of-the-art method (2018). It has the highest mean F1, but only 0.0001 above CS-FOF; "
-                 "no test separates them. It is the most consistent across the three additional datasets. Across its "
-                 "16 combinations, class weights is its best technique.")},
+        "note": ("Mayor F1 de los siete modelos de referencia. Con CS-FOF y Random Forest forma un grupo de tres que "
+                 "las pruebas no separan: en la práctica empatan.",
+                 "Highest F1 of the seven baseline models. With CS-FOF and Random Forest it forms a group of three "
+                 "that the tests do not separate: in practice they tie.")},
     "cs_fof": {
         "label": ("CS-FOF (original)", "CS-FOF (original)"),
         "family": ("Modelo original · bosque oblicuo con costo", "Original model · cost-sensitive oblique forest"),
@@ -1342,21 +1333,10 @@ MODEL_INFO = {   # textos bilingües (es, en): se leen con minfo(modelo, campo)
                  "en la dirección de Fisher, ponderada por el costo de no detectar a quien incumple.",
                  "Our own random forest: at each node it compares single-variable splits with an oblique split "
                  "along the Fisher direction, weighted by the cost of missing a defaulter."),
-        "note": ("Programado desde cero con numpy. Tiene el mayor F1 medio entre los modelos exigidos (+0.0013 sobre "
-                 "XGBoost) y el mayor ROC-AUC, pero la diferencia no es significativa. CatBoost, modelo adicional, "
-                 "queda 0.0001 por encima.",
-                 "Programmed from scratch with numpy. It has the highest mean F1 among the required models (+0.0013 "
-                 "over XGBoost) and the highest ROC-AUC, but the difference is not significant. CatBoost, an "
-                 "additional model, is 0.0001 above it.")},
-    "lightgbm": {
-        "label": ("LightGBM (adicional)", "LightGBM (additional)"),
-        "family": ("Boosting reciente (por hojas)", "Recent boosting (leaf-wise)"),
-        "desc": ("Boosting que hace crecer cada árbol por la hoja que más reduce el error; muy rápido.",
-                 "Boosting that grows each tree from the leaf that most reduces the error; very fast."),
-        "note": ("Método reciente del estado del arte (2017). Queda a 0.0018 del mejor. Con sus 16 combinaciones, "
-                 "pesos de clase es su mejor técnica; su PR-AUC no se calculó.",
-                 "Recent state-of-the-art method (2017). It is 0.0018 behind the best. Across its 16 combinations, "
-                 "class weights is its best technique; its PR-AUC was not computed.")},
+        "note": ("Programado desde cero con numpy. Tiene el mayor F1 medio (+0.0014 sobre XGBoost) y el mayor "
+                 "ROC-AUC, pero la diferencia con XGBoost y Random Forest no es significativa.",
+                 "Programmed from scratch with numpy. It has the highest mean F1 (+0.0014 over XGBoost) and the "
+                 "highest ROC-AUC, but the difference with XGBoost and Random Forest is not significant.")},
     "svm": {
         "label": ("SVM", "SVM"),
         "family": ("Máquina de vectores de soporte (kernel RBF)", "Support vector machine (RBF kernel)"),
@@ -1422,8 +1402,8 @@ _METHOD_LBL = {"grid_search": ("Grid search", "Grid search"), "random_search": (
 
 
 # Tiempo de inferencia (ms por 1,000 clientes, 25 columnas, pliegue 0, 4 núcleos), medido en
-# experiments/robustez/escalabilidad.csv del proyecto. Solo se midió para los cinco mejores modelos.
-INFER_MS = {"cs_fof": 253.1, "catboost": 0.4, "xgboost": 4.8, "lightgbm": 5.5, "random_forest": 9.4}
+# experiments/robustez/escalabilidad.csv del proyecto. Solo se midió para los tres mejores modelos.
+INFER_MS = {"cs_fof": 253.1, "xgboost": 4.8, "random_forest": 9.4}
 
 
 def leaderboard():
@@ -1473,38 +1453,18 @@ def method_lbl(m):
 BEST_BY_MODEL = (MR.loc[MR.groupby("model")["f1_mean"].idxmax()]
                  .sort_values("f1_mean", ascending=False).reset_index(drop=True))
 BEST = BEST_BY_MODEL.iloc[0]
-# Las 112 combinaciones del diseño factorial (7 modelos base) y, aparte, las corridas de LightGBM, CatBoost y
-# CS-FOF que buscan superar el mejor F1 de esas 112.
+# Las 112 combinaciones del diseño factorial (7 modelos base) y, aparte, las corridas de CS-FOF, que buscan
+# superar el mejor F1 de esas 112.
 BASE_MODELS = ["random_forest", "xgboost", "svm", "knn", "decision_tree", "logistic_regression", "naive_bayes"]
 N_BASE = int(MR["model"].isin(BASE_MODELS).sum())
 N_EXTRA = len(MR) - N_BASE
 BEST_BASE = BEST_BY_MODEL[BEST_BY_MODEL["model"].isin(BASE_MODELS)].iloc[0]
-# Modelos adicionales: dos variantes recientes de boosting que el curso no exige como modelos de referencia. Se
-# reportan en la tabla, los gráficos y las pruebas, pero las tarjetas y los indicadores comparan a CS-FOF con los
-# siete modelos exigidos. La separación se hizo después de ver los resultados, por indicación del profesor.
-ADICIONALES = ["catboost", "lightgbm"]
-BEST_REQ_BY_MODEL = BEST_BY_MODEL[~BEST_BY_MODEL["model"].isin(ADICIONALES)].reset_index(drop=True)
-BEST_REQ = BEST_REQ_BY_MODEL.iloc[0]      # CS-FOF: mayor F1 medio entre el modelo propuesto y los exigidos
-F1_ADIC = {m: float(BEST_BY_MODEL.loc[BEST_BY_MODEL["model"] == m, "f1_mean"].iloc[0]) for m in ADICIONALES}
-
-
-def nota_adicionales():
-    """Frase única sobre los modelos adicionales, para que todas las páginas digan lo mismo."""
-    d = F1_ADIC["catboost"] - float(BEST_REQ["f1_mean"])
-    return tx(f"Además se evaluaron dos variantes recientes de boosting, que el curso no exige como modelos de "
-              f"referencia: CatBoost (F1 {F1_ADIC['catboost']:.4f}, {d:+.4f} frente a CS-FOF) y LightGBM "
-              f"(F1 {F1_ADIC['lightgbm']:.4f}). Ninguna prueba las separa de CS-FOF. Siguen en la tabla, los "
-              "gráficos y las pruebas estadísticas.",
-              f"Two recent boosting variants, not required by the course as baseline models, were also evaluated: "
-              f"CatBoost (F1 {F1_ADIC['catboost']:.4f}, {d:+.4f} versus CS-FOF) and LightGBM "
-              f"(F1 {F1_ADIC['lightgbm']:.4f}). No test separates them from CS-FOF. They remain in the table, the "
-              "charts and the statistical tests.")
 # Tasa de cambio promedio de 2005 (Banco Central de la República de China): 32.2 NT$ por US$
 TWD_PER_USD_2005 = 32.2
 BASELINE = MR[(MR["model"] == "logistic_regression") & (MR["technique"] == "none")]["f1_mean"].max()
-# Matrices de confusión fuera de pliegue (umbral 0.5) de CatBoost (la mejor combinación) y de CS-FOF,
+# Matrices de confusión fuera de pliegue (umbral 0.5) de CS-FOF y de XGBoost, el mejor modelo de referencia,
 # reajustadas con los hiperparámetros de cada fold (experiments/comparacion_final/probabilidades_oof.npz).
-BEST_CM = {"tn": 18868, "fp": 4467, "fn": 2452, "tp": 4178}
+XGB_CM = {"tn": 19087, "fp": 4248, "fn": 2557, "tp": 4073}
 CSFOF_CM = {"tn": 19660, "fp": 3675, "fn": 2737, "tp": 3893}
 TECH_COLORS = {"none": GREY_BLUE, "class_weight": WARM_GOLD, "smote": DEEP_NAVY, "adasyn": MID_BLUE}
 
@@ -1561,7 +1521,7 @@ def fig_models_scatter():
 
 
 def fig_best_cm():
-    """Matriz de confusión out-of-fold de CS-FOF, el de mayor F1 entre los modelos exigidos (umbral 0.5)."""
+    """Matriz de confusión out-of-fold de CS-FOF, el modelo de mayor F1 medio (umbral 0.5)."""
     c = CSFOF_CM
     z = [[c["tn"], c["fp"]], [c["fn"], c["tp"]]]
     txt = [[f"<b>{c['tn']:,}</b><br>{tx('Bien clasificados', 'Correctly classified')}",
@@ -1581,7 +1541,7 @@ def fig_best_cm():
     return fig
 
 
-# ----- Diagnóstico del modelo elegido, diagrama de diferencia crítica y SHAP global de CS-FOF y CatBoost -----
+# ----- Diagnóstico del modelo elegido, diagrama de diferencia crítica y SHAP global de CS-FOF y XGBoost -----
 # results/diagnosticos.json lo genera herramientas/diagnosticos_desde_proyecto.py a partir de las predicciones
 # fuera de pliegue del proyecto (mejor combinación de cada modelo, mismos 5 pliegues externos).
 DIAG = json.loads((BASE_DIR / "results" / "diagnosticos.json").read_text(encoding="utf-8"))
@@ -1589,8 +1549,8 @@ DIAG_MODELS = list(DIAG["modelos"])
 
 
 def fig_diag(model):
-    """ROC, precisión-recall y calibración del modelo elegido frente a CS-FOF (o frente a CatBoost si se elige CS-FOF)."""
-    ref = "catboost" if model == "cs_fof" else "cs_fof"
+    """ROC, precisión-recall y calibración del modelo elegido frente a CS-FOF (o frente a XGBoost si se elige CS-FOF)."""
+    ref = "xgboost" if model == "cs_fof" else "cs_fof"
     fig = make_subplots(rows=1, cols=3, horizontal_spacing=0.09,
                         subplot_titles=(tx("Curva ROC", "ROC curve"), tx("Precisión-recall", "Precision-recall"),
                                         tx("Calibración (10 grupos)", "Calibration (10 bins)")))
@@ -1637,12 +1597,12 @@ def diag_interp(model):
               "eligió en cada pliegue externo. Las curvas ROC y precisión-recall miden cómo ordena a los clientes, sin "
               "depender del umbral; la de calibración compara la probabilidad predicha con la tasa real en 10 grupos (la "
               "diagonal es la calibración perfecta). Todos los modelos con pesos de clase o SMOTE quedan por debajo de la "
-              "diagonal: sobreestiman el riesgo. El reajuste de LightGBM rinde algo menos que su validación anidada.",
+              "diagonal: sobreestiman el riesgo.",
               "Out-of-fold predictions for the 29,965 clients: each model was refit with the hyperparameters it chose in "
               "each outer fold. The ROC and precision-recall curves measure how it ranks clients, regardless of the "
               "threshold; the calibration curve compares the predicted probability with the observed rate in 10 bins (the "
               "diagonal is perfect calibration). All models with class weights or SMOTE fall below the diagonal: they "
-              "overestimate risk. LightGBM's refit performs slightly worse than its nested validation.")
+              "overestimate risk.")
     return interp_block(base, tech)
 
 
@@ -1681,12 +1641,12 @@ def fig_cd(fuente):
 def cd_interp(fuente):
     F = DIAG["friedman"][fuente]; r = pd.Series(F["rangos"]).sort_values()
     if fuente == "taiwan":
-        base = tx(f"CS-FOF tiene rango medio {r['cs_fof']:.1f}, detrás solo de CatBoost ({r['catboost']:.1f}). Las barras "
-                  "azules unen modelos que no se distinguen: CS-FOF queda en el mismo grupo que CatBoost, XGBoost, Random "
-                  "Forest y LightGBM.",
-                  f"CS-FOF has mean rank {r['cs_fof']:.1f}, behind only CatBoost ({r['catboost']:.1f}). The blue bars join "
-                  "models that cannot be told apart: CS-FOF is in the same group as CatBoost, XGBoost, Random Forest and "
-                  "LightGBM.")
+        base = tx(f"CS-FOF tiene el mejor rango medio ({r['cs_fof']:.1f}), seguido de XGBoost ({r['xgboost']:.1f}) y Random "
+                  f"Forest ({r['random_forest']:.1f}). Las barras azules unen modelos que no se distinguen: CS-FOF queda en "
+                  "el mismo grupo que esos dos.",
+                  f"CS-FOF has the best mean rank ({r['cs_fof']:.1f}), followed by XGBoost ({r['xgboost']:.1f}) and Random "
+                  f"Forest ({r['random_forest']:.1f}). The blue bars join models that cannot be told apart: CS-FOF is in "
+                  "the same group as those two.")
         tech = tx(f"Friedman sobre los 5 pliegues externos de Taiwán: χ² = {F['chi2']:.1f}, p = {F['p']:.1e}; diferencia "
                   f"crítica de Nemenyi {F['cd']:.2f}. Con un solo conjunto los pliegues no son bloques independientes, así "
                   "que esta vista es descriptiva; la comparación entre conjuntos es la que usa bloques independientes.",
@@ -1694,12 +1654,12 @@ def cd_interp(fuente):
                   f"difference {F['cd']:.2f}. With a single dataset the folds are not independent blocks, so this view is "
                   "descriptive; the across-datasets comparison is the one with independent blocks.")
     else:
-        base = tx(f"En los 4 conjuntos (Taiwán, German, Australian y Polish), CatBoost es primero ({r['catboost']:.2f}) y CS-FOF "
-                  f"empata en el tercer lugar ({r['cs_fof']:.2f}) con Random Forest y LightGBM: pierde terreno en Polish, con "
-                  "4 % de quiebras.",
-                  f"Across the 4 datasets (Taiwan, German, Australian and Polish), CatBoost is first ({r['catboost']:.2f}) and "
-                  f"CS-FOF ties for third ({r['cs_fof']:.2f}) with Random Forest and LightGBM: it loses ground on Polish, "
-                  "with 4% bankruptcies.")
+        base = tx(f"En los 4 conjuntos (Taiwán, German, Australian y Polish), XGBoost es primero ({r['xgboost']:.2f}), "
+                  f"seguido de Random Forest ({r['random_forest']:.2f}) y de CS-FOF ({r['cs_fof']:.2f}), que pierde terreno "
+                  "en Polish, con 4 % de quiebras.",
+                  f"Across the 4 datasets (Taiwan, German, Australian and Polish), XGBoost is first ({r['xgboost']:.2f}), "
+                  f"followed by Random Forest ({r['random_forest']:.2f}) and CS-FOF ({r['cs_fof']:.2f}), which loses "
+                  "ground on Polish, with 4% bankruptcies.")
         tech = tx(f"Friedman con corrección de Iman-Davenport, cada conjunto como bloque: F = {F['F']:.2f}, p = {F['p']:.4f}; "
                   f"diferencia crítica de Nemenyi {F['cd']:.2f}. Con 4 conjuntos la potencia es baja.",
                   f"Friedman with the Iman-Davenport correction, each dataset as a block: F = {F['F']:.2f}, p = {F['p']:.4f}; "
@@ -1708,8 +1668,8 @@ def cd_interp(fuente):
 
 
 def fig_shap_global(model):
-    """SHAP por permutación (300 clientes del pliegue externo 1) de CS-FOF o CatBoost; el otro como referencia."""
-    S = DIAG["shap_global"]; otro = "catboost" if model == "cs_fof" else "cs_fof"
+    """SHAP por permutación (300 clientes del pliegue externo 1) de CS-FOF, con XGBoost como referencia."""
+    S = DIAG["shap_global"]; otro = "xgboost" if model == "cs_fof" else "cs_fof"
     d = pd.DataFrame({"f": S["variables"], "m": S[model], "o": S[otro]}).sort_values("m").tail(10)
     fig = go.Figure()
     fig.add_trace(go.Bar(y=[feat_lbl(f) for f in d.f], x=d.o, orientation="h", name=minfo(otro, "label"),
@@ -1726,13 +1686,17 @@ def fig_shap_global(model):
 
 def shap_global_interp(model):
     S = DIAG["shap_global"]
+
+    def _p2(m):   # peso de PAY_2 relativo a PAY_0 en el modelo m
+        v = dict(zip(S["variables"], S[m]))
+        return v["PAY_2"] / v["PAY_0"]
     return interp_block(
-        tx(f"CS-FOF y CatBoost usan casi las mismas variables (correlación de Spearman {S['spearman']:.2f} entre sus "
-           "importancias): el atraso de septiembre (PAY_0) y el cupo dominan. CS-FOF reparte más peso entre meses de atraso "
-           "(PAY_2 pesa 38 % de PAY_0, frente a 23 % en CatBoost), como se espera de un corte oblicuo que combina meses.",
-           f"CS-FOF and CatBoost use almost the same variables (Spearman correlation {S['spearman']:.2f} between their "
-           "importances): the September delay (PAY_0) and the limit dominate. CS-FOF spreads more weight across delay "
-           "months (PAY_2 weighs 38% of PAY_0, versus 23% in CatBoost), as expected from an oblique cut that combines months."),
+        tx(f"CS-FOF y XGBoost usan casi las mismas variables (correlación de Spearman {S['spearman']:.2f} entre sus "
+           "importancias): el atraso de septiembre (PAY_0) y el cupo dominan. En CS-FOF el atraso de agosto (PAY_2) pesa "
+           f"el {_p2('cs_fof'):.0%} de PAY_0; en XGBoost, el {_p2('xgboost'):.0%}.",
+           f"CS-FOF and XGBoost use almost the same variables (Spearman correlation {S['spearman']:.2f} between their "
+           "importances): the September delay (PAY_0) and the limit dominate. In CS-FOF the August delay (PAY_2) weighs "
+           f"{_p2('cs_fof'):.0%} of PAY_0; in XGBoost, {_p2('xgboost'):.0%}."),
         tx("SHAP por permutación (el mismo explicador para los dos, porque CS-FOF no es un árbol de scikit-learn) en 300 "
            "clientes de prueba del pliegue externo 1, con 50 clientes de fondo; los valores suman exactamente la "
            "probabilidad de cada cliente. Las barras tenues son el otro modelo.",
@@ -1956,18 +1920,18 @@ except Exception as _e:   # el tablero sigue funcionando aunque falte el modelo
     INPUT_COLS = (["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BILL_COLS + PAYAMT_COLS)
     print(f"[modelo] no se pudo cargar {MODEL_FILE.name}: {MODELO_ERROR}")
 
-# Selector de «Predecir»: Random Forest (el de siempre), CatBoost (mejor global) y CS-FOF (original).
-# Los dos últimos los genera `python -m modelo.entrenar_extra`; si faltan, el selector solo ofrece RF.
+# Selector de «Predecir»: Random Forest (el de siempre) y CS-FOF (original).
+# El segundo lo genera `python -m modelo.entrenar_extra cs_fof`; si falta, el selector solo ofrece RF.
 MODELOS = {}
 if MODELO is not None:
     MODELOS["rf"] = (MODELO, MODELO_META)
-for _k in ("catboost", "cs_fof"):
+for _k in ("cs_fof",):
     try:
         MODELOS[_k] = (joblib.load(BASE_DIR / "modelo" / f"modelo_{_k}.pkl"),
                        json.loads((BASE_DIR / "modelo" / f"modelo_{_k}.json").read_text(encoding="utf-8")))
     except Exception as _e:
         print(f"[modelo] no se pudo cargar modelo_{_k}.pkl: {type(_e).__name__}: {_e}")
-MODEL_LABELS = {"rf": ("Random Forest", "Random Forest"), "catboost": ("CatBoost (adicional)", "CatBoost (additional)"),
+MODEL_LABELS = {"rf": ("Random Forest", "Random Forest"),
                 "cs_fof": ("CS-FOF (modelo original)", "CS-FOF (original model)")}
 
 
@@ -2529,21 +2493,19 @@ def page_intro():
                 html.P(tx("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables "
                           f"anticipan el incumplimiento. Luego se comparan {N_BASE} combinaciones de modelos tradicionales "
                           "(diseño factorial: 7 algoritmos × 4 técnicas de balanceo × 4 optimizadores) y, aparte, "
-                          f"{N_EXTRA} corridas de LightGBM, CatBoost y CS-FOF, el modelo original del proyecto, que buscan "
+                          f"{N_EXTRA} corridas de CS-FOF, el modelo original del proyecto, que busca "
                           f"superar el mejor F1 de esas {N_BASE}. La mejor de las {N_BASE} es "
-                          f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}). CS-FOF obtiene el mayor F1 entre los "
-                          f"modelos exigidos ({BEST_REQ['f1_mean']:.3f}), y CatBoost, modelo adicional, queda 0.0001 por "
-                          "encima: las diferencias son menores que 0.002 y "
+                          f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}). CS-FOF obtiene el mayor "
+                          f"F1 medio ({BEST['f1_mean']:.3f}), pero la diferencia es menor que 0.002 y "
                           "ninguna prueba estadística las separa. Por último, la página Predecir usa un Random Forest con "
                           "pesos de clase (estadísticamente empatado con el mejor) para estimar el riesgo de un cliente nuevo.",
                           "First the data is explored (univariate and multivariate EDA) to see which variables "
                           f"anticipate default. Then {N_BASE} traditional model combinations are compared (factorial "
                           "design: 7 algorithms × 4 balancing techniques × 4 optimizers) and, separately, "
-                          f"{N_EXTRA} runs of LightGBM, CatBoost and CS-FOF, the project's original model, which try to "
+                          f"{N_EXTRA} runs of CS-FOF, the project's original model, which tries to "
                           f"beat the best F1 of those {N_BASE}. The best of the {N_BASE} is "
-                          f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}). CS-FOF has the highest F1 among the "
-                          f"required models ({BEST_REQ['f1_mean']:.3f}), and CatBoost, an additional model, is 0.0001 "
-                          "above it: the differences are below 0.002 and no "
+                          f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}). CS-FOF has the highest "
+                          f"mean F1 ({BEST['f1_mean']:.3f}), but the difference is below 0.002 and no "
                           "statistical test separates them. Finally, the Predict page uses a Random Forest with class "
                           "weights (statistically tied with the best) to estimate the risk of a new client.")),
                 html.P(tx("Cada gráfico trae una interpretación básica (lenguaje cotidiano) y una técnica "
@@ -2909,10 +2871,10 @@ def page_marco():
                 html.P(tx("En el ECE las probabilidades se agrupan en B intervalos (10 en este proyecto); ȳ_b es la tasa "
                           "real de incumplimiento y p̄_b la probabilidad media en el intervalo b. En ambos, menor es mejor. "
                           "La página Modelos reporta el ECE del mejor modelo y la página Modelo original compara el Brier "
-                          "de los cinco mejores.",
+                          "de los tres mejores.",
                           "In the ECE, probabilities are grouped into B bins (10 in this project); ȳ_b is the real default "
                           "rate and p̄_b the mean probability in bin b. For both, lower is better. The Models page reports "
-                          "the best model's ECE and the Original model page compares the Brier score of the top five.")),
+                          "the best model's ECE and the Original model page compares the Brier score of the top three.")),
             ]),
         ], className="masonry"),
         html.Div([
@@ -2926,11 +2888,11 @@ def page_marco():
                           "predict default with this same data, and proposed the Sorting Smoothing Method to estimate "
                           "the real probability of default.")),
                 html.P(tx("La sección Modelos retoma esa comparación con siete clasificadores, cuatro técnicas de "
-                          "balanceo y cuatro métodos de optimización de hiperparámetros, y la amplía con LightGBM, "
-                          "CatBoost y un modelo original propuesto en este proyecto (CS-FOF).",
+                          "balanceo y cuatro métodos de optimización de hiperparámetros, y la amplía con "
+                          "un modelo original propuesto en este proyecto (CS-FOF).",
                           "The Models section revisits that comparison with seven classifiers, four balancing "
-                          "techniques and four hyperparameter optimization methods, and extends it with LightGBM, "
-                          "CatBoost and an original model proposed in this project (CS-FOF).")),
+                          "techniques and four hyperparameter optimization methods, and extends it with "
+                          "an original model proposed in this project (CS-FOF).")),
             ]),
         ], className="grid"),
         card(tx("Diccionario de variables", "Variable dictionary"),
@@ -3043,7 +3005,7 @@ def page_home():
 
 
 # ---------------------------------------------------------------- Modelos
-F1_MAX = float(BEST_REQ["f1_mean"])   # referencia de las tarjetas: el mayor F1 entre CS-FOF y los modelos exigidos
+F1_MAX = float(BEST["f1_mean"])   # referencia de las tarjetas: el mayor F1 medio
 
 
 def _mc_bar(label, v, scale=1.0, cls=""):
@@ -3064,7 +3026,7 @@ def model_slide(row, rank):
     sub = MR[MR["model"] == m]
     by_tech = sub.groupby("technique")["f1_mean"].max()
     top = html.Div([html.Span(f"#{rank}", className="mc-rank"),
-                    html.Span([icon("trophy"), tx("Mayor F1 entre los exigidos", "Highest F1 among required")], className="mc-badge") if best
+                    html.Span([icon("trophy"), tx("Mayor F1 medio", "Highest mean F1")], className="mc-badge") if best
                     else html.Span(tx(f"{row['f1_mean'] - F1_MAX:+.4f} F1 vs. el mejor",
                                       f"{row['f1_mean'] - F1_MAX:+.4f} F1 vs. the best"), className="mc-fam-top")],
                    className="mc-top")
@@ -3101,23 +3063,21 @@ def model_slide(row, rank):
 
 
 # ----- Modelo original CS-FOF (experiments/comparacion_final del proyecto) -----
-# Pruebas de CS-FOF frente a la mejor combinación de cada rival (5 folds externos; Holm sobre 9 comparaciones)
+# Pruebas de CS-FOF frente a la mejor combinación de cada modelo de referencia (5 folds externos; Holm sobre 7
+# comparaciones; experiments/paper/pruebas_cs_fof.csv y comparacion_final/ del proyecto)
 CSFOF_TESTS = [  # (rival, diferencia F1, folds ganados, p Nadeau-Bengio Holm, delta de Cliff, p DeLong, McNemar)
-    ("catboost", -0.0001, 2, 1.000, -0.04, "0.273", "429 / 936"),
-    ("xgboost", 0.0014, 4, 1.000, 0.36, "0.561", "434 / 827"),
-    ("lightgbm", 0.0018, 3, 1.000, 0.12, "—", "345 / 782"),
-    ("random_forest", 0.0027, 4, 1.000, 0.36, "0.171", "313 / 615"),
-    ("svm", 0.0092, 5, 0.014, 0.76, "—", "—"),
-    ("knn", 0.0216, 5, 0.056, 0.92, "—", "—"),
+    ("xgboost", 0.0014, 4, 0.627, 0.36, "0.561", "434 / 827"),
+    ("random_forest", 0.0027, 4, 0.619, 0.36, "0.171", "313 / 615"),
+    ("svm", 0.0092, 5, 0.010, 0.76, "—", "—"),
+    ("knn", 0.0216, 5, 0.034, 0.92, "—", "—"),
     ("decision_tree", 0.0225, 5, 0.003, 1.00, "—", "—"),
-    ("logistic_regression", 0.0297, 5, 0.014, 1.00, "—", "—"),
-    ("naive_bayes", 0.0493, 5, 0.0003, 1.00, "—", "—"),
+    ("logistic_regression", 0.0297, 5, 0.010, 1.00, "—", "—"),
+    ("naive_bayes", 0.0493, 5, 0.0002, 1.00, "—", "—"),
 ]
 # F1 de la mejor configuración en Taiwán y en los tres conjuntos adicionales (pesos de clase, búsqueda aleatoria)
-CROSS_DATA = [  # (modelo, taiwan, german, australian, polish, rango medio)
-    ("catboost", 0.548, 0.605, 0.878, 0.733, 1.25), ("xgboost", 0.547, 0.599, 0.880, 0.682, 2.75),
-    ("cs_fof", 0.548, 0.589, 0.874, 0.430, 4.75), ("random_forest", 0.545, 0.600, 0.874, 0.446, 4.75),
-    ("lightgbm", 0.546, 0.575, 0.874, 0.658, 4.75),
+CROSS_DATA = [  # (modelo, taiwan, german, australian, polish, rango medio entre los 8 modelos)
+    ("xgboost", 0.547, 0.599, 0.880, 0.682, 2.00), ("random_forest", 0.545, 0.600, 0.874, 0.446, 3.00),
+    ("cs_fof", 0.548, 0.589, 0.874, 0.430, 3.25),
 ]
 
 
@@ -3343,11 +3303,11 @@ def csfof_theory():
         ], className="kpi-row k4"),
         html.Div(tx("Lo que la teoría no garantiza: la Proposición 1 asegura que cada corte es al menos tan bueno como "
                     "el mejor corte recto en los datos de entrenamiento, no que el bosque completo prediga mejor en "
-                    "clientes nuevos que métodos como CatBoost o XGBoost. Eso solo lo dicen las pruebas estadísticas "
+                    "clientes nuevos que métodos como XGBoost. Eso solo lo dicen las pruebas estadísticas "
                     "(pestaña 4).",
                     "What the theory does not guarantee: Proposition 1 ensures each cut is at least as good as the best "
                     "straight cut on the training data, not that the whole forest predicts new clients better than "
-                    "methods like CatBoost or XGBoost. Only the statistical tests can say that (tab 4)."),
+                    "methods like XGBoost. Only the statistical tests can say that (tab 4)."),
                  className="callout"),
     ])]
 
@@ -3356,26 +3316,20 @@ def csfof_theory():
 # ----- CS-FOF frente al rival que se elija (Random Forest es su versión sin cortes oblicuos ni costo por nodo) -----
 # Pliegues: validación anidada 5 x 5, mejor combinación de cada modelo (experiments/comparacion_final/mejor_por_modelo.csv).
 # Datos y ruido: experiments/robustez/ del proyecto (exploratorio; hiperparámetros fijos por pliegue).
-CS_RIVALS = ["random_forest", "catboost", "xgboost", "lightgbm"]
+CS_RIVALS = ["random_forest", "xgboost"]
 CS_VS = {
     "folds": dict(x=["1", "2", "3", "4", "5"], v={
         "cs_fof": ([0.5484, 0.5447, 0.5441, 0.5572, 0.5453], None),
         "random_forest": ([0.5510, 0.5404, 0.5375, 0.5556, 0.5417], None),
-        "catboost": ([0.5491, 0.5492, 0.5382, 0.5614, 0.5423], None),
-        "xgboost": ([0.5478, 0.5428, 0.5403, 0.5619, 0.5399], None),
-        "lightgbm": ([0.5466, 0.5470, 0.5374, 0.5598, 0.5401], None)}),
+        "xgboost": ([0.5478, 0.5428, 0.5403, 0.5619, 0.5399], None)}),
     "size": dict(x=["10 %", "25 %", "50 %", "100 %"], v={
         "cs_fof": ([0.5356, 0.5429, 0.5473, 0.5483], [0.0073, 0.0065, 0.0073, 0.0078]),
         "random_forest": ([0.5375, 0.5415, 0.5405, 0.5434], [0.0091, 0.0084, 0.0093, 0.0076]),
-        "catboost": ([0.5290, 0.5379, 0.5442, 0.5471], [0.0084, 0.0112, 0.0077, 0.0100]),
-        "xgboost": ([0.5244, 0.5370, 0.5392, 0.5448], [0.0088, 0.0089, 0.0076, 0.0087]),
-        "lightgbm": ([0.5363, 0.5415, 0.5437, 0.5459], [0.0069, 0.0104, 0.0085, 0.0085])}),
+        "xgboost": ([0.5244, 0.5370, 0.5392, 0.5448], [0.0088, 0.0089, 0.0076, 0.0087])}),
     "noise": dict(x=["0 %", "5 %", "10 %", "20 %"], v={
         "cs_fof": ([0.5483, 0.5455, 0.5455, 0.5336], [0.0078, 0.0081, 0.0085, 0.0147]),
         "random_forest": ([0.5434, 0.5423, 0.5414, 0.5303], [0.0076, 0.0085, 0.0109, 0.0148]),
-        "catboost": ([0.5471, 0.5469, 0.5416, 0.5301], [0.0100, 0.0072, 0.0092, 0.0077]),
-        "xgboost": ([0.5448, 0.5430, 0.5401, 0.5252], [0.0087, 0.0065, 0.0090, 0.0111]),
-        "lightgbm": ([0.5459, 0.5443, 0.5408, 0.5304], [0.0085, 0.0078, 0.0118, 0.0102])}),
+        "xgboost": ([0.5448, 0.5430, 0.5401, 0.5252], [0.0087, 0.0065, 0.0090, 0.0111])}),
 }
 _CSRF_X = {"folds": ("Pliegue externo", "Outer fold"), "size": ("Datos de entrenamiento usados", "Training data used"),
            "noise": ("Etiquetas de entrenamiento invertidas", "Training labels flipped")}
@@ -3384,12 +3338,8 @@ _RIVAL_DESC = {
                       "corte oblicuo con costo, así que esta comparación aísla lo que aporta la idea nueva.",
                       "Random Forest is the most similar basic model: CS-FOF is a Random Forest with the cost-sensitive "
                       "oblique cut added, so this comparison isolates what the new idea contributes."),
-    "catboost": ("CatBoost es la mejor combinación global de las 148: es el rival más exigente.",
-                 "CatBoost is the best overall combination of the 148: it is the toughest rival."),
-    "xgboost": ("XGBoost es la mejor de las 112 combinaciones del diseño factorial del Entregable 2.",
-                "XGBoost is the best of the 112 combinations of the Deliverable 2 factorial design."),
-    "lightgbm": ("LightGBM es uno de los dos métodos recientes del estado del arte que pide la guía.",
-                 "LightGBM is one of the two recent state-of-the-art methods required by the guide."),
+    "xgboost": ("XGBoost es la mejor de las 112 combinaciones del diseño factorial del Entregable 2: es el rival más exigente.",
+                "XGBoost is the best of the 112 combinations of the Deliverable 2 factorial design: it is the toughest rival."),
 }
 
 
@@ -3603,8 +3553,8 @@ METH_FLOW = [  # (título, texto) — los 8 pasos de la guía, aplicados a este 
                                               "Forest with cost-weighted Fisher oblique cuts (equations 1 to 5).")),
     (("Entrenamiento", "Training"), ("4 búsquedas de hiperparámetros (malla, aleatoria, Optuna, genético); semilla 42.",
                                      "4 hyperparameter searches (grid, random, Optuna, genetic); seed 42.")),
-    (("Baselines", "Baselines"), ("9 modelos: 7 clásicos + LightGBM y CatBoost, con el mismo presupuesto de búsqueda.",
-                                  "9 models: 7 classic + LightGBM and CatBoost, with the same search budget.")),
+    (("Baselines", "Baselines"), ("Los 7 modelos de referencia exigidos, con el mismo presupuesto de búsqueda.",
+                                  "The 7 required baseline models, with the same search budget.")),
     (("Evaluación", "Evaluation"), ("Validación anidada 5 × 5; F1, AUC-ROC, AUC-PR, MCC; Friedman, Nadeau-Bengio, Wilcoxon, DeLong.",
                                     "Nested 5 × 5 validation; F1, ROC-AUC, PR-AUC, MCC; Friedman, Nadeau-Bengio, Wilcoxon, DeLong.")),
     (("Ablación", "Ablation"), ("Mismo bosque sin corte oblicuo y variantes del corte, con todo lo demás fijo.",
@@ -3639,8 +3589,8 @@ CHECKLIST = [  # lista de verificación de la guía; estado honesto
     ("ok", ("Particiones antes de cualquier ajuste; imputación, escalado y SMOTE dentro de cada pliegue (sin fuga).",
             "Splits before any fitting; imputation, scaling and SMOTE inside each fold (no leakage).")),
     ("ok", ("El modelo tiene diagrama, ecuaciones, pseudocódigo y complejidad.", "The model has a diagram, equations, pseudocode and complexity.")),
-    ("ok", ("Baselines recientes (LightGBM, CatBoost) con el mismo presupuesto de búsqueda.",
-            "Recent baselines (LightGBM, CatBoost) with the same search budget.")),
+    ("ok", ("Modelos de referencia con el mismo presupuesto de búsqueda.",
+            "Baseline models with the same search budget.")),
     ("ok", ("Media y desviación estándar sobre 5 pliegues externos.", "Mean and standard deviation over 5 outer folds.")),
     ("ok", ("Pruebas estadísticas: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon con Holm, DeLong y McNemar.",
             "Statistical tests: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon with Holm, DeLong and McNemar.")),
@@ -3841,13 +3791,13 @@ def _csfof_results():
         ]),
         card(tx("Pruebas frente a cada modelo (Taiwán)", "Tests against each model (Taiwan)"), [
             html.P(tx("Validación cruzada anidada 5 × 5 con los mismos folds, preprocesamiento y presupuesto de "
-                      "búsqueda para los 10 modelos. Métrica principal: F1 de la clase default. En negrita, p < 0.05.",
-                      "Nested 5 × 5 cross-validation with the same folds, preprocessing and search budget for the 10 "
+                      "búsqueda para los 8 modelos. Métrica principal: F1 de la clase default. En negrita, p < 0.05.",
+                      "Nested 5 × 5 cross-validation with the same folds, preprocessing and search budget for the 8 "
                       "models. Main metric: F1 of the default class. In bold, p < 0.05."), className="muted"),
             tests]),
         card(tx("Consistencia en otros conjuntos de crédito (F1)", "Consistency on other credit datasets (F1)"), [
-            html.P(tx("Los 10 modelos con pesos de clase y búsqueda aleatoria en tres conjuntos públicos de UCI.",
-                      "The 10 models with class weights and random search on three public UCI datasets."),
+            html.P(tx("Los 8 modelos con pesos de clase y búsqueda aleatoria en tres conjuntos públicos de UCI.",
+                      "The 8 models with class weights and random search on three public UCI datasets."),
                    className="muted"),
             cross]),
         card(tx("Métricas fuera de pliegue que pide la guía", "Out-of-fold metrics required by the guide"), [
@@ -3857,36 +3807,30 @@ def _csfof_results():
                       "threshold 0.5. Descriptive: only ROC-AUC has a test (DeLong)."), className="muted"),
             _tbl([tx("Modelo", "Model"), "MCC", "AUC-PR", tx("Brier (menor es mejor)", "Brier (lower is better)"), "F1"],
                  [(html.B("CS-FOF (original)"), html.B("0.411"), html.B("0.560"), html.B("0.168"), html.B("0.548")),
-                  ("CatBoost", "0.402", "0.558", "0.179", "0.547"),
                   ("XGBoost", "0.401", "0.555", "0.175", "0.545"),
-                  ("Random Forest", "0.400", "0.558", "0.173", "0.543"),
-                  (tx("LightGBM (reajuste con AUC menor)", "LightGBM (refit with lower AUC)"), "0.401", "0.528", "0.190", "0.546")]),
+                  ("Random Forest", "0.400", "0.558", "0.173", "0.543")]),
         ]),
         card(tx("Veredicto", "Verdict"), [
-        html.Div(tx("CS-FOF empata con los mejores métodos del estado del arte en el problema principal, "
-                    "con la menor variación entre folds, pero no es superior de forma significativa a CatBoost, "
-                    "XGBoost, LightGBM ni Random Forest, y en los conjuntos adicionales queda por detrás de CatBoost.",
-                    "CS-FOF ties with the best state-of-the-art methods on the main problem, with the lowest "
-                    "variation between folds, but it is not significantly superior to CatBoost, XGBoost, LightGBM or "
-                    "Random Forest, and on the additional datasets it falls behind CatBoost."), className="callout"),
+        html.Div(tx("CS-FOF obtiene el mayor F1 medio en el problema principal, pero no es superior de forma "
+                    "significativa a XGBoost ni a Random Forest, y en los conjuntos adicionales queda por detrás de XGBoost.",
+                    "CS-FOF has the highest mean F1 on the main problem, but it is not significantly superior to "
+                    "XGBoost or Random Forest, and on the additional datasets it falls behind XGBoost."), className="callout"),
         interp_block(
             tx("En el problema principal CS-FOF acierta tanto como los mejores modelos y es el más estable. Comete "
                "menos errores que solo él cometa, pero eso se debe a que marca menos clientes como riesgosos, no a "
-               "que ordene mejor. En el conjunto polaco, con muy pocas quiebras (4 %), los métodos de boosting le "
-               "sacan mucha ventaja.",
+               "que ordene mejor. En el conjunto polaco, con muy pocas quiebras (4 %), XGBoost le "
+               "saca mucha ventaja.",
                "On the main problem CS-FOF is as accurate as the best models and is the most stable. It makes fewer "
                "errors that only it makes, but that is because it flags fewer clients as risky, not because it ranks "
-               "them better. On the Polish dataset, with very few bankruptcies (4%), boosting methods are far ahead."),
-            tx("Friedman sobre los 10 modelos: χ² = 40.3, p = 6.7·10⁻⁶; rangos medios CatBoost 2.0 y CS-FOF 2.4; "
-               "diferencia crítica de Nemenyi 6.06. Wilcoxon con 5 folds no puede bajar de p = 0.0625. DeLong y "
-               "McNemar usan predicciones fuera de pliegue de los 29 965 clientes; el reajuste de LightGBM dio un AUC "
-               "menor que el de su validación (0.773 frente a 0.784), por eso no se reporta su DeLong. Entre los 4 "
-               "conjuntos, Iman-Davenport F = 4.38, p = 0.0013, sin diferencias significativas de CS-FOF tras Holm.",
-               "Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks CatBoost 2.0 and CS-FOF 2.4; "
-               "Nemenyi critical difference 6.06. Wilcoxon with 5 folds cannot go below p = 0.0625. DeLong and "
-               "McNemar use out-of-fold predictions for the 29,965 clients; the LightGBM refit gave a lower AUC than "
-               "its validation (0.773 vs 0.784), so its DeLong is not reported. Across the 4 datasets, "
-               "Iman-Davenport F = 4.38, p = 0.0013, with no significant CS-FOF differences after Holm.")),
+               "them better. On the Polish dataset, with very few bankruptcies (4%), XGBoost is far ahead."),
+            tx("Friedman sobre los 8 modelos: χ² = 32.9, p = 2.7·10⁻⁵; rangos medios CS-FOF 1.4 y XGBoost 2.2; "
+               "diferencia crítica de Nemenyi 4.70. Wilcoxon con 5 folds no puede bajar de p = 0.0625. DeLong y "
+               "McNemar usan predicciones fuera de pliegue de los 29 965 clientes. Entre los 4 "
+               "conjuntos, Iman-Davenport F = 3.22, p = 0.018; XGBoost tiene el mejor rango medio (2.0) y CS-FOF el tercero (3.25).",
+               "Friedman over the 8 models: χ² = 32.9, p = 2.7·10⁻⁵; mean ranks CS-FOF 1.4 and XGBoost 2.2; "
+               "Nemenyi critical difference 4.70. Wilcoxon with 5 folds cannot go below p = 0.0625. DeLong and "
+               "McNemar use out-of-fold predictions for the 29,965 clients. Across the 4 datasets, "
+               "Iman-Davenport F = 3.22, p = 0.018; XGBoost has the best mean rank (2.0) and CS-FOF the third (3.25).")),
         ]),
     ]
 
@@ -3911,9 +3855,9 @@ def page_original():
                       "presentation: the idea (Theory), how it was built and evaluated (Methodology), the code and how it "
                       "performed (Results).")),
             html.Div([
-                kpi("F1", "0.548 ± 0.005", tx("el mayor entre los modelos exigidos; CatBoost (adicional) queda 0.0001 por encima",
-                                              "the highest among the required models; CatBoost (additional) is 0.0001 above"), "trophy"),
-                kpi("ROC-AUC", "0.785", tx("el mayor de los 10 modelos", "the highest of the 10 models"), "target"),
+                kpi("F1", "0.548 ± 0.005", tx("el mayor de los 8 modelos; sin diferencia significativa con XGBoost",
+                                              "the highest of the 8 models; no significant difference with XGBoost"), "trophy"),
+                kpi("ROC-AUC", "0.785", tx("el mayor de los 8 modelos", "the highest of the 8 models"), "target"),
                 kpi(tx("Cortes oblicuos", "Oblique splits"), "71 %",
                     tx("de los nodos del modelo final", "of the final model's nodes"), "layers"),
                 kpi(tx("Incumplimientos detectados", "Defaults detected"), f"{c['tp'] / pos:.0%}",
@@ -3931,7 +3875,7 @@ def page_original():
 
 
 def models_carousel():
-    rows = list(BEST_REQ_BY_MODEL.iterrows())   # sin los modelos adicionales (CatBoost y LightGBM)
+    rows = list(BEST_BY_MODEL.iterrows())
     slides = [model_slide(r, i + 1) for i, r in rows]
     dots = [html.Button(className="mc-dot", n_clicks=0,
                         **{"data-i": str(i), "type": "button", "title": minfo(r["model"], "label"),
@@ -3952,13 +3896,12 @@ def models_carousel():
         html.Div(dots, className="mc-dots"),
         html.P(tx(f"Desliza, usa las flechas o los puntos para recorrer los {len(rows)} modelos.",
                   f"Swipe, or use the arrows or dots to browse the {len(rows)} models."), className="muted mc-hint"),
-        html.P(nota_adicionales(), className="muted mc-hint"),
     ], className="mc-wrap")
 
 
 def page_models():
-    b = BEST_REQ
-    best_lbl = minfo(BEST_REQ["model"], "label")
+    b = BEST
+    best_lbl = minfo(BEST["model"], "label")
     c = CSFOF_CM
     pos, flagged = c["tp"] + c["fn"], c["tp"] + c["fp"]
     gcfg = {"displaylogo": False, "displayModeBar": False}
@@ -3966,17 +3909,15 @@ def page_models():
         page_title(tx("Modelos", "Models"), ""),
         html.Div([
             kpi(tx("Combinaciones evaluadas", "Combinations evaluated"), f"{N_BASE} + {N_EXTRA}",
-                tx(f"{N_BASE} del diseño factorial (7 × 4 × 4) y, aparte, {N_EXTRA} corridas de LightGBM, CatBoost y CS-FOF",
-                   f"{N_BASE} from the factorial design (7 × 4 × 4) and, separately, {N_EXTRA} runs of LightGBM, CatBoost and CS-FOF"),
+                tx(f"{N_BASE} del diseño factorial (7 × 4 × 4) y, aparte, {N_EXTRA} corridas de CS-FOF",
+                   f"{N_BASE} from the factorial design (7 × 4 × 4) and, separately, {N_EXTRA} runs of CS-FOF"),
                 "layers"),
             kpi(tx("Mejor F1 (clase default)", "Best F1 (default class)"),
-                f"{BEST_REQ['f1_mean']:.3f}",
-                tx(f"CS-FOF, el mayor entre los modelos exigidos ({minfo(BEST_BASE['model'], 'label')}: "
-                   f"{BEST_BASE['f1_mean']:.3f}); la diferencia no es significativa. Adicional: CatBoost "
-                   f"{F1_ADIC['catboost']:.3f}.",
-                   f"CS-FOF, the highest among the required models ({minfo(BEST_BASE['model'], 'label')}: "
-                   f"{BEST_BASE['f1_mean']:.3f}); the difference is not significant. Additional: CatBoost "
-                   f"{F1_ADIC['catboost']:.3f}."), "trophy"),
+                f"{BEST['f1_mean']:.3f}",
+                tx(f"CS-FOF, el mayor de los modelos comparados ({minfo(BEST_BASE['model'], 'label')}: "
+                   f"{BEST_BASE['f1_mean']:.3f}); la diferencia no es significativa.",
+                   f"CS-FOF, the highest of the models compared ({minfo(BEST_BASE['model'], 'label')}: "
+                   f"{BEST_BASE['f1_mean']:.3f}); the difference is not significant."), "trophy"),
             kpi(tx("Mejora sobre la línea base", "Improvement over baseline"), f"+{b['f1_mean'] - BASELINE:.3f}",
                 tx(f"Regresión logística sin balanceo: {BASELINE:.3f}", f"Logistic regression without balancing: {BASELINE:.3f}"),
                 "bars"),
@@ -3988,9 +3929,9 @@ def page_models():
             leaderboard(),
             interp_block(
                 tx("Haz clic en un encabezado para ordenar y escribe en la fila gris para filtrar (por ejemplo, "
-                   "«CatBoost» en Modelo o «> 0.54» en AUC). La estrella marca la mejor combinación de cada modelo, "
+                   "«XGBoost» en Modelo o «> 0.54» en AUC). La estrella marca la mejor combinación de cada modelo, "
                    "elegida por el F1 medio del bucle externo de la validación anidada 5 × 5.",
-                   "Click a header to sort and type in the grey row to filter (for example, “CatBoost” in Model or "
+                   "Click a header to sort and type in the grey row to filter (for example, “XGBoost” in Model or "
                    "“> 0.54” in AUC). The star marks each model's best combination, chosen by the mean F1 of the "
                    "outer loop of the 5 × 5 nested validation."),
                 tx("El tiempo de inferencia se midió con el pliegue 0 (5,993 clientes, 4 núcleos) para los cinco "
@@ -4006,10 +3947,10 @@ def page_models():
                 dcc.Graph(id="mdl-heat", figure=fig_models_heat(), config=gcfg),
                 interp_block(
                     tx("Cada celda es el mejor F1 que logró el modelo con esa técnica. Sin balanceo todos rinden peor, "
-                       "porque casi no detectan a quienes incumplen; con pesos de clase, los cinco mejores llegan a "
+                       "porque casi no detectan a quienes incumplen; con pesos de clase, los tres mejores llegan a "
                        "0.55. CS-FOF solo se corrió con pesos de clase (celdas vacías).",
                        "Each cell is the best F1 the model achieved with that technique. Without balancing all of them "
-                       "perform worse, because they barely detect defaulters; with class weights, the top five reach "
+                       "perform worse, because they barely detect defaulters; with class weights, the top three reach "
                        "0.55. CS-FOF was only run with class weights (empty cells)."),
                     tx("Comparación por factor sobre las 112 combinaciones base (Friedman con 28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. "
                        "Sin balanceo el F1 medio es 0.455, frente a 0.526 (pesos de clase), 0.520 (SMOTE) y 0.513 "
@@ -4026,10 +3967,10 @@ def page_models():
                     "Balancing moves the threshold, not the ranking ability"), [
                 dcc.Graph(id="mdl-scatter", figure=fig_models_scatter(), config=gcfg),
                 interp_block(
-                    tx(f"Cada punto es una combinación: las {N_BASE} del diseño factorial y las {N_EXTRA} corridas de LightGBM, CatBoost y CS-FOF (rombos: CS-FOF). Las que no balancean (gris) quedan abajo: "
+                    tx(f"Cada punto es una combinación: las {N_BASE} del diseño factorial y las {N_EXTRA} corridas de CS-FOF (rombos). Las que no balancean (gris) quedan abajo: "
                        "aciertan poco con quienes incumplen. Pero no quedan más a la izquierda: ordenan a los clientes "
                        "casi igual de bien; lo que cambia es dónde se pone el corte entre «paga» e «incumple».",
-                       f"Each point is one combination: the {N_BASE} from the factorial design and the {N_EXTRA} runs of LightGBM, CatBoost and CS-FOF (diamonds: CS-FOF). Those without balancing (grey) sit at the bottom: "
+                       f"Each point is one combination: the {N_BASE} from the factorial design and the {N_EXTRA} runs of CS-FOF (diamonds). Those without balancing (grey) sit at the bottom: "
                        "they rarely get defaulters right. But they are not further to the left: they rank clients "
                        "almost equally well; what changes is where the cut between “pays” and “defaults” is placed."),
                     tx("ROC-AUC medio por técnica (96 combinaciones sin SVM): 0.759 sin balanceo, 0.762 con pesos de "
@@ -4043,7 +3984,7 @@ def page_models():
             ]),
         ], className="grid g2"),
         html.Div([
-            card(tx(f"Mayor F1 entre los modelos exigidos: {best_lbl}", f"Highest F1 among the required models: {best_lbl}"), [
+            card(tx(f"Mayor F1 medio: {best_lbl}", f"Highest mean F1: {best_lbl}"), [
                 dcc.Graph(id="mdl-cm", figure=fig_best_cm(), config=gcfg),
                 html.Div([
                     kpi("Recall", f"{c['tp'] / pos:.0%}", tx("incumplimientos detectados", "defaults detected"), "target"),
@@ -4065,19 +4006,18 @@ def page_models():
                        "out-of-fold de los cinco modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.783). "
                        "Las probabilidades no están calibradas (ECE = 0.180) porque el peso de costo infla la clase "
                        "positiva. Ajustar el umbral según el costo de cada tipo de error es el siguiente paso natural. "
-                       "CatBoost, modelo adicional, detecta 4,178 incumplimientos con 4,467 falsas alarmas.",
+                       f"XGBoost, el mejor modelo de referencia, detecta {XGB_CM['tp']:,} incumplimientos con {XGB_CM['fp']:,} falsas alarmas.",
                        f"{tech_lbl(b['technique'])} and {method_lbl(b['method']).lower()} optimization. Out-of-fold "
                        "predictions from the five outer-fold models, with a 0.5 threshold (pooled AUC 0.783). The "
                        "probabilities are not calibrated (ECE = 0.180) because the cost weight inflates the positive "
                        "class. Tuning the threshold to the cost of each type of error is the natural next step. "
-                       "CatBoost, an additional model, detects 4,178 defaults with 4,467 false alarms.")),
+                       f"XGBoost, the best baseline model, detects {XGB_CM['tp']:,} defaults with {XGB_CM['fp']:,} false alarms.")),
             ]),
             card(tx("Qué variables pesan más: SHAP global", "Which variables matter most: global SHAP"), [
                 html.Div([control(tx("Modelo", "Model"), dcc.RadioItems(
                     id="shap-model", value="xgboost", className="radio",
                     options=[{"label": "XGBoost", "value": "xgboost"},
                              {"label": "Random Forest", "value": "random_forest"},
-                             {"label": "CatBoost", "value": "catboost"},
                              {"label": "CS-FOF", "value": "cs_fof"}]))], className="controls"),
                 dcc.Graph(id="shap-graph", config=gcfg),
                 html.Div(id="shap-interp"),
@@ -4090,7 +4030,7 @@ def page_models():
         ], className="grid g2"),
         card(tx("Diagnóstico del modelo seleccionado", "Diagnostics of the selected model"), [
             html.Div([control(tx("Modelo", "Model"), dcc.RadioItems(
-                id="diag-model", value="catboost", className="radio",
+                id="diag-model", value="cs_fof", className="radio",
                 options=[{"label": minfo(m, "label"), "value": m} for m in DIAG_MODELS]))], className="controls"),
             dcc.Graph(id="diag-graph", config=gcfg),
             html.Div(id="diag-interp"),
@@ -4391,16 +4331,6 @@ def page_predict():
 
 
 def trees_block(values, key="rf"):
-    if _mk(key) == "catboost":
-        n = MODELOS["catboost"][0][-1].tree_count_
-        return html.Div([
-            html.Div([icon("tree"), html.B(tx(f"{n} árboles en secuencia", f"{n} trees in sequence"))],
-                     className="pf-trees-h"),
-            html.P(tx("CatBoost no vota: cada árbol corrige el error de los anteriores y el puntaje es la suma de "
-                      "todos (boosting). Por eso no hay un conteo de votos como en los bosques.",
-                      "CatBoost does not vote: each tree corrects the error of the previous ones and the score is the "
-                      "sum of all of them (boosting). That is why there is no vote count as in the forests."),
-                   className="muted")], className="pf-trees")
     yes, n = tree_votes(values, key)
     share = yes / n if n else 0
     cells = int(round(share * 100))
@@ -4561,13 +4491,13 @@ def book_summary():
                   "en el desbalance de clases y la multicolinealidad severa entre los montos facturados, y un diseño "
                   "factorial de 112 configuraciones que compara algoritmos, representaciones de variables, técnicas de "
                   "balanceo y optimización (genética y bayesiana), y un modelo original (CS-FOF, un bosque con cortes "
-                  "oblicuos sensibles al costo) comparado con LightGBM y CatBoost. El resultado mejora el F1 de la "
+                  "oblicuos sensibles al costo). El resultado mejora el F1 de la "
                   "clase minoritaria y reduce los falsos negativos frente a la regresión logística base.",
                   "It includes an extraction, cleaning and transformation (ETL) pipeline, an exploratory analysis "
                   "focused on class imbalance and the severe multicollinearity among billed amounts, and a factorial "
                   "design of 112 configurations comparing algorithms, feature representations, balancing techniques "
                   "and optimization (genetic and Bayesian), plus an original model (CS-FOF, a forest with "
-                  "cost-sensitive oblique splits) compared with LightGBM and CatBoost. The result improves the "
+                  "cost-sensitive oblique splits). The result improves the "
                   "minority-class F1 and reduces false negatives compared with the baseline logistic regression.")),
     ])
 
@@ -4598,8 +4528,8 @@ def page_conclusions():
     ratio = (1 - GLOBAL_RATE) / GLOBAL_RATE
     c = CSFOF_CM
     pos, flagged = c["tp"] + c["fn"], c["tp"] + c["fp"]
-    best_lbl = minfo(BEST_REQ["model"], "label")
-    tech = tech_lbl(BEST_REQ["technique"]).lower()
+    best_lbl = minfo(BEST["model"], "label")
+    tech = tech_lbl(BEST["technique"]).lower()
     yes = html.Span(tx("Se cumple", "Supported"), className="tag verdict")
 
     hyp = [
@@ -4646,19 +4576,19 @@ def page_conclusions():
                         "late the client is, especially in September. It is followed, less strongly, by the credit "
                         "limit (the lower the limit, the higher the risk). Demographics add very little."),
                      className="callout"),
-            html.P(tx(f"Con esas señales, el modelo con mayor F1 entre los exigidos ({best_lbl} con {tech}) logra un F1 medio de "
-                      f"{BEST_REQ['f1_mean']:.3f} en la validación anidada 5 × 5. En sus predicciones fuera de pliegue "
+            html.P(tx(f"Con esas señales, el modelo con mayor F1 medio ({best_lbl} con {tech}) logra un F1 medio de "
+                      f"{BEST['f1_mean']:.3f} en la validación anidada 5 × 5. En sus predicciones fuera de pliegue "
                       f"(una sola corrida, umbral 0.5) detecta {c['tp']:,} de los {pos:,} incumplimientos "
                       f"({c['tp'] / pos:.0%}) y, de cada dos clientes que marca como riesgo, uno realmente incumple "
                       f"({c['tp'] / flagged:.0%}).",
-                      f"With those signals, the model with the highest F1 among the required ones ({best_lbl} with {tech}) reaches a mean F1 of "
-                      f"{BEST_REQ['f1_mean']:.3f} in the nested 5 × 5 validation. In its out-of-fold predictions (a single "
+                      f"With those signals, the model with the highest mean F1 ({best_lbl} with {tech}) reaches a mean F1 of "
+                      f"{BEST['f1_mean']:.3f} in the nested 5 × 5 validation. In its out-of-fold predictions (a single "
                       f"run, threshold 0.5) it detects {c['tp']:,} of the {pos:,} defaults ({c['tp'] / pos:.0%}) and, "
                       f"out of every two clients it flags as risky, one actually defaults ({c['tp'] / flagged:.0%}).")),
             html.Div([
                 kpi(tx("Señal más fuerte", "Strongest signal"), "PAY_0",
                     tx(f"ρ = {rho['PAY_0']:.2f} con el default", f"ρ = {rho['PAY_0']:.2f} with default"), "alert"),
-                kpi(tx("Mayor F1 entre los exigidos", "Highest F1 among required"), f"F1 {BEST_REQ['f1_mean']:.3f}", f"{best_lbl} · {tech}", "trophy"),
+                kpi(tx("Mayor F1 medio", "Highest mean F1"), f"F1 {BEST['f1_mean']:.3f}", f"{best_lbl} · {tech}", "trophy"),
                 kpi(tx("Incumplimientos detectados", "Defaults detected"), f"{c['tp'] / pos:.0%}",
                     tx(f"{c['tp']:,} de {pos:,}", f"{c['tp']:,} of {pos:,}"), "target"),
             ], className="kpi-row k3"),
@@ -4667,31 +4597,31 @@ def page_conclusions():
              _tbl(["#", tx("Hipótesis", "Hypothesis"), tx("Veredicto", "Verdict"), tx("Evidencia", "Evidence")],
                   [(html.B(a), b, v, e) for a, b, v, e in hyp])),
         card(tx(f"¿Superó CS-FOF a las {N_BASE} combinaciones?", f"Did CS-FOF beat the {N_BASE} combinations?"), [
-            html.Div(tx("CS-FOF obtiene el mayor F1 entre los modelos exigidos, pero no de forma significativa: en la "
-                        "práctica empata con los mejores.",
-                        "CS-FOF has the highest F1 among the required models, but not significantly: in practice it "
-                        "ties with the best ones."),
+            html.Div(tx("CS-FOF obtiene el mayor F1 medio, pero no de forma significativa: en la práctica empata con "
+                        "XGBoost y Random Forest.",
+                        "CS-FOF has the highest mean F1, but not significantly: in practice it ties with XGBoost and "
+                        "Random Forest."),
                      className="callout"),
             html.Div([
                 kpi(tx(f"Mejor de las {N_BASE}", f"Best of the {N_BASE}"), f"F1 {BEST_BASE['f1_mean']:.3f}",
                     minfo(BEST_BASE["model"], "label") + " · " + tech_lbl(BEST_BASE["technique"]).lower(), "layers"),
                 kpi("CS-FOF", "F1 0.548", tx("+0.0014 sobre XGBoost; gana en 4 de 5 pliegues", "+0.0014 over XGBoost; wins in 4 of 5 folds"),
                     "tree"),
-                kpi(tx("Modelo adicional", "Additional model"), f"F1 {F1_ADIC['catboost']:.3f}",
-                    tx("CatBoost: 0.0001 por encima de CS-FOF", "CatBoost: 0.0001 above CS-FOF"), "layers"),
+                kpi("Random Forest", "F1 0.545", tx("CS-FOF queda +0.0027 por encima; gana en 4 de 5 pliegues",
+                                                    "CS-FOF is +0.0027 above; it wins in 4 of 5 folds"), "layers"),
             ], className="kpi-row k3"),
-            _ul([tx("Frente a XGBoost, Random Forest, LightGBM y CatBoost, ni Nadeau-Bengio (p = 1.000 con Holm), ni "
-                    "Wilcoxon, ni DeLong encuentran diferencias significativas; la diferencia de F1 es menor que 0.002.",
-                    "Against XGBoost, Random Forest, LightGBM and CatBoost, neither Nadeau-Bengio (p = 1.000 with Holm), "
-                    "nor Wilcoxon, nor DeLong finds significant differences; the F1 difference is below 0.002."),
-                 tx("Sí es significativamente mejor que SVM, el árbol de decisión, la regresión logística y Naive Bayes, "
+            _ul([tx("Frente a XGBoost y Random Forest, ni Nadeau-Bengio (p > 0.6 con Holm), ni "
+                    "Wilcoxon, ni DeLong encuentran diferencias significativas; la diferencia de F1 es menor que 0.003.",
+                    "Against XGBoost and Random Forest, neither Nadeau-Bengio (p > 0.6 with Holm), "
+                    "nor Wilcoxon, nor DeLong finds significant differences; the F1 difference is below 0.003."),
+                 tx("Sí es significativamente mejor que SVM, KNN, el árbol de decisión, la regresión logística y Naive Bayes, "
                     "con tamaños de efecto grandes.",
                     "It is significantly better than SVM, the decision tree, logistic regression and Naive Bayes, with "
                     "large effect sizes."),
-                 tx("Aporta estabilidad (la menor variación entre pliegues) y las probabilidades mejor calibradas de los "
-                    "cinco mejores, pero en los otros conjuntos de crédito queda por detrás de CatBoost.",
-                    "It brings stability (the lowest variation between folds) and the best-calibrated probabilities of "
-                    "the top five, but on the other credit datasets it falls behind CatBoost.")]),
+                 tx("Aporta estabilidad (la menor variación entre pliegues de los tres mejores) y las probabilidades mejor "
+                    "calibradas de esos tres, pero en los otros conjuntos de crédito queda por detrás de XGBoost.",
+                    "It brings stability (the lowest variation between folds of the top three) and the best-calibrated "
+                    "probabilities of those three, but on the other credit datasets it falls behind XGBoost.")]),
             dcc.Link([tx("Ver el detalle en Modelo original", "See the details in Original model"), icon("arrow")],
                      href="/modelo-original", className="btn"),
         ]),
@@ -4712,6 +4642,10 @@ def page_conclusions():
                    "discrimination risk."),
             ])),
             card(tx("Limitaciones y próximos pasos", "Limitations and next steps"), _ul([
+                tx("La comparación se limita a los siete modelos de referencia exigidos por el curso. Variantes recientes "
+                   "de boosting, como CatBoost y LightGBM, quedan fuera de su alcance.",
+                   "The comparison is limited to the seven baseline models required by the course. Recent boosting "
+                   "variants, such as CatBoost and LightGBM, are outside its scope."),
                 tx("Datos de un solo banco de Taiwán en 2005: antes de usarlo en otro mercado hay que reentrenarlo con "
                    "datos actuales.",
                    "Data from a single Taiwanese bank in 2005: before using it in another market it must be retrained "
@@ -6210,14 +6144,14 @@ def cb_lime_cells():
 
 @graph_cb(Output("shap-graph", "figure"), Output("shap-interp", "children"), Input("shap-model", "value"))
 def cb_shap(model):
-    if model in ("cs_fof", "catboost"):
+    if model == "cs_fof":
         return fig_shap_global(model), shap_global_interp(model)
     return fig_shap_folds(model), interp_block(*interp_shap_folds(model))
 
 
 @graph_cb(Output("diag-graph", "figure"), Output("diag-interp", "children"), Input("diag-model", "value"))
 def cb_diag(model):
-    model = model if model in DIAG["modelos"] else "catboost"
+    model = model if model in DIAG["modelos"] else "cs_fof"
     return fig_diag(model), diag_interp(model)
 
 

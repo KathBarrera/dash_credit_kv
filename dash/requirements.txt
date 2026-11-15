@@ -7,4 +7,3 @@ xlrd==2.0.2
 gunicorn==26.2.0
 scikit-learn==1.9.1
 joblib==1.6.0
-catboost==1.2.10
