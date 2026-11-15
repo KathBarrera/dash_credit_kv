@@ -1407,7 +1407,7 @@ INFER_MS = {"cs_fof": 253.1, "xgboost": 4.8, "random_forest": 9.4}
 
 
 def leaderboard():
-    """Tabla de líderes: las 148 combinaciones, ordenable y filtrable (mejor de cada modelo marcada)."""
+    """Tabla de líderes: todas las combinaciones, ordenable y filtrable (mejor de cada modelo marcada)."""
     d = MR.copy()
     best = d.loc[d.groupby("model")["f1_mean"].idxmax()].index
     d["mejor"] = np.where(d.index.isin(best), "★", "")
@@ -3925,7 +3925,7 @@ def page_models():
                 tx(f"{c['tp']:,} de {pos:,} · {best_lbl}, predicciones fuera de pliegue (umbral 0.5)",
                    f"{c['tp']:,} of {pos:,} · {best_lbl}, out-of-fold predictions (threshold 0.5)"), "target"),
         ], className="kpi-row k4"),
-        card(tx("Tabla de líderes: 148 combinaciones", "Leaderboard: 148 combinations"), [
+        card(tx(f"Tabla de líderes: {len(MR)} combinaciones", f"Leaderboard: {len(MR)} combinations"), [
             leaderboard(),
             interp_block(
                 tx("Haz clic en un encabezado para ordenar y escribe en la fila gris para filtrar (por ejemplo, "
