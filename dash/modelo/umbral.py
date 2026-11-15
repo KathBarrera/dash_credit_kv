@@ -53,4 +53,4 @@ def main(claves):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or ["rf", "catboost", "cs_fof"])
+    main(sys.argv[1:] or ["rf", "cs_fof"])
