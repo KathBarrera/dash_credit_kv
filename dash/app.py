@@ -1407,7 +1407,7 @@ INFER_MS = {"cs_fof": 253.1, "xgboost": 4.8, "random_forest": 9.4}
 
 
 def leaderboard():
-    """Tabla de líderes: las 148 combinaciones, ordenable y filtrable (mejor de cada modelo marcada)."""
+    """Tabla de líderes: todas las combinaciones, ordenable y filtrable (mejor de cada modelo marcada)."""
     d = MR.copy()
     best = d.loc[d.groupby("model")["f1_mean"].idxmax()].index
     d["mejor"] = np.where(d.index.isin(best), "★", "")
@@ -2238,6 +2238,8 @@ ICONS = {
     "save": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
     # --- asistente Kyo ---
     "close": '<path d="M6 6l12 12M18 6 6 18"/>',
+    "filter": '<path d="M3 4h18l-7 8.5V20l-4-2v-5.5z"/>',
+    "expand": '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
     "send": '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
     "reset": '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
 }
@@ -2268,14 +2270,23 @@ PAGE_ICONS = {"Introducción": "info", "Problema y Objetivos": "target", "Marco 
 # =============================================================================
 # 5. COMPONENTES DE INTERFAZ
 # =============================================================================
+def zoom_btn():
+    """Botón de «ampliar» de la esquina superior derecha. assets/card_focus.js lo cambia por «cerrar» al ampliar."""
+    abrir, cerrar = tx("Ampliar tarjeta", "Enlarge card"), tx("Cerrar (Esc)", "Close (Esc)")
+    return html.Button([icon("expand", "zb-open"), icon("close", "zb-close")], type="button", className="card-zoom",
+                       title=abrir, **{"aria-label": abrir, "aria-expanded": "false",
+                                       "data-label-open": abrir, "data-label-close": cerrar})
+
+
 def card(title, children, subtitle=None, cls=""):
-    head = [html.H3(title, className="card-title")]   # solo el título (subtitle se ignora a propósito)
+    head = [zoom_btn(), html.H3(title, className="card-title")]   # solo el título (subtitle se ignora a propósito)
     return html.Div(head + (children if isinstance(children, list) else [children]),
                     className=f"card {cls}".strip())
 
 
 def kpi(label, value, note="", ico=None):
-    return html.Div([html.Div([icon(ico) if ico else None, html.Div(label, className="kpi-label")],
+    return html.Div([zoom_btn(),
+                     html.Div([icon(ico) if ico else None, html.Div(label, className="kpi-label")],
                               className="kpi-head"),
                      html.Div(value, className="kpi-value"),
                      html.Div(note, className="kpi-note")], className="kpi")
@@ -2314,7 +2325,7 @@ ALL_VARS = ["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BIL
 def eda_filter_card():
     """Filtros globales del EDA: actualizan todos los gráficos de la página (y se conservan entre páginas)."""
     k = tx("mil", "k")
-    return card(tx("Filtros globales", "Global filters"), [
+    controles = [
         html.Div([
             control(tx("Sexo", "Sex"), dcc.Checklist(
                 id="ef-sex", value=[1, 2], inline=True, className="radio",
@@ -2335,13 +2346,23 @@ def eda_filter_card():
                 marks={10000: f"10 {k}", 250000: f"250 {k}", 500000: f"500 {k}", 750000: f"750 {k}", 1000000: "1 M"},
                 tooltip={"placement": "bottom"}, **KEEP)),
         ], className="grid g2"),
-        html.Div([html.Span(id="ef-info"), html.Button(tx("Quitar filtros", "Clear filters"), id="ef-reset", className="btn")],
+        html.Div([html.Button(tx("Quitar filtros", "Clear filters"), id="ef-reset", className="btn")],
                  className="ef-bar"),
         html.P(tx("Los filtros actualizan todos los gráficos de esta página y de la otra página del EDA. Las tarjetas de "
                   "cifras y los textos fijos describen siempre a todos los clientes.",
                   "The filters update every chart on this page and on the other EDA page. The figure cards and the fixed "
                   "texts always describe all clients."), className="muted"),
-    ])
+    ]
+    # Tarjeta plegable: arranca cerrada con una sola fila (icono, título, resumen y botón). Los controles
+    # siguen en el DOM (los oculta <details>), porque cb_eda_filter los usa como entrada. El estado
+    # abierto/cerrado se conserva entre páginas del EDA con assets/ef_fold.js.
+    return html.Div([zoom_btn(), html.Details([
+        html.Summary([icon("filter", "ef-ico"), html.H3(tx("Filtros globales", "Global filters"), className="card-title"),
+                      html.Span(id="ef-info", className="ef-info"),
+                      html.Span(icon("chevron", "ef-chev"), className="ef-toggle", **{"aria-hidden": "true"})],
+                     className="ef-summary"),
+        html.Div(controles, className="ef-body"),
+    ], id="ef-fold", className="ef-fold")], className="card ef-card")
 
 
 def page_uni():
@@ -2532,7 +2553,7 @@ def page_intro():
 
 def money_kpi(label, amount, note):
     """KPI de un monto en millones de NT$ con su equivalente en dólares debajo (el valor no se parte en dos líneas)."""
-    return html.Div([html.Div(html.Div(label, className="kpi-label"), className="kpi-head"),
+    return html.Div([zoom_btn(), html.Div(html.Div(label, className="kpi-label"), className="kpi-head"),
                      html.Div(f"NT$\u00a0{amount / 1e6:,.0f}\u00a0M", className="kpi-value"),
                      html.Div(f"≈ US$\u00a0{amount / TWD_PER_USD_2005 / 1e6:,.1f}\u00a0M", className="kpi-usd"),
                      html.Div(note, className="kpi-note")], className="kpi kpi-money")
@@ -3925,7 +3946,7 @@ def page_models():
                 tx(f"{c['tp']:,} de {pos:,} · {best_lbl}, predicciones fuera de pliegue (umbral 0.5)",
                    f"{c['tp']:,} of {pos:,} · {best_lbl}, out-of-fold predictions (threshold 0.5)"), "target"),
         ], className="kpi-row k4"),
-        card(tx("Tabla de líderes: 148 combinaciones", "Leaderboard: 148 combinations"), [
+        card(tx(f"Tabla de líderes: {len(MR)} combinaciones", f"Leaderboard: {len(MR)} combinations"), [
             leaderboard(),
             interp_block(
                 tx("Haz clic en un encabezado para ordenar y escribe en la fila gris para filtrar (por ejemplo, "
@@ -3934,10 +3955,10 @@ def page_models():
                    "Click a header to sort and type in the grey row to filter (for example, “XGBoost” in Model or "
                    "“> 0.54” in AUC). The star marks each model's best combination, chosen by the mean F1 of the "
                    "outer loop of the 5 × 5 nested validation."),
-                tx("El tiempo de inferencia se midió con el pliegue 0 (5,993 clientes, 4 núcleos) para los cinco "
+                tx("El tiempo de inferencia se midió con el pliegue 0 (5,993 clientes, 4 núcleos) para los tres "
                    "mejores modelos. CS-FOF es el más lento al predecir (253 ms por cada 1,000 clientes) porque sus "
                    "árboles se recorren con numpy, sin código compilado como el de las librerías de los demás.",
-                   "Inference time was measured on fold 0 (5,993 clients, 4 cores) for the five best models. CS-FOF is "
+                   "Inference time was measured on fold 0 (5,993 clients, 4 cores) for the three best models. CS-FOF is "
                    "the slowest to predict (253 ms per 1,000 clients) because its trees are traversed with numpy, without "
                    "compiled code like the other models' libraries.")),
         ]),
@@ -5329,8 +5350,57 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-hint { font-size:12.5px; color:var(--muted); } .pf-note { margin:6px 0 12px; } .pf-row { margin-bottom:14px; }
 .pf-slider { padding-top:34px; }
 .pf-thr-info { margin-top:10px; }
+/* ---------- Modo foco: una tarjeta ampliada al centro (assets/card_focus.js) ---------- */
+.card, .kpi { position:relative; }
+.card-zoom { position:absolute; top:10px; right:10px; z-index:2; width:30px; height:30px; padding:0; display:inline-flex;
+  align-items:center; justify-content:center; background:var(--surface); color:var(--muted); cursor:pointer;
+  border:1px solid var(--line-strong); border-radius:8px; opacity:.75; transition:opacity .15s, color .15s, border-color .15s; }
+.card-zoom .ico { width:16px; height:16px; }
+.card-zoom .zb-close { display:none; }
+.card:hover > .card-zoom, .kpi:hover > .card-zoom, .card-zoom:focus-visible { opacity:1; }
+.card-zoom:hover { color:var(--accent-2); border-color:var(--accent-2); opacity:1; }
+.card > .card-title { padding-right:38px; }
+.kpi > .card-zoom { top:6px; right:6px; width:24px; height:24px; border-radius:6px; }
+.kpi > .card-zoom .ico { width:13px; height:13px; }
+.kpi > .kpi-head { padding-right:26px; }
+.ef-card > .card-zoom { top:16px; right:14px; }
+.ef-summary { padding-right:58px; }
+
+.focus-overlay { position:fixed; inset:0; z-index:10005; background:rgba(8,12,24,.72); opacity:0; visibility:hidden;
+  transition:opacity .18s ease, visibility 0s linear .18s; }
+.focus-overlay.on { opacity:1; visibility:visible; transition:opacity .18s ease, visibility 0s; }
+html.focus-open, html.focus-open body { overflow:hidden; }
+.card-zoomed { --fz:1.3; position:fixed !important; z-index:10010; zoom:var(--fz); margin:0 !important;
+  top:calc(5vh / var(--fz)) !important; left:calc(5vw / var(--fz)) !important;
+  width:calc(90vw / var(--fz)) !important; height:calc(90vh / var(--fz)) !important; max-width:none !important; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; padding-top:20px;
+  box-shadow:0 24px 80px rgba(0,0,0,.55); border-color:var(--line-strong); outline:none; }
+.card-zoomed.ef-card { padding-top:0; }
+.kpi.card-zoomed { --fz:2.6; display:flex; flex-direction:column; justify-content:center; padding:24px 40px;
+  border-left-width:6px; border-left-color:var(--accent-2); }
+.card-zoomed > .card-zoom { position:fixed; top:calc((5vh + 12px) / var(--fz)); right:calc((5vw + 12px) / var(--fz));
+  width:calc(52px / var(--fz)); height:calc(52px / var(--fz)); z-index:3; opacity:1; color:var(--text);
+  background:var(--surface-2); border-color:var(--accent-2); }
+.card-zoomed > .card-zoom .ico { width:calc(28px / var(--fz)); height:calc(28px / var(--fz)); }
+.card-zoomed > .card-zoom .zb-open { display:none; } .card-zoomed > .card-zoom .zb-close { display:inline-block; }
+.card-zoomed > .card-title { padding-right:56px; }
+/* los menús desplegables de Dash viven fuera de la tarjeta: deben quedar por encima de la capa */
+.dash-dropdown-content, [data-radix-popper-content-wrapper], .dash-tooltip { z-index:10030 !important; }
+/* el menú se posiciona en píxeles de pantalla; dentro de la tarjeta con zoom hay que deshacer el zoom */
+.card-zoomed [data-radix-popper-content-wrapper] { zoom:calc(1 / var(--fz)); }
+@media (prefers-reduced-motion:reduce) { .focus-overlay, .focus-overlay.on { transition:none; } }
+.ef-card { padding:0; }
+.ef-summary { display:flex; align-items:center; gap:12px; padding:14px 22px; cursor:pointer; list-style:none; }
+.ef-summary::-webkit-details-marker { display:none; }
+.ef-summary .ef-ico { width:20px; height:20px; color:var(--accent-2); }
+.ef-summary .card-title { margin:0; flex:none; }
+.ef-summary .ef-info { flex:1; min-width:0; font-weight:600; color:var(--text); font-size:14px; }
+.ef-toggle { flex:none; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+  border:1px solid var(--line-strong); border-radius:8px; color:var(--text); }
+.ef-summary:hover .ef-toggle { border-color:var(--accent-2); color:var(--accent-2); }
+.ef-toggle .ico { transition:transform .2s; transform:rotate(90deg); }
+.ef-fold[open] .ef-toggle .ico { transform:rotate(-90deg); }
+.ef-body { padding:0 22px 16px; border-top:1px solid var(--line); }
 .ef-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 0 4px; flex-wrap:wrap; }
-.ef-bar #ef-info { font-weight:600; color:var(--text); }
 .pf-thr-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:8px; }
 .pf-thr-k { border:1px solid var(--line); border-radius:12px; padding:8px 12px; display:flex; flex-direction:column; }
 .pf-thr-k b { font-size:22px; color:var(--accent-2, #B88F3D); line-height:1.2; }
