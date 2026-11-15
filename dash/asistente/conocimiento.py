@@ -1108,7 +1108,7 @@ def _construir(A, EN):
           "3. **Código:** los fragmentos reales del archivo original_model.py y sus pruebas.\n"
           "4. **Resultados:** una gráfica animada frente a **Random Forest** (gana en 4 de 5 pliegues), las pruebas "
           "frente a los 10 modelos y los otros tres conjuntos de crédito.\n\n"
-          "Veredicto: F1 0.548, empatado con CatBoost y con el mayor ROC-AUC, pero **no es superior de forma "
+          "Veredicto: F1 0.548, el mayor entre los modelos exigidos (XGBoost 0.547) y con el mayor ROC-AUC; CatBoost, modelo adicional, queda 0.0001 por encima. **No es superior de forma "
           "significativa**.",
           "**Original model** presents **CS-FOF**, the random forest proposed in the project, in four tabs:\n\n"
           "1. **Theory:** with real clients, a classic tree needs a staircase of straight cuts while CS-FOF draws a "
@@ -1119,7 +1119,7 @@ def _construir(A, EN):
           "3. **Code:** the real excerpts of original_model.py and its tests.\n"
           "4. **Results:** an animated chart against **Random Forest** (it wins in 4 of 5 folds), the tests against "
           "the 10 models and the three other credit datasets.\n\n"
-          "Verdict: F1 0.548, tied with CatBoost and with the highest ROC-AUC, but **not significantly superior**."),
+          "Verdict: F1 0.548, the highest among the required models (XGBoost 0.547) and with the highest ROC-AUC; CatBoost, an additional model, is 0.0001 above. **Not significantly superior**."),
         tecnico=t("Validación anidada 5×5. Frente a Random Forest: Nadeau-Bengio con Holm p = 1.000, δ de Cliff 0.36, "
                   "DeLong p = 0.171. Friedman sobre 10 modelos χ² = 40.3; rangos medios CatBoost 2.0 y CS-FOF 2.4.",
                   "Nested 5×5 validation. Against Random Forest: Nadeau-Bengio with Holm p = 1.000, Cliff's δ 0.36, "
