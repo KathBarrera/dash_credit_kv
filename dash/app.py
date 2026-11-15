@@ -2238,6 +2238,8 @@ ICONS = {
     "save": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
     # --- asistente Kyo ---
     "close": '<path d="M6 6l12 12M18 6 6 18"/>',
+    "filter": '<path d="M3 4h18l-7 8.5V20l-4-2v-5.5z"/>',
+    "expand": '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
     "send": '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
     "reset": '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
 }
@@ -2314,7 +2316,7 @@ ALL_VARS = ["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BIL
 def eda_filter_card():
     """Filtros globales del EDA: actualizan todos los gráficos de la página (y se conservan entre páginas)."""
     k = tx("mil", "k")
-    return card(tx("Filtros globales", "Global filters"), [
+    controles = [
         html.Div([
             control(tx("Sexo", "Sex"), dcc.Checklist(
                 id="ef-sex", value=[1, 2], inline=True, className="radio",
@@ -2335,13 +2337,23 @@ def eda_filter_card():
                 marks={10000: f"10 {k}", 250000: f"250 {k}", 500000: f"500 {k}", 750000: f"750 {k}", 1000000: "1 M"},
                 tooltip={"placement": "bottom"}, **KEEP)),
         ], className="grid g2"),
-        html.Div([html.Span(id="ef-info"), html.Button(tx("Quitar filtros", "Clear filters"), id="ef-reset", className="btn")],
+        html.Div([html.Button(tx("Quitar filtros", "Clear filters"), id="ef-reset", className="btn")],
                  className="ef-bar"),
         html.P(tx("Los filtros actualizan todos los gráficos de esta página y de la otra página del EDA. Las tarjetas de "
                   "cifras y los textos fijos describen siempre a todos los clientes.",
                   "The filters update every chart on this page and on the other EDA page. The figure cards and the fixed "
                   "texts always describe all clients."), className="muted"),
-    ])
+    ]
+    # Tarjeta plegable: arranca cerrada con una sola fila (icono, título, resumen y botón). Los controles
+    # siguen en el DOM (los oculta <details>), porque cb_eda_filter los usa como entrada. El estado
+    # abierto/cerrado se conserva entre páginas del EDA con assets/ef_fold.js.
+    return html.Div([html.Details([
+        html.Summary([icon("filter", "ef-ico"), html.H3(tx("Filtros globales", "Global filters"), className="card-title"),
+                      html.Span(id="ef-info", className="ef-info"),
+                      html.Span(icon("chevron", "ef-chev"), className="ef-toggle", **{"aria-hidden": "true"})],
+                     className="ef-summary"),
+        html.Div(controles, className="ef-body"),
+    ], id="ef-fold", className="ef-fold")], className="card ef-card")
 
 
 def page_uni():
@@ -5329,8 +5341,19 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-hint { font-size:12.5px; color:var(--muted); } .pf-note { margin:6px 0 12px; } .pf-row { margin-bottom:14px; }
 .pf-slider { padding-top:34px; }
 .pf-thr-info { margin-top:10px; }
+.ef-card { padding:0; }
+.ef-summary { display:flex; align-items:center; gap:12px; padding:14px 22px; cursor:pointer; list-style:none; }
+.ef-summary::-webkit-details-marker { display:none; }
+.ef-summary .ef-ico { width:20px; height:20px; color:var(--accent-2); }
+.ef-summary .card-title { margin:0; flex:none; }
+.ef-summary .ef-info { flex:1; min-width:0; font-weight:600; color:var(--text); font-size:14px; }
+.ef-toggle { flex:none; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+  border:1px solid var(--line-strong); border-radius:8px; color:var(--text); }
+.ef-summary:hover .ef-toggle { border-color:var(--accent-2); color:var(--accent-2); }
+.ef-toggle .ico { transition:transform .2s; transform:rotate(90deg); }
+.ef-fold[open] .ef-toggle .ico { transform:rotate(-90deg); }
+.ef-body { padding:0 22px 16px; border-top:1px solid var(--line); }
 .ef-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 0 4px; flex-wrap:wrap; }
-.ef-bar #ef-info { font-weight:600; color:var(--text); }
 .pf-thr-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:8px; }
 .pf-thr-k { border:1px solid var(--line); border-radius:12px; padding:8px 12px; display:flex; flex-direction:column; }
 .pf-thr-k b { font-size:22px; color:var(--accent-2, #B88F3D); line-height:1.2; }
