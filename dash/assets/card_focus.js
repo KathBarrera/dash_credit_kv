@@ -133,7 +133,7 @@
     if (zoomed) return;             // ya ampliada: sus controles funcionan con normalidad
     if (e.defaultPrevented) return;
     var card = t.closest(CARD);
-    if (!card || t.closest(INTERACTIVE)) return;
+    if (!card || card.classList.contains('ef-card') || t.closest(INTERACTIVE)) return;
     var sel = window.getSelection && window.getSelection();
     if (sel && String(sel).length > 0) return;   // el usuario estaba seleccionando texto
     open(card, btnOf(card));

@@ -2322,6 +2322,11 @@ ALL_VARS = ["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BIL
 # =============================================================================
 # 6. PÁGINAS
 # =============================================================================
+def ef_opt(t):
+    """Opción de los filtros del EDA: icono (el mismo de «Predecir») y texto."""
+    return html.Span([icon(t[2], "ef-opt-ico"), L(t[1])], className="ef-opt")
+
+
 def eda_filter_card():
     """Filtros globales del EDA: actualizan todos los gráficos de la página (y se conservan entre páginas)."""
     k = tx("mil", "k")
@@ -2329,13 +2334,13 @@ def eda_filter_card():
         html.Div([
             control(tx("Sexo", "Sex"), dcc.Checklist(
                 id="ef-sex", value=[1, 2], inline=True, className="radio",
-                options=[{"label": L(t[1]), "value": t[0]} for t in SEX_TILES if t[0] in (1, 2)], **KEEP)),
+                options=[{"label": ef_opt(t), "value": t[0]} for t in SEX_TILES if t[0] in (1, 2)], **KEEP)),
             control(tx("Educación", "Education"), dcc.Checklist(
                 id="ef-edu", value=[1, 2, 3, 4], inline=True, className="radio",
-                options=[{"label": L(t[1]), "value": t[0]} for t in EDU_TILES], **KEEP)),
+                options=[{"label": ef_opt(t), "value": t[0]} for t in EDU_TILES], **KEEP)),
             control(tx("Estado civil", "Marital status"), dcc.Checklist(
                 id="ef-mar", value=[1, 2, 3], inline=True, className="radio",
-                options=[{"label": L(t[1]), "value": t[0]} for t in MAR_TILES], **KEEP)),
+                options=[{"label": ef_opt(t), "value": t[0]} for t in MAR_TILES], **KEEP)),
         ], className="controls"),
         html.Div([
             control(tx("Edad (años)", "Age (years)"), dcc.RangeSlider(
@@ -2356,7 +2361,7 @@ def eda_filter_card():
     # Tarjeta plegable: arranca cerrada con una sola fila (icono, título, resumen y botón). Los controles
     # siguen en el DOM (los oculta <details>), porque cb_eda_filter los usa como entrada. El estado
     # abierto/cerrado se conserva entre páginas del EDA con assets/ef_fold.js.
-    return html.Div([zoom_btn(), html.Details([
+    return html.Div([html.Details([
         html.Summary([icon("filter", "ef-ico"), html.H3(tx("Filtros globales", "Global filters"), className="card-title"),
                       html.Span(id="ef-info", className="ef-info"),
                       html.Span(icon("chevron", "ef-chev"), className="ef-toggle", **{"aria-hidden": "true"})],
@@ -5363,8 +5368,10 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .kpi > .card-zoom { top:6px; right:6px; width:24px; height:24px; border-radius:6px; }
 .kpi > .card-zoom .ico { width:13px; height:13px; }
 .kpi > .kpi-head { padding-right:26px; }
-.ef-card > .card-zoom { top:16px; right:14px; }
-.ef-summary { padding-right:58px; }
+.ef-summary { padding-right:22px; }
+.ef-card .controls { align-items:flex-start; }
+.ef-opt { display:inline-flex; align-items:center; gap:6px; }
+.ef-opt-ico { width:17px; height:17px; color:var(--accent-2); }
 
 .focus-overlay { position:fixed; inset:0; z-index:10005; background:rgba(8,12,24,.72); opacity:0; visibility:hidden;
   transition:opacity .18s ease, visibility 0s linear .18s; }
@@ -5374,7 +5381,6 @@ html.focus-open, html.focus-open body { overflow:hidden; }
   top:calc(5vh / var(--fz)) !important; left:calc(5vw / var(--fz)) !important;
   width:calc(90vw / var(--fz)) !important; height:calc(90vh / var(--fz)) !important; max-width:none !important; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; padding-top:20px;
   box-shadow:0 24px 80px rgba(0,0,0,.55); border-color:var(--line-strong); outline:none; }
-.card-zoomed.ef-card { padding-top:0; }
 .kpi.card-zoomed { --fz:2.6; display:flex; flex-direction:column; justify-content:center; padding:24px 40px;
   border-left-width:6px; border-left-color:var(--accent-2); }
 .card-zoomed > .card-zoom { position:fixed; top:calc((5vh + 12px) / var(--fz)); right:calc((5vw + 12px) / var(--fz));
