@@ -2303,8 +2303,14 @@ def interp_block(basic, tech):
     ], className="interp-wrap")
 
 
-def control(label, comp):
-    return html.Div([html.Label(label, className="ctl-label"), comp], className="control")
+def control(label, comp, ico=None):
+    lbl = html.Label([icon(ico), label] if ico else label, className="ctl-label" + (" ctl-label-ico" if ico else ""))
+    return html.Div([lbl, comp], className="control")
+
+
+def ico_opts(tiles):
+    """Opciones de un Checklist con el ícono de cada categoría delante del texto."""
+    return [{"label": html.Span([icon(ic), L(txt)], className="opt-ico"), "value": v} for v, txt, ic in tiles]
 
 
 def page_title(title, sub):
@@ -2327,21 +2333,21 @@ def eda_filter_card():
     k = tx("mil", "k")
     controles = [
         html.Div([
-            control(tx("Sexo", "Sex"), dcc.Checklist(
+            control(tx("Sexo", "Sex"), ico="gender", comp=dcc.Checklist(
                 id="ef-sex", value=[1, 2], inline=True, className="radio",
-                options=[{"label": L(t[1]), "value": t[0]} for t in SEX_TILES if t[0] in (1, 2)], **KEEP)),
-            control(tx("Educación", "Education"), dcc.Checklist(
+                options=ico_opts([t for t in SEX_TILES if t[0] in (1, 2)]), **KEEP)),
+            control(tx("Educación", "Education"), ico="cap", comp=dcc.Checklist(
                 id="ef-edu", value=[1, 2, 3, 4], inline=True, className="radio",
-                options=[{"label": L(t[1]), "value": t[0]} for t in EDU_TILES], **KEEP)),
-            control(tx("Estado civil", "Marital status"), dcc.Checklist(
+                options=ico_opts(EDU_TILES), **KEEP)),
+            control(tx("Estado civil", "Marital status"), ico="rings", comp=dcc.Checklist(
                 id="ef-mar", value=[1, 2, 3], inline=True, className="radio",
-                options=[{"label": L(t[1]), "value": t[0]} for t in MAR_TILES], **KEEP)),
+                options=ico_opts(MAR_TILES), **KEEP)),
         ], className="controls"),
         html.Div([
-            control(tx("Edad (años)", "Age (years)"), dcc.RangeSlider(
+            control(tx("Edad (años)", "Age (years)"), ico="calendar", comp=dcc.RangeSlider(
                 id="ef-age", min=21, max=79, step=1, value=[21, 79], allowCross=False,
                 marks={i: str(i) for i in range(21, 80, 10)}, tooltip={"placement": "bottom"}, **KEEP)),
-            control(tx("Cupo de crédito (NT$)", "Credit limit (NT$)"), dcc.RangeSlider(
+            control(tx("Cupo de crédito (NT$)", "Credit limit (NT$)"), ico="card", comp=dcc.RangeSlider(
                 id="ef-lim", min=10000, max=1000000, step=10000, value=[10000, 1000000], allowCross=False,
                 marks={10000: f"10 {k}", 250000: f"250 {k}", 500000: f"500 {k}", 750000: f"750 {k}", 1000000: "1 M"},
                 tooltip={"placement": "bottom"}, **KEEP)),
@@ -2356,13 +2362,14 @@ def eda_filter_card():
     # Tarjeta plegable: arranca cerrada con una sola fila (icono, título, resumen y botón). Los controles
     # siguen en el DOM (los oculta <details>), porque cb_eda_filter los usa como entrada. El estado
     # abierto/cerrado se conserva entre páginas del EDA con assets/ef_fold.js.
-    return html.Div([zoom_btn(), html.Details([
+    # Sin botón de ampliar ni modo foco (clase no-zoom): es una barra de controles, no una tarjeta de contenido.
+    return html.Div([html.Details([
         html.Summary([icon("filter", "ef-ico"), html.H3(tx("Filtros globales", "Global filters"), className="card-title"),
                       html.Span(id="ef-info", className="ef-info"),
                       html.Span(icon("chevron", "ef-chev"), className="ef-toggle", **{"aria-hidden": "true"})],
                      className="ef-summary"),
         html.Div(controles, className="ef-body"),
-    ], id="ef-fold", className="ef-fold")], className="card ef-card")
+    ], id="ef-fold", className="ef-fold")], className="card ef-card no-zoom")
 
 
 def page_uni():
@@ -4279,12 +4286,19 @@ def page_predict():
                        labelClassName="pf-tile", options=[{"label": L(MODEL_LABELS[k]), "value": k} for k in MODELOS],
                        **KEEP),
         html.Div(id="pf-model-info", className="muted"),
-        html.H4([icon("target"), tx("Umbral de decisión", "Decision threshold")], className="pf-h"),
-        dcc.Slider(id="pf-thr", min=0.05, max=0.95, step=0.01, value=_rec_thr("rf"),
-                   marks={v: f"{v:.0%}" for v in (0.05, 0.25, 0.5, 0.75, 0.95)},
-                   tooltip={"placement": "top", "always_visible": True, "transform": "pctFormat"},
-                   className="pf-slider", **KEEP),
-        html.Div(id="pf-thr-info", className="pf-thr-info"),
+        # Plegable: arranca cerrado y el resumen muestra el umbral elegido. El deslizador y las cifras siguen en el
+        # DOM aunque esté cerrado (los oculta <details>), porque los callbacks de Predecir los usan.
+        html.Details([
+            html.Summary([icon("target"), html.Span(tx("Umbral de decisión", "Decision threshold"), className="thr-tt"),
+                          html.Span(id="pf-thr-sum", className="thr-sum"),
+                          html.Span(icon("chevron", "thr-chev"), className="ef-toggle", **{"aria-hidden": "true"})],
+                         className="pf-h thr-summary"),
+            dcc.Slider(id="pf-thr", min=0.05, max=0.95, step=0.01, value=_rec_thr("rf"),
+                       marks={v: f"{v:.0%}" for v in (0.05, 0.25, 0.5, 0.75, 0.95)},
+                       tooltip={"placement": "top", "always_visible": True, "transform": "pctFormat"},
+                       className="pf-slider", **KEEP),
+            html.Div(id="pf-thr-info", className="pf-thr-info"),
+        ], id="pf-thr-fold", className="thr-fold"),
     ])
     return html.Div([
         head,
@@ -5400,6 +5414,20 @@ html.focus-open, html.focus-open body { overflow:hidden; }
 .ef-toggle .ico { transition:transform .2s; transform:rotate(90deg); }
 .ef-fold[open] .ef-toggle .ico { transform:rotate(-90deg); }
 .ef-body { padding:0 22px 16px; border-top:1px solid var(--line); }
+/* íconos de los filtros globales */
+.ctl-label-ico { display:flex; align-items:center; gap:6px; }
+.ctl-label-ico .ico { width:15px; height:15px; color:var(--accent-2); }
+.opt-ico { display:inline-flex; align-items:center; gap:5px; }
+.opt-ico .ico { width:15px; height:15px; color:var(--muted); }
+/* umbral plegable en Predecir */
+.thr-summary { cursor:pointer; list-style:none; }
+.thr-summary::-webkit-details-marker { display:none; }
+.thr-summary .thr-sum { font-size:14px; color:var(--accent-2); letter-spacing:0; text-transform:none; }
+.thr-summary .ef-toggle { order:3; width:28px; height:28px; }
+.thr-summary::after { order:2; }
+.thr-summary:hover .ef-toggle { border-color:var(--accent-2); color:var(--accent-2); }
+.thr-fold .thr-chev { transition:transform .2s; transform:rotate(90deg); }
+.thr-fold[open] .thr-chev { transform:rotate(-90deg); }
 .ef-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 0 4px; flex-wrap:wrap; }
 .pf-thr-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:8px; }
 .pf-thr-k { border:1px solid var(--line); border-radius:12px; padding:8px 12px; display:flex; flex-direction:column; }
@@ -6066,6 +6094,12 @@ def toggle_theme(n, n2, t):
     return "light" if t == "dark" else "dark"
 
 
+# Resumen del umbral en la cabecera plegable de Predecir («52 %»), sin ir al servidor
+app.clientside_callback(
+    "function(v){ if (v === null || v === undefined) { return ''; } return Math.round(v * 100) + ' %'; }",
+    Output("pf-thr-sum", "children"), Input("pf-thr", "value"))
+
+
 app.clientside_callback(
     """function(t, l) { t = t || 'light'; document.documentElement.setAttribute('data-theme', t);
          var en = l === 'en';
@@ -6295,10 +6329,10 @@ def model_info(key):
         return ""
     return tx(f"{m.get('modelo', '')}: en {pr['n']:,} clientes de prueba (20 %, nunca vistos al entrenar) logra F1 "
               f"{pr['f1']:.3f}, recall {pr['recall']:.3f}, precisión {pr['precision']:.3f} y AUC-ROC {pr['roc_auc']:.3f}. "
-              "Los tres modelos usan la misma partición, las mismas variables y pesos de clase.",
+              "Los dos modelos usan la misma partición, las mismas variables y pesos de clase.",
               f"{m.get('modelo', '')}: on {pr['n']:,} test clients (20%, never seen in training) it reaches F1 "
               f"{pr['f1']:.3f}, recall {pr['recall']:.3f}, precision {pr['precision']:.3f} and ROC-AUC {pr['roc_auc']:.3f}. "
-              "The three models use the same split, the same variables and class weights.")
+              "Both models use the same split, the same variables and class weights.")
 
 
 @app.callback(Output("pf-verdict", "children"), Output("pf-trees", "children"),

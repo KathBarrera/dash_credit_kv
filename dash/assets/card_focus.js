@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   var ZOOMED = 'card-zoomed';
-  var CARD = '.card, .kpi';
+  var CARD = '.card:not(.no-zoom), .kpi:not(.no-zoom)';   // .no-zoom: tarjetas que no se amplían (filtros globales)
   // Elementos sobre los que un clic NO debe ampliar la tarjeta (el botón de ampliar es el camino seguro).
   var INTERACTIVE = [
     'a', 'button', 'input', 'select', 'textarea', 'label', 'summary', 'option',
