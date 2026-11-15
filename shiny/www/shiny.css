@@ -90,3 +90,15 @@
 [data-theme="dark"] .cs-code .hljs-comment { color: #9AA3BA; }
 [data-theme="dark"] .cs-code .hljs-number { color: #F2B37A; }
 [data-theme="dark"] .cs-code .hljs-literal, [data-theme="dark"] .cs-code .hljs-params { color: #D2BB89; }
+
+/* ---------- Tabla de líderes (Modelos): orden y filtro con www/leaderboard.js ---------- */
+.lb-search { width:100%; max-width:360px; margin:0 0 10px; padding:8px 12px; border:1px solid var(--line-strong);
+  border-radius:10px; background:var(--surface); color:var(--text); font:inherit; font-size:14px; }
+.lb-wrap { max-height:440px; overflow-y:auto; }
+.lb-table th.lb-sort { cursor:pointer; user-select:none; position:sticky; top:0; z-index:1; background:var(--surface-2, var(--surface)); white-space:nowrap; }
+.lb-table th.lb-sort::after { content:' ↕'; color:var(--muted); font-weight:400; }
+.lb-table th[aria-sort="ascending"]::after { content:' ↑'; color:var(--accent-2); }
+.lb-table th[aria-sort="descending"]::after { content:' ↓'; color:var(--accent-2); }
+.lb-table tr.lb-best td { font-weight:700; }
+.lb-table tr.lb-cs td { color:var(--accent-2); }
+.lb-count { margin:6px 0 0; }

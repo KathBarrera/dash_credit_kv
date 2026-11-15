@@ -177,8 +177,8 @@ csfof_theory <- function() {
             tx(sprintf("incumple; cada moroso pesa %.1f veces más", T_$c), sprintf("default; each defaulter weighs %.1f× more", T_$c)), "alert"),
         kpi(tx("Cortes oblicuos usados", "Oblique cuts used"), "71 %",
             tx("de los nodos del modelo final; quitarlos baja el F1", "of the final model's nodes; removing them lowers F1"), "target")),
-      div(class = "callout", tx("Lo que la teoría no garantiza: la Proposición 1 asegura que cada corte es al menos tan bueno como el mejor corte recto en los datos de entrenamiento, no que el bosque completo prediga mejor en clientes nuevos que métodos como CatBoost o XGBoost. Eso solo lo dicen las pruebas estadísticas (pestaña 4).",
-                                "What the theory does not guarantee: Proposition 1 ensures each cut is at least as good as the best straight cut on the training data, not that the whole forest predicts new clients better than methods like CatBoost or XGBoost. Only the statistical tests can say that (tab 4)."))))
+      div(class = "callout", tx("Lo que la teoría no garantiza: la Proposición 1 asegura que cada corte es al menos tan bueno como el mejor corte recto en los datos de entrenamiento, no que el bosque completo prediga mejor en clientes nuevos que métodos como XGBoost. Eso solo lo dicen las pruebas estadísticas (pestaña 4).",
+                                "What the theory does not guarantee: Proposition 1 ensures each cut is at least as good as the best straight cut on the training data, not that the whole forest predicts new clients better than methods like XGBoost. Only the statistical tests can say that (tab 4)."))))
 }
 
 # ---------- Metodología (estructura de la «Guía de redacción metodológica» del curso) ----------
@@ -187,7 +187,7 @@ METH_FLOW <- list(
   list(c("Datos", "Data"), c("UCI Taiwán: 29 965 clientes, 20 variables, 22.1 % de incumplimiento. Preprocesamiento dentro de cada pliegue.", "UCI Taiwan: 29,965 clients, 20 variables, 22.1% default. Preprocessing inside each fold.")),
   list(c("Modelo propuesto", "Proposed model"), c("Bosque con cortes oblicuos de Fisher ponderados por costo (ecuaciones 1 a 5).", "Forest with cost-weighted Fisher oblique cuts (equations 1 to 5).")),
   list(c("Entrenamiento", "Training"), c("4 búsquedas de hiperparámetros (malla, aleatoria, Optuna, genético); semilla 42.", "4 hyperparameter searches (grid, random, Optuna, genetic); seed 42.")),
-  list(c("Baselines", "Baselines"), c("9 modelos: 7 clásicos + LightGBM y CatBoost, con el mismo presupuesto de búsqueda.", "9 models: 7 classic + LightGBM and CatBoost, with the same search budget.")),
+  list(c("Baselines", "Baselines"), c("Los 7 modelos de referencia exigidos, con el mismo presupuesto de búsqueda.", "The 7 required baseline models, with the same search budget.")),
   list(c("Evaluación", "Evaluation"), c("Validación anidada 5 × 5; F1, AUC-ROC, AUC-PR, MCC; Friedman, Nadeau-Bengio, Wilcoxon, DeLong.", "Nested 5 × 5 validation; F1, ROC-AUC, PR-AUC, MCC; Friedman, Nadeau-Bengio, Wilcoxon, DeLong.")),
   list(c("Ablación", "Ablation"), c("Mismo bosque sin corte oblicuo y variantes del corte, con todo lo demás fijo.", "Same forest without the oblique cut and variants of the cut, all else fixed.")),
   list(c("Reproducibilidad", "Reproducibility"), c("Código en GitHub (MIT), 14 pruebas en GitHub Actions, datos de UCI.", "Code on GitHub (MIT), 14 tests on GitHub Actions, UCI data.")))
@@ -216,7 +216,7 @@ CHECKLIST <- list(
   list("ok", c("La tarea, la pérdida y la notación están definidas formalmente.", "Task, loss and notation are formally defined.")),
   list("ok", c("Particiones antes de cualquier ajuste; imputación, escalado y SMOTE dentro de cada pliegue (sin fuga).", "Splits before any fitting; imputation, scaling and SMOTE inside each fold (no leakage).")),
   list("ok", c("El modelo tiene diagrama, ecuaciones, pseudocódigo y complejidad.", "The model has a diagram, equations, pseudocode and complexity.")),
-  list("ok", c("Baselines recientes (LightGBM, CatBoost) con el mismo presupuesto de búsqueda.", "Recent baselines (LightGBM, CatBoost) with the same search budget.")),
+  list("ok", c("Modelos de referencia con el mismo presupuesto de búsqueda.", "Baseline models with the same search budget.")),
   list("ok", c("Media y desviación estándar sobre 5 pliegues externos.", "Mean and standard deviation over 5 outer folds.")),
   list("ok", c("Pruebas estadísticas: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon con Holm, DeLong y McNemar.", "Statistical tests: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon with Holm, DeLong and McNemar.")),
   list("mid", c("Ablación por componente: hecha solo en el pliegue 1 y sin la variante «sin costo».", "Ablation per component: done only on fold 1 and without the “no cost” variant.")),
@@ -374,38 +374,54 @@ csfof_code <- function() {
 }
 
 # ---------- Resultados ----------
+# Pruebas de CS-FOF frente a la mejor combinación de cada modelo de referencia (5 folds externos; Holm sobre 7
+# comparaciones; experiments/paper/pruebas_cs_fof.csv y comparacion_final/ del proyecto)
 CSFOF_TESTS <- list(  # rival, diferencia F1, folds ganados, p Nadeau-Bengio (Holm), δ de Cliff, p DeLong, McNemar
-  list("catboost", -0.0001, 2, 1.000, -0.04, "0.273", "429 / 936"),
-  list("xgboost", 0.0014, 4, 1.000, 0.36, "0.561", "434 / 827"),
-  list("lightgbm", 0.0018, 3, 1.000, 0.12, "—", "345 / 782"),
-  list("random_forest", 0.0027, 4, 1.000, 0.36, "0.171", "313 / 615"),
-  list("svm", 0.0092, 5, 0.014, 0.76, "—", "—"),
-  list("knn", 0.0216, 5, 0.056, 0.92, "—", "—"),
+  list("xgboost", 0.0014, 4, 0.627, 0.36, "0.561", "434 / 827"),
+  list("random_forest", 0.0027, 4, 0.619, 0.36, "0.171", "313 / 615"),
+  list("svm", 0.0092, 5, 0.010, 0.76, "—", "—"),
+  list("knn", 0.0216, 5, 0.034, 0.92, "—", "—"),
   list("decision_tree", 0.0225, 5, 0.003, 1.00, "—", "—"),
-  list("logistic_regression", 0.0297, 5, 0.014, 1.00, "—", "—"),
-  list("naive_bayes", 0.0493, 5, 0.0003, 1.00, "—", "—"))
-CROSS_DATA <- list(   # F1 en Taiwán y en los tres conjuntos adicionales; rango medio
-  list("catboost", 0.548, 0.605, 0.878, 0.733, 1.25), list("xgboost", 0.547, 0.599, 0.880, 0.682, 2.75),
-  list("cs_fof", 0.548, 0.589, 0.874, 0.430, 4.75), list("random_forest", 0.545, 0.600, 0.874, 0.446, 4.75),
-  list("lightgbm", 0.546, 0.575, 0.874, 0.658, 4.75))
-# CS-FOF frente a Random Forest: pliegues (validación anidada) y robustez (exploratoria)
-CS_VS_RF <- list(
-  folds = list(x = c("1", "2", "3", "4", "5"), cs = c(0.5484, 0.5447, 0.5441, 0.5572, 0.5453),
-               rf = c(0.5510, 0.5404, 0.5375, 0.5556, 0.5417), cs_sd = NULL, rf_sd = NULL),
-  size = list(x = c("10 %", "25 %", "50 %", "100 %"), cs = c(0.5356, 0.5429, 0.5473, 0.5483), rf = c(0.5375, 0.5415, 0.5405, 0.5434),
-              cs_sd = c(0.0073, 0.0065, 0.0073, 0.0078), rf_sd = c(0.0091, 0.0084, 0.0093, 0.0076)),
-  noise = list(x = c("0 %", "5 %", "10 %", "20 %"), cs = c(0.5483, 0.5455, 0.5455, 0.5336), rf = c(0.5434, 0.5423, 0.5414, 0.5303),
-               cs_sd = c(0.0078, 0.0081, 0.0085, 0.0147), rf_sd = c(0.0076, 0.0085, 0.0109, 0.0148)))
+  list("logistic_regression", 0.0297, 5, 0.010, 1.00, "—", "—"),
+  list("naive_bayes", 0.0493, 5, 0.0002, 1.00, "—", "—"))
+CROSS_DATA <- list(   # F1 en Taiwán y en los tres conjuntos adicionales; rango medio entre los 8 modelos
+  list("xgboost", 0.547, 0.599, 0.880, 0.682, 2.00), list("random_forest", 0.545, 0.600, 0.874, 0.446, 3.00),
+  list("cs_fof", 0.548, 0.589, 0.874, 0.430, 3.25))
+# CS-FOF frente al rival que se elija: pliegues (validación anidada) y robustez (exploratoria)
+CS_RIVALS <- c("random_forest", "xgboost")
+CS_VS <- list(
+  folds = list(x = c("1", "2", "3", "4", "5"), sd = FALSE,
+               v = list(cs_fof = c(0.5484, 0.5447, 0.5441, 0.5572, 0.5453), random_forest = c(0.5510, 0.5404, 0.5375, 0.5556, 0.5417),
+                        xgboost = c(0.5478, 0.5428, 0.5403, 0.5619, 0.5399))),
+  size = list(x = c("10 %", "25 %", "50 %", "100 %"), sd = TRUE,
+              v = list(cs_fof = c(0.5356, 0.5429, 0.5473, 0.5483), random_forest = c(0.5375, 0.5415, 0.5405, 0.5434),
+                       xgboost = c(0.5244, 0.5370, 0.5392, 0.5448)),
+              s = list(cs_fof = c(0.0073, 0.0065, 0.0073, 0.0078), random_forest = c(0.0091, 0.0084, 0.0093, 0.0076),
+                       xgboost = c(0.0088, 0.0089, 0.0076, 0.0087))),
+  noise = list(x = c("0 %", "5 %", "10 %", "20 %"), sd = TRUE,
+               v = list(cs_fof = c(0.5483, 0.5455, 0.5455, 0.5336), random_forest = c(0.5434, 0.5423, 0.5414, 0.5303),
+                        xgboost = c(0.5448, 0.5430, 0.5401, 0.5252)),
+               s = list(cs_fof = c(0.0078, 0.0081, 0.0085, 0.0147), random_forest = c(0.0076, 0.0085, 0.0109, 0.0148),
+                        xgboost = c(0.0087, 0.0065, 0.0090, 0.0111))))
 CSRF_X <- list(folds = c("Pliegue externo", "Outer fold"), size = c("Datos de entrenamiento usados", "Training data used"),
                noise = c("Etiquetas de entrenamiento invertidas", "Training labels flipped"))
+RIVAL_DESC <- list(
+  random_forest = c("Random Forest es el modelo básico más parecido: CS-FOF es un Random Forest al que se le agregó el corte oblicuo con costo, así que esta comparación aísla lo que aporta la idea nueva.",
+                    "Random Forest is the most similar basic model: CS-FOF is a Random Forest with the cost-sensitive oblique cut added, so this comparison isolates what the new idea contributes."),
+  xgboost = c("XGBoost es la mejor de las 112 combinaciones del diseño factorial del Entregable 2: es el rival más exigente.",
+              "XGBoost is the best of the 112 combinations of the Deliverable 2 factorial design: it is the toughest rival."))
+.rival <- function(r) if (!is.null(r) && r %in% CS_RIVALS) r else "random_forest"
 
 # Líneas que se dibujan punto por punto (botón Reproducir y deslizador) con la diferencia en cada paso
-fig_cs_vs_rf <- function(scn) {
-  D <- CS_VS_RF[[scn]]; n <- length(D$x); xs <- D$x
-  allv <- c(D$cs, D$rf); pad <- if (is.null(D$cs_sd)) 0.006 else 0.012
-  arriba <- D$cs >= D$rf
-  series <- list(list("CS-FOF", D$cs, D$cs_sd, WARM_GOLD, "diamond", ifelse(arriba, "top center", "bottom center")),
-                 list("Random Forest", D$rf, D$rf_sd, DEEP_NAVY, "circle", ifelse(arriba, "bottom center", "top center")))
+fig_cs_vs_rf <- function(scn, rival = "random_forest") {
+  rival <- .rival(rival)
+  D <- CS_VS[[scn]]; n <- length(D$x); xs <- D$x
+  cs <- D$v$cs_fof; rv <- D$v[[rival]]; rname <- minfo(rival, "label")
+  cs_sd <- if (D$sd) D$s$cs_fof else NULL; rv_sd <- if (D$sd) D$s[[rival]] else NULL
+  allv <- c(cs, rv); pad <- if (D$sd) 0.012 else 0.006
+  arriba <- cs >= rv
+  series <- list(list("CS-FOF", cs, cs_sd, WARM_GOLD, "diamond", ifelse(arriba, "top center", "bottom center")),
+                 list(rname, rv, rv_sd, DEEP_NAVY, "circle", ifelse(arriba, "bottom center", "top center")))
   trazas <- function(k) lapply(series, function(s) {
     tr <- list(type = "scatter", x = xs[seq_len(k)], y = s[[2]][seq_len(k)], mode = "lines+markers+text", name = s[[1]],
                text = sprintf("%.3f", s[[2]][seq_len(k)]), textposition = s[[6]][seq_len(k)],
@@ -416,15 +432,19 @@ fig_cs_vs_rf <- function(scn) {
     tr
   })
   nota_k <- function(k) {
-    d <- D$cs[k] - D$rf[k]; quien <- if (d > 0) "CS-FOF" else "Random Forest"
+    d <- cs[k] - rv[k]
+    txt <- if (abs(d) < 5e-5) tx(sprintf("<b>%s</b>: empate", xs[k]), sprintf("<b>%s</b>: tie", xs[k])) else {
+      quien <- if (d > 0) "CS-FOF" else rname
+      tx(sprintf("<b>%s</b>: gana %s por %.4f", xs[k], quien, abs(d)), sprintf("<b>%s</b>: %s wins by %.4f", xs[k], quien, abs(d)))
+    }
     list(list(xref = "paper", yref = "paper", x = 0, y = 1.22, showarrow = FALSE, xanchor = "left", yanchor = "bottom",
-              font = list(size = 13, color = if (d > 0) WARM_GOLD else DEEP_NAVY),
-              text = tx(sprintf("<b>%s</b>: gana %s por %.4f", xs[k], quien, abs(d)), sprintf("<b>%s</b>: %s wins by %.4f", xs[k], quien, abs(d)))))
+              font = list(size = 13, color = if (d > 0) WARM_GOLD else DEEP_NAVY), text = txt))
   }
+  tag <- paste0(scn, "-", rival)
   p <- plotly_build(style_fig(plot_ly(type = "scatter", mode = "markers"), 400, margin = list(l = 60, r = 20, t = 100, b = 120)))
   p$x$data <- trazas(n)
-  # nombres únicos por escenario: así una animación en curso no se mezcla con el escenario nuevo
-  p$x$frames <- lapply(seq_len(n), function(k) list(name = paste0(scn, "-", k), data = trazas(k), layout = list(annotations = nota_k(k))))
+  # nombres únicos por escenario y rival: así una animación en curso no se mezcla con la nueva
+  p$x$frames <- lapply(seq_len(n), function(k) list(name = paste0(tag, "-", k), data = trazas(k), layout = list(annotations = nota_k(k))))
   p$x$layout$annotations <- nota_k(n)
   p$x$config$displayModeBar <- FALSE
   p$x$layout$xaxis <- modifyList(p$x$layout$xaxis %||% list(), list(title = L(CSRF_X[[scn]]), type = "category",
@@ -440,31 +460,44 @@ fig_cs_vs_rf <- function(scn) {
   p$x$layout$sliders <- list(list(active = n - 1, x = 0.2, len = 0.8, y = -0.27, yanchor = "top", pad = list(t = 0),
     currentvalue = list(visible = FALSE), font = list(color = GREY_BLUE),
     steps = lapply(seq_len(n), function(k) list(label = xs[k], method = "animate",
-      args = list(list(paste0(scn, "-", k)), list(mode = "immediate", frame = list(duration = 0, redraw = TRUE), transition = list(duration = 300)))))))
+      args = list(list(paste0(tag, "-", k)), list(mode = "immediate", frame = list(duration = 0, redraw = TRUE), transition = list(duration = 300)))))))
   p
 }
 
-cs_vs_rf_interp <- function(scn) {
-  D <- CS_VS_RF[[scn]]; gana <- sum(D$cs > D$rf)
+cs_vs_rf_interp <- function(scn, rival = "random_forest") {
+  rival <- .rival(rival)
+  D <- CS_VS[[scn]]; cs <- D$v$cs_fof; rv <- D$v[[rival]]; rname <- minfo(rival, "label"); xs <- D$x
+  gana <- sum(cs > rv); dif <- mean(cs - rv)
+  lead <- paste0(L(RIVAL_DESC[[rival]]), " ")
   if (scn == "folds") {
-    interp_block(tx(sprintf("CS-FOF le gana a Random Forest en %d de 5 pliegues, pero por poco: 0.003 de F1 en promedio, menos que lo que cambia el F1 de un pliegue a otro.", gana),
-                    sprintf("CS-FOF beats Random Forest in %d of 5 folds, but narrowly: 0.003 of F1 on average, less than F1 changes from one fold to another.", gana)),
-                 tx("Validación anidada 5 × 5, mejor combinación de cada uno (pesos de clase + búsqueda aleatoria). Nadeau-Bengio con Holm p = 1.000; δ de Cliff = 0.36 (efecto mediano); DeLong p = 0.171; McNemar p < 0.001 (313 errores exclusivos de CS-FOF frente a 615).",
-                    "Nested 5 × 5 validation, best combination of each (class weights + random search). Nadeau-Bengio with Holm p = 1.000; Cliff's δ = 0.36 (medium effect); DeLong p = 0.171; McNemar p < 0.001 (313 exclusive CS-FOF errors vs 615)."))
+    basic <- if (dif >= 0)
+      tx(sprintf("CS-FOF le gana a %s en %d de 5 pliegues, con %.4f de F1 más en promedio: menos que lo que cambia el F1 de un pliegue a otro.", rname, gana, dif),
+         sprintf("CS-FOF beats %s in %d of 5 folds, with %.4f more F1 on average: less than F1 changes from one fold to another.", rname, gana, dif)) else
+      tx(sprintf("CS-FOF le gana a %s solo en %d de 5 pliegues y queda %.4f de F1 por debajo en promedio: en la práctica, un empate.", rname, gana, abs(dif)),
+         sprintf("CS-FOF beats %s in only %d of 5 folds and is %.4f of F1 below on average: in practice, a tie.", rname, gana, abs(dif)))
+    t <- Filter(function(r) r[[1]] == rival, CSFOF_TESTS)[[1]]
+    tech <- tx(sprintf("Validación anidada 5 × 5, mejor combinación de cada uno. Nadeau-Bengio con Holm p = %.3f; δ de Cliff = %+.2f; DeLong p = %s; McNemar (errores exclusivos CS-FOF / %s): %s. Ninguna prueba de superioridad es significativa.", t[[4]], t[[5]], t[[6]], rname, t[[7]]),
+               sprintf("Nested 5 × 5 validation, best combination of each. Nadeau-Bengio with Holm p = %.3f; Cliff's δ = %+.2f; DeLong p = %s; McNemar (exclusive errors CS-FOF / %s): %s. No superiority test is significant.", t[[4]], t[[5]], t[[6]], rname, t[[7]]))
   } else if (scn == "size") {
-    interp_block(tx("Con 25 % de los datos o más, CS-FOF queda arriba y sigue mejorando al recibir más clientes; Random Forest se estanca. Con muy pocos datos (10 %), Random Forest queda apenas por encima: calcular la dirección de Fisher en cada nodo necesita suficientes clientes.",
-                    "With 25% of the data or more, CS-FOF stays on top and keeps improving with more clients; Random Forest plateaus. With very little data (10%), Random Forest is slightly ahead: computing the Fisher direction at each node needs enough clients."),
-                 tx("Exploratorio: fracción estratificada del entrenamiento de cada pliegue, prueba completa, hiperparámetros elegidos en la validación anidada (sin búsqueda nueva). Barras: ± 1 desviación estándar entre los 5 pliegues. Sin pruebas de hipótesis.",
-                    "Exploratory: stratified fraction of each fold's training set, full test set, hyperparameters chosen in the nested validation (no new search). Bars: ± 1 standard deviation across the 5 folds. No hypothesis tests."))
+    donde <- paste(xs[cs > rv], collapse = ", "); if (!nzchar(donde)) donde <- tx("ninguno", "none")
+    basic <- tx(sprintf("CS-FOF queda arriba de %s en %d de 4 tamaños (%s). Con 10 %% de los datos pierde %.3f de F1 frente a %.3f de %s: calcular la dirección de Fisher en cada nodo necesita suficientes clientes.",
+                        rname, gana, donde, cs[length(cs)] - cs[1], rv[length(rv)] - rv[1], rname),
+                sprintf("CS-FOF is above %s in %d of 4 sizes (%s). With 10%% of the data it loses %.3f of F1 versus %.3f for %s: computing the Fisher direction at each node needs enough clients.",
+                        rname, gana, donde, cs[length(cs)] - cs[1], rv[length(rv)] - rv[1], rname))
+    tech <- tx("Exploratorio: fracción estratificada del entrenamiento de cada pliegue, prueba completa, hiperparámetros elegidos en la validación anidada (sin búsqueda nueva). Barras: ± 1 desviación estándar entre los 5 pliegues. Sin pruebas de hipótesis.",
+               "Exploratory: stratified fraction of each fold's training set, full test set, hyperparameters chosen in the nested validation (no new search). Bars: ± 1 standard deviation across the 5 folds. No hypothesis tests.")
   } else {
-    interp_block(tx("Al ensuciar las etiquetas de entrenamiento, los dos pierden casi lo mismo, y CS-FOF se mantiene arriba en todos los niveles.",
-                    "When the training labels are corrupted, both lose almost the same, and CS-FOF stays on top at every level."),
-                 tx("Exploratorio: se invierte al azar una fracción de las etiquetas de entrenamiento (la misma para los dos modelos); la prueba es limpia. Pérdida con 20 % de ruido: CS-FOF −0.015, Random Forest −0.013. Barras: ± 1 desviación estándar entre pliegues; se solapan, así que la diferencia no es concluyente.",
-                    "Exploratory: a random fraction of training labels is flipped (the same for both models); the test set is clean. Loss with 20% noise: CS-FOF −0.015, Random Forest −0.013. Bars: ± 1 standard deviation across folds; they overlap, so the difference is not conclusive."))
+    basic <- tx(sprintf("Al ensuciar las etiquetas de entrenamiento, CS-FOF queda arriba de %s en %d de 4 niveles. Con 20 %% de ruido pierde %.3f de F1 y %s %.3f.",
+                        rname, gana, cs[1] - cs[length(cs)], rname, rv[1] - rv[length(rv)]),
+                sprintf("When the training labels are corrupted, CS-FOF is above %s at %d of 4 levels. With 20%% noise it loses %.3f of F1 and %s %.3f.",
+                        rname, gana, cs[1] - cs[length(cs)], rname, rv[1] - rv[length(rv)]))
+    tech <- tx("Exploratorio: se invierte al azar una fracción de las etiquetas de entrenamiento (la misma para todos los modelos); la prueba es limpia. Barras: ± 1 desviación estándar entre pliegues; si se solapan, la diferencia no es concluyente.",
+               "Exploratory: a random fraction of training labels is flipped (the same for all models); the test set is clean. Bars: ± 1 standard deviation across folds; if they overlap, the difference is not conclusive.")
   }
+  interp_block(paste0(lead, basic), tech)
 }
 
-csfof_results <- function(scn = "folds") {
+csfof_results <- function(scn = "folds", rival = "random_forest") {
   sig <- function(p) if (p < 0.05) tags$b(if (p < 0.001) "< 0.001" else sprintf("%.3f", p)) else sprintf("%.3f", p)
   tests <- tbl_(c(tx("Rival", "Rival"), tx("Dif. F1", "F1 diff."), tx("Gana en", "Wins in"), "p Nadeau-Bengio (Holm)",
                   tx("δ de Cliff", "Cliff's δ"), "p DeLong", tx("Errores exclusivos (CS-FOF / rival)", "Exclusive errors (CS-FOF / rival)")),
@@ -475,34 +508,36 @@ csfof_results <- function(scn = "folds") {
                                                     sprintf("%.3f", r[[2]]), sprintf("%.3f", r[[3]]), sprintf("%.3f", r[[4]]),
                                                     sprintf("%.3f", r[[5]]), sprintf("%.2f", r[[6]]))))
   tagList(
-    card(tx("CS-FOF frente a Random Forest, el modelo básico más parecido", "CS-FOF vs Random Forest, the most similar basic model"),
-      tags$p(class = "muted", tx("CS-FOF es un Random Forest al que se le agregó el corte oblicuo con costo, así que esta comparación aísla lo que aporta la idea nueva. Elige un escenario y presiona Reproducir.",
-                                 "CS-FOF is a Random Forest with the cost-sensitive oblique cut added, so this comparison isolates what the new idea contributes. Pick a scenario and press Play.")),
-      div(class = "controls", control(tx("Escenario", "Scenario"),
-          radio_("csrf_scn", stats::setNames(c("folds", "size", "noise"), c(tx("Los 5 pliegues", "The 5 folds"), tx("Menos datos", "Less data"), tx("Más ruido", "More noise"))), scn))),
+    card(tx("CS-FOF frente a otro modelo", "CS-FOF vs another model"),
+      tags$p(class = "muted", tx("Elige contra qué modelo comparar a CS-FOF y en qué escenario, y presiona Reproducir.",
+                                 "Choose which model to compare CS-FOF against and in which scenario, and press Play.")),
+      div(class = "controls",
+          control(tx("Comparar con", "Compare with"),
+                  radio_("csrf_rival", stats::setNames(CS_RIVALS, vapply(CS_RIVALS, minfo, "", "label")), .rival(rival))),
+          control(tx("Escenario", "Scenario"),
+                  radio_("csrf_scn", stats::setNames(c("folds", "size", "noise"), c(tx("Los 5 pliegues", "The 5 folds"), tx("Menos datos", "Less data"), tx("Más ruido", "More noise"))), scn))),
       uiOutput("csrf_box")),
     card(tx("Pruebas frente a cada modelo (Taiwán)", "Tests against each model (Taiwan)"),
-      tags$p(class = "muted", tx("Validación cruzada anidada 5 × 5 con los mismos folds, preprocesamiento y presupuesto de búsqueda para los 10 modelos. Métrica principal: F1 de la clase default. En negrita, p < 0.05.",
-                                 "Nested 5 × 5 cross-validation with the same folds, preprocessing and search budget for the 10 models. Main metric: F1 of the default class. In bold, p < 0.05.")), tests),
+      tags$p(class = "muted", tx("Validación cruzada anidada 5 × 5 con los mismos folds, preprocesamiento y presupuesto de búsqueda para los 8 modelos. Métrica principal: F1 de la clase default. En negrita, p < 0.05.",
+                                 "Nested 5 × 5 cross-validation with the same folds, preprocessing and search budget for the 8 models. Main metric: F1 of the default class. In bold, p < 0.05.")), tests),
     card(tx("Consistencia en otros conjuntos de crédito (F1)", "Consistency on other credit datasets (F1)"),
-      tags$p(class = "muted", tx("Los 10 modelos con pesos de clase y búsqueda aleatoria en tres conjuntos públicos de UCI.",
-                                 "The 10 models with class weights and random search on three public UCI datasets.")), cross),
+      tags$p(class = "muted", tx("Los 8 modelos con pesos de clase y búsqueda aleatoria en tres conjuntos públicos de UCI.",
+                                 "The 8 models with class weights and random search on three public UCI datasets.")), cross),
     card(tx("Métricas fuera de pliegue que pide la guía", "Out-of-fold metrics required by the guide"),
       tags$p(class = "muted", tx("Predicciones fuera de pliegue de los 29 965 clientes (reajuste con los hiperparámetros de cada pliegue), umbral 0.5. Descriptivas: solo el AUC-ROC tiene prueba (DeLong).",
                                  "Out-of-fold predictions for the 29,965 clients (refit with each fold's hyperparameters), threshold 0.5. Descriptive: only ROC-AUC has a test (DeLong).")),
       tbl_(c(tx("Modelo", "Model"), "MCC", "AUC-PR", tx("Brier (menor es mejor)", "Brier (lower is better)"), "F1"),
            list(list(tags$b("CS-FOF (original)"), tags$b("0.411"), tags$b("0.560"), tags$b("0.168"), tags$b("0.548")),
-                list("CatBoost", "0.402", "0.558", "0.179", "0.547"), list("XGBoost", "0.401", "0.555", "0.175", "0.545"),
-                list("Random Forest", "0.400", "0.558", "0.173", "0.543"),
-                list(tx("LightGBM (reajuste con AUC menor)", "LightGBM (refit with lower AUC)"), "0.401", "0.528", "0.190", "0.546")))),
+                list("XGBoost", "0.401", "0.555", "0.175", "0.545"),
+                list("Random Forest", "0.400", "0.558", "0.173", "0.543")))),
     card(tx("Veredicto", "Verdict"),
-      div(class = "callout", tx("CS-FOF empata con los mejores métodos del estado del arte en el problema principal, con la menor variación entre folds, pero no es superior de forma significativa a CatBoost, XGBoost, LightGBM ni Random Forest, y en los conjuntos adicionales queda por detrás de CatBoost.",
-                                "CS-FOF ties with the best state-of-the-art methods on the main problem, with the lowest variation between folds, but it is not significantly superior to CatBoost, XGBoost, LightGBM or Random Forest, and on the additional datasets it falls behind CatBoost.")),
+      div(class = "callout", tx("CS-FOF obtiene el mayor F1 medio en el problema principal, pero no es superior de forma significativa a XGBoost ni a Random Forest, y en los conjuntos adicionales queda por detrás de XGBoost.",
+                                "CS-FOF has the highest mean F1 on the main problem, but it is not significantly superior to XGBoost or Random Forest, and on the additional datasets it falls behind XGBoost.")),
       interp_block(
-        tx("En el problema principal CS-FOF acierta tanto como los mejores modelos y es el más estable. Comete menos errores que solo él cometa, pero eso se debe a que marca menos clientes como riesgosos, no a que ordene mejor. En el conjunto polaco, con muy pocas quiebras (4 %), los métodos de boosting le sacan mucha ventaja.",
-           "On the main problem CS-FOF is as accurate as the best models and is the most stable. It makes fewer errors that only it makes, but that is because it flags fewer clients as risky, not because it ranks them better. On the Polish dataset, with very few bankruptcies (4%), boosting methods are far ahead."),
-        tx("Friedman sobre los 10 modelos: χ² = 40.3, p = 6.7·10⁻⁶; rangos medios CatBoost 2.0 y CS-FOF 2.4; diferencia crítica de Nemenyi 6.06. Wilcoxon con 5 folds no puede bajar de p = 0.0625. DeLong y McNemar usan predicciones fuera de pliegue de los 29 965 clientes; el reajuste de LightGBM dio un AUC menor que el de su validación (0.773 frente a 0.784), por eso no se reporta su DeLong. Entre los 4 conjuntos, Iman-Davenport F = 4.38, p = 0.0013, sin diferencias significativas de CS-FOF tras Holm.",
-           "Friedman over the 10 models: χ² = 40.3, p = 6.7·10⁻⁶; mean ranks CatBoost 2.0 and CS-FOF 2.4; Nemenyi critical difference 6.06. Wilcoxon with 5 folds cannot go below p = 0.0625. DeLong and McNemar use out-of-fold predictions for the 29,965 clients; the LightGBM refit gave a lower AUC than its validation (0.773 vs 0.784), so its DeLong is not reported. Across the 4 datasets, Iman-Davenport F = 4.38, p = 0.0013, with no significant CS-FOF differences after Holm."))))
+        tx("En el problema principal CS-FOF acierta tanto como los mejores modelos y es el más estable. Comete menos errores que solo él cometa, pero eso se debe a que marca menos clientes como riesgosos, no a que ordene mejor. En el conjunto polaco, con muy pocas quiebras (4 %), XGBoost le saca mucha ventaja.",
+           "On the main problem CS-FOF is as accurate as the best models and is the most stable. It makes fewer errors that only it makes, but that is because it flags fewer clients as risky, not because it ranks them better. On the Polish dataset, with very few bankruptcies (4%), XGBoost is far ahead."),
+        tx("Friedman sobre los 8 modelos: χ² = 32.9, p = 2.7·10⁻⁵; rangos medios CS-FOF 1.4 y XGBoost 2.2; diferencia crítica de Nemenyi 4.70. Wilcoxon con 5 folds no puede bajar de p = 0.0625. DeLong y McNemar usan predicciones fuera de pliegue de los 29 965 clientes. Entre los 4 conjuntos, Iman-Davenport F = 3.22, p = 0.018; XGBoost tiene el mejor rango medio (2.0) y CS-FOF el tercero (3.25).",
+           "Friedman over the 8 models: χ² = 32.9, p = 2.7·10⁻⁵; mean ranks CS-FOF 1.4 and XGBoost 2.2; Nemenyi critical difference 4.70. Wilcoxon with 5 folds cannot go below p = 0.0625. DeLong and McNemar use out-of-fold predictions for the 29,965 clients. Across the 4 datasets, Iman-Davenport F = 3.22, p = 0.018; XGBoost has the best mean rank (2.0) and CS-FOF the third (3.25)."))))
 }
 
 # ---------- Página ----------
@@ -516,8 +551,8 @@ page_original <- function(sel = list()) {
       tags$p(tx("Es el modelo propuesto en este proyecto: un bosque aleatorio programado desde cero, sin redes neuronales, cuyos árboles pueden cortar en diagonal combinando varias variables, en la dirección de Fisher ponderada por el costo de no detectar a quien incumple. Las pestañas siguen el orden de una presentación: la idea (Teoría), cómo se construyó y evaluó (Metodología), el código y cómo le fue (Resultados).",
                 "It is the model proposed in this project: a random forest programmed from scratch, without neural networks, whose trees can cut diagonally by combining several variables, along the Fisher direction weighted by the cost of missing a defaulter. The tabs follow the order of a presentation: the idea (Theory), how it was built and evaluated (Methodology), the code and how it performed (Results).")),
       div(class = "kpi-row k4",
-          kpi("F1", "0.548 ± 0.005", tx("2.º de 10, a 0.0001 de CatBoost", "2nd of 10, 0.0001 behind CatBoost"), "trophy"),
-          kpi("ROC-AUC", "0.785", tx("el mayor de los 10 modelos", "the highest of the 10 models"), "target"),
+          kpi("F1", "0.548 ± 0.005", tx("el mayor de los 8 modelos; sin diferencia significativa con XGBoost", "the highest of the 8 models; no significant difference with XGBoost"), "trophy"),
+          kpi("ROC-AUC", "0.785", tx("el mayor de los 8 modelos", "the highest of the 8 models"), "target"),
           kpi(tx("Cortes oblicuos", "Oblique splits"), "71 %", tx("de los nodos del modelo final", "of the final model's nodes"), "layers"),
           kpi(tx("Incumplimientos detectados", "Defaults detected"), pct(c_$tp / pos, 0),
               tx(sprintf("%s de %s; %s falsas alarmas", num(c_$tp), num(pos), num(c_$fp)), sprintf("%s of %s; %s false alarms", num(c_$tp), num(pos), num(c_$fp))), "bars"))),
@@ -527,5 +562,5 @@ page_original <- function(sel = list()) {
     pane("teoria", csfof_theory(), TRUE),
     pane("metodologia", csfof_method()),
     pane("codigo", csfof_code()),
-    pane("resultados", csfof_results(sel$csrf_scn %||% "folds")))
+    pane("resultados", csfof_results(sel$csrf_scn %||% "folds", sel$csrf_rival %||% "random_forest")))
 }

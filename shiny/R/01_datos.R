@@ -54,6 +54,25 @@ AGE_LABELS <- c("21-25", "26-30", "31-35", "36-40", "41-45", "46-50", "51-55", "
 df$AGE_GRP <- cut(df$AGE, breaks = c(20, 25, 30, 35, 40, 45, 50, 55, 60, 80), labels = AGE_LABELS)
 
 GLOBAL_RATE <- mean(df[[TARGET]])
+DF_FULL <- df
+EDA_MIN_ROWS <- 200
+
+# Subconjunto de DF_FULL según el filtro global del EDA (NULL = todos los clientes)
+aplicar_filtro <- function(f) {
+  if (is.null(f)) return(DF_FULL)
+  m <- DF_FULL$SEX %in% f$sex & DF_FULL$EDUCATION %in% f$edu & DF_FULL$MARRIAGE %in% f$mar &
+       DF_FULL$AGE >= f$age[1] & DF_FULL$AGE <= f$age[2] & DF_FULL$LIMIT_BAL >= f$lim[1] & DF_FULL$LIMIT_BAL <= f$lim[2]
+  sub <- DF_FULL[m, , drop = FALSE]
+  if (nrow(sub) >= EDA_MIN_ROWS) sub else DF_FULL
+}
+# Evalúa una función de gráfica con `df` reemplazado por el subconjunto filtrado y lo restaura al terminar
+# (Shiny atiende una petición a la vez por proceso, así que el cambio no se cruza con otra sesión).
+con_filtro <- function(f, fn) {
+  env <- environment(aplicar_filtro)
+  env$df <- aplicar_filtro(f)
+  on.exit(env$df <- DF_FULL, add = TRUE)
+  fn()
+}
 N_DEF <- sum(df[[TARGET]])
 
 # ---------- Etiquetas de categorías y meses -------------------------------------

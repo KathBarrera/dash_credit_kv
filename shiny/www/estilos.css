@@ -556,6 +556,76 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-field { min-width:0; } .pf-field .ctl-label { margin-bottom:8px; }
 .pf-hint { font-size:12.5px; color:var(--muted); } .pf-note { margin:6px 0 12px; } .pf-row { margin-bottom:14px; }
 .pf-slider { padding-top:34px; }
+.pf-thr-info { margin-top:10px; }
+/* ---------- Modo foco: una tarjeta ampliada al centro (assets/card_focus.js) ---------- */
+.card, .kpi { position:relative; }
+.card-zoom { position:absolute; top:10px; right:10px; z-index:2; width:30px; height:30px; padding:0; display:inline-flex;
+  align-items:center; justify-content:center; background:var(--surface); color:var(--muted); cursor:pointer;
+  border:1px solid var(--line-strong); border-radius:8px; opacity:.75; transition:opacity .15s, color .15s, border-color .15s; }
+.card-zoom .ico { width:16px; height:16px; }
+.card-zoom .zb-close { display:none; }
+.card:hover > .card-zoom, .kpi:hover > .card-zoom, .card-zoom:focus-visible { opacity:1; }
+.card-zoom:hover { color:var(--accent-2); border-color:var(--accent-2); opacity:1; }
+.card > .card-title { padding-right:38px; }
+.kpi > .card-zoom { top:6px; right:6px; width:24px; height:24px; border-radius:6px; }
+.kpi > .card-zoom .ico { width:13px; height:13px; }
+.kpi > .kpi-head { padding-right:26px; }
+.ef-card > .card-zoom { top:16px; right:14px; }
+.ef-summary { padding-right:58px; }
+
+.focus-overlay { position:fixed; inset:0; z-index:10005; background:rgba(8,12,24,.72); opacity:0; visibility:hidden;
+  transition:opacity .18s ease, visibility 0s linear .18s; }
+.focus-overlay.on { opacity:1; visibility:visible; transition:opacity .18s ease, visibility 0s; }
+html.focus-open, html.focus-open body { overflow:hidden; }
+.card-zoomed { --fz:1.3; position:fixed !important; z-index:10010; zoom:var(--fz); margin:0 !important;
+  top:calc(5vh / var(--fz)) !important; left:calc(5vw / var(--fz)) !important;
+  width:calc(90vw / var(--fz)) !important; height:calc(90vh / var(--fz)) !important; max-width:none !important; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; padding-top:20px;
+  box-shadow:0 24px 80px rgba(0,0,0,.55); border-color:var(--line-strong); outline:none; }
+.card-zoomed.ef-card { padding-top:0; }
+.kpi.card-zoomed { --fz:2.6; display:flex; flex-direction:column; justify-content:center; padding:24px 40px;
+  border-left-width:6px; border-left-color:var(--accent-2); }
+.card-zoomed > .card-zoom { position:fixed; top:calc((5vh + 12px) / var(--fz)); right:calc((5vw + 12px) / var(--fz));
+  width:calc(52px / var(--fz)); height:calc(52px / var(--fz)); z-index:3; opacity:1; color:var(--text);
+  background:var(--surface-2); border-color:var(--accent-2); }
+.card-zoomed > .card-zoom .ico { width:calc(28px / var(--fz)); height:calc(28px / var(--fz)); }
+.card-zoomed > .card-zoom .zb-open { display:none; } .card-zoomed > .card-zoom .zb-close { display:inline-block; }
+.card-zoomed > .card-title { padding-right:56px; }
+/* los menús desplegables de Dash viven fuera de la tarjeta: deben quedar por encima de la capa */
+.dash-dropdown-content, [data-radix-popper-content-wrapper], .dash-tooltip { z-index:10030 !important; }
+/* el menú se posiciona en píxeles de pantalla; dentro de la tarjeta con zoom hay que deshacer el zoom */
+.card-zoomed [data-radix-popper-content-wrapper] { zoom:calc(1 / var(--fz)); }
+@media (prefers-reduced-motion:reduce) { .focus-overlay, .focus-overlay.on { transition:none; } }
+.ef-card { padding:0; }
+.ef-summary { display:flex; align-items:center; gap:12px; padding:14px 22px; cursor:pointer; list-style:none; }
+.ef-summary::-webkit-details-marker { display:none; }
+.ef-summary .ef-ico { width:20px; height:20px; color:var(--accent-2); }
+.ef-summary .card-title { margin:0; flex:none; }
+.ef-summary .ef-info { flex:1; min-width:0; font-weight:600; color:var(--text); font-size:14px; }
+.ef-toggle { flex:none; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+  border:1px solid var(--line-strong); border-radius:8px; color:var(--text); }
+.ef-summary:hover .ef-toggle { border-color:var(--accent-2); color:var(--accent-2); }
+.ef-toggle .ico { transition:transform .2s; transform:rotate(90deg); }
+.ef-fold[open] .ef-toggle .ico { transform:rotate(-90deg); }
+.ef-body { padding:0 22px 16px; border-top:1px solid var(--line); }
+/* íconos de los filtros globales */
+.ctl-label-ico { display:flex; align-items:center; gap:6px; }
+.ctl-label-ico .ico { width:15px; height:15px; color:var(--accent-2); }
+.opt-ico { display:inline-flex; align-items:center; gap:5px; }
+.opt-ico .ico { width:15px; height:15px; color:var(--muted); }
+/* umbral plegable en Predecir */
+.thr-summary { cursor:pointer; list-style:none; }
+.thr-summary::-webkit-details-marker { display:none; }
+.thr-summary .thr-sum { font-size:14px; color:var(--accent-2); letter-spacing:0; text-transform:none; }
+.thr-summary .ef-toggle { order:3; width:28px; height:28px; }
+.thr-summary::after { order:2; }
+.thr-summary:hover .ef-toggle { border-color:var(--accent-2); color:var(--accent-2); }
+.thr-fold .thr-chev { transition:transform .2s; transform:rotate(90deg); }
+.thr-fold[open] .thr-chev { transform:rotate(-90deg); }
+.ef-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 0 4px; flex-wrap:wrap; }
+.pf-thr-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:8px; }
+.pf-thr-k { border:1px solid var(--line); border-radius:12px; padding:8px 12px; display:flex; flex-direction:column; }
+.pf-thr-k b { font-size:22px; color:var(--accent-2, #B88F3D); line-height:1.2; }
+.pf-thr-k small { color:var(--muted); font-size:12px; }
 .pf-form { --Dash-Fill-Interactive-Strong:var(--accent-2); --Dash-Fill-Inverse-Strong:var(--surface);
   --Dash-Text-Strong:var(--text); --Dash-Fill-Disabled:var(--line-strong); --Dash-Text-Primary:var(--muted); }
 .pf-form .dash-slider-tooltip { color:var(--text); font-weight:700; font-variant-numeric:tabular-nums;
@@ -729,6 +799,8 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .ico-tree{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%2022v-5%22/%3E%3Cpath%20d%3D%22M12%2017H6l3-4H7l3-4H8.5L12%203l3.5%206H14l3%204h-2l3%204z%22/%3E%3C/svg%3E");}
 .ico-save{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M19%2021H5a2%202%200%200%201-2-2V5a2%202%200%200%201%202-2h11l5%205v11a2%202%200%200%201-2%202z%22/%3E%3Cpath%20d%3D%22M17%2021v-8H7v8M7%203v5h8%22/%3E%3C/svg%3E");}
 .ico-close{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%206l12%2012M18%206%206%2018%22/%3E%3C/svg%3E");}
+.ico-filter{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%204h18l-7%208.5V20l-4-2v-5.5z%22/%3E%3C/svg%3E");}
+.ico-expand{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%203h6v6M9%2021H3v-6M21%203l-7%207M3%2021l7-7%22/%3E%3C/svg%3E");}
 .ico-send{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M22%202%2011%2013%22/%3E%3Cpath%20d%3D%22M22%202%2015%2022l-4-9-9-4z%22/%3E%3C/svg%3E");}
 .ico-reset{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2012a9%209%200%201%200%203-6.7L3%208%22/%3E%3Cpath%20d%3D%22M3%203v5h5%22/%3E%3C/svg%3E");}
 /* ---- panel del asistente: se abre a la derecha y empuja el contenido ---- */

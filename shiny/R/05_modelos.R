@@ -3,13 +3,19 @@
 # =============================================================================
 # results/ tiene los mismos archivos que dash/results (los genera
 # dash/herramientas/actualizar_resultados.py a partir de Credit_Card_Project/results):
-#   - model_results.csv: 141 combinaciones con validación cruzada anidada 5 x 5 (desviaciones con ddof=1):
-#     112 de los 7 modelos base (4 técnicas de balanceo x 4 métodos de optimización), 16 de LightGBM,
-#     9 de CatBoost y 4 del modelo original CS-FOF (pesos de clase con los 4 métodos). SVM conserva
-#     el F1 de Colab y trae aparte f1_cpu_refit_mean (reajuste con scikit-learn en CPU).
+#   - model_results.csv: combinaciones con validación cruzada anidada 5 x 5 (desviaciones con ddof=1). El
+#     tablero usa las 112 de los 7 modelos base (4 técnicas de balanceo x 4 métodos de optimización) y las 4 del
+#     modelo original CS-FOF (pesos de clase con los 4 métodos). SVM conserva el F1 de Colab y trae aparte
+#     f1_cpu_refit_mean (reajuste con scikit-learn en CPU).
+#   - diagnosticos.json: curvas ROC, precisión-recall y calibración, Friedman/Nemenyi y SHAP global (lo genera
+#     dash/herramientas/diagnosticos_desde_proyecto.py).
 #   - shap_by_fold.csv y lime_vs_shap.csv: interpretabilidad en los 5 folds (notebook 06).
 #   - anytime_curves.csv y anytime_summary.csv: costo de los optimizadores (notebook 09).
 MR <- utils::read.csv("results/model_results.csv", stringsAsFactors = FALSE)
+# Alcance del tablero: el modelo original (CS-FOF) frente a los siete modelos de referencia exigidos por el curso.
+# El archivo conserva las corridas de CatBoost y LightGBM, que quedan fuera de la comparación.
+MR <- MR[!MR$model %in% c("catboost", "lightgbm"), ]
+rownames(MR) <- NULL
 
 MODEL_INFO <- list(
   random_forest = list(
@@ -19,8 +25,8 @@ MODEL_INFO <- list(
              "Tree ensemble (bagging)"),
     desc = c("Promedia muchos árboles entrenados sobre muestras distintas de clientes; capta relaciones no lineales entre el historial de pagos y el riesgo.",
              "Averages many trees trained on different samples of clients; captures non-linear relationships between payment history and risk."),
-    note = c("A solo 0.0028 del mejor: una diferencia menor que la variación entre folds. Con sus 16 combinaciones tiene el mejor rango medio de los siete modelos base, y es el que usa la página Predecir. CS-FOF parte de él y le agrega cortes oblicuos.",
-             "Only 0.0028 behind the best: a difference smaller than the variation between folds. Across its 16 combinations it has the best mean rank of the seven base models, and it is the one used by the Predict page. CS-FOF starts from it and adds oblique splits.")),
+    note = c("A solo 0.0027 de CS-FOF: una diferencia menor que la variación entre folds. Con sus 16 combinaciones tiene el mejor rango medio de los siete modelos base, y es el que usa la página Predecir. CS-FOF parte de él y le agrega cortes oblicuos.",
+             "Only 0.0027 behind CS-FOF: a difference smaller than the variation between folds. Across its 16 combinations it has the best mean rank of the seven base models, and it is the one used by the Predict page. CS-FOF starts from it and adds oblique splits.")),
   xgboost = list(
     label = c("XGBoost",
              "XGBoost"),
@@ -28,17 +34,8 @@ MODEL_INFO <- list(
              "Tree ensemble (boosting)"),
     desc = c("Construye árboles en secuencia: cada uno corrige los errores del anterior.",
              "Builds trees in sequence: each one corrects the errors of the previous one."),
-    note = c("Mayor F1 de los siete modelos base. Con CatBoost, LightGBM, CS-FOF y Random Forest forma un grupo de cinco que las pruebas no separan: en la práctica empatan.",
-             "Highest F1 of the seven base models. With CatBoost, LightGBM, CS-FOF and Random Forest it forms a group of five that the tests do not separate: in practice they tie.")),
-  catboost = list(
-    label = c("CatBoost",
-             "CatBoost"),
-    family = c("Boosting reciente (árboles simétricos)",
-             "Recent boosting (symmetric trees)"),
-    desc = c("Boosting con árboles simétricos y un orden aleatorio de los datos que reduce el sobreajuste.",
-             "Boosting with symmetric trees and a random ordering of the data that reduces overfitting."),
-    note = c("Método reciente del estado del arte (2018). Tiene el mayor F1 medio, pero solo 0.0001 por encima de CS-FOF; ninguna prueba los separa. Es el más consistente en los tres conjuntos adicionales. Con sus 16 combinaciones, pesos de clase es su mejor técnica.",
-             "Recent state-of-the-art method (2018). It has the highest mean F1, but only 0.0001 above CS-FOF; no test separates them. It is the most consistent across the three additional datasets. Across its 16 combinations, class weights is its best technique.")),
+    note = c("Mayor F1 de los siete modelos de referencia. Con CS-FOF y Random Forest forma un grupo de tres que las pruebas no separan: en la práctica empatan.",
+             "Highest F1 of the seven baseline models. With CS-FOF and Random Forest it forms a group of three that the tests do not separate: in practice they tie.")),
   cs_fof = list(
     label = c("CS-FOF (original)",
              "CS-FOF (original)"),
@@ -46,17 +43,8 @@ MODEL_INFO <- list(
              "Original model · cost-sensitive oblique forest"),
     desc = c("Bosque aleatorio propio: en cada nodo compara los cortes de una variable con un corte oblicuo en la dirección de Fisher, ponderada por el costo de no detectar a quien incumple.",
              "Our own random forest: at each node it compares single-variable splits with an oblique split along the Fisher direction, weighted by the cost of missing a defaulter."),
-    note = c("Programado desde cero con numpy. Empata con CatBoost en F1 (−0.0001), con el mayor ROC-AUC y la menor variación entre folds (± 0.005). No es superior de forma significativa.",
-             "Programmed from scratch with numpy. It ties with CatBoost in F1 (−0.0001), with the highest ROC-AUC and the lowest variation between folds (± 0.005). It is not significantly superior.")),
-  lightgbm = list(
-    label = c("LightGBM",
-             "LightGBM"),
-    family = c("Boosting reciente (por hojas)",
-             "Recent boosting (leaf-wise)"),
-    desc = c("Boosting que hace crecer cada árbol por la hoja que más reduce el error; muy rápido.",
-             "Boosting that grows each tree from the leaf that most reduces the error; very fast."),
-    note = c("Método reciente del estado del arte (2017). Queda a 0.0018 del mejor. Con sus 16 combinaciones, pesos de clase es su mejor técnica; su PR-AUC no se calculó.",
-             "Recent state-of-the-art method (2017). It is 0.0018 behind the best. Across its 16 combinations, class weights is its best technique; its PR-AUC was not computed.")),
+    note = c("Programado desde cero con numpy. Tiene el mayor F1 medio (+0.0014 sobre XGBoost) y el mayor ROC-AUC, pero la diferencia con XGBoost y Random Forest no es significativa.",
+             "Programmed from scratch with numpy. It has the highest mean F1 (+0.0014 over XGBoost) and the highest ROC-AUC, but the difference with XGBoost and Random Forest is not significant.")),
   svm = list(
     label = c("SVM",
              "SVM"),
@@ -119,8 +107,8 @@ BEST_BY_MODEL <- do.call(rbind, lapply(split(MR, MR$model), function(s) s[which.
 BEST_BY_MODEL <- BEST_BY_MODEL[order(-BEST_BY_MODEL$f1_mean), ]
 rownames(BEST_BY_MODEL) <- NULL
 BEST <- BEST_BY_MODEL[1, ]
-# Las 112 combinaciones del diseño factorial (7 modelos base) y, aparte, las corridas de LightGBM, CatBoost y
-# CS-FOF que buscan superar el mejor F1 de esas 112.
+# Las 112 combinaciones del diseño factorial (7 modelos base) y, aparte, las corridas de CS-FOF, que buscan
+# superar el mejor F1 de esas 112.
 BASE_MODELS <- c("random_forest", "xgboost", "svm", "knn", "decision_tree", "logistic_regression", "naive_bayes")
 N_BASE <- sum(MR$model %in% BASE_MODELS)
 N_EXTRA <- nrow(MR) - N_BASE
@@ -128,9 +116,9 @@ BEST_BASE <- BEST_BY_MODEL[BEST_BY_MODEL$model %in% BASE_MODELS, ][1, ]
 TWD_PER_USD_2005 <- 32.2   # tasa promedio de 2005 (Banco Central de la República de China)
 BASELINE <- max(MR$f1_mean[MR$model == "logistic_regression" & MR$technique == "none"])
 F1_MAX <- max(MR$f1_mean)
-# Matrices de confusión fuera de pliegue (umbral 0.5) de CatBoost (la mejor combinación) y de CS-FOF,
+# Matrices de confusión fuera de pliegue (umbral 0.5) de CS-FOF y de XGBoost, el mejor modelo de referencia,
 # reajustadas con los hiperparámetros de cada fold (experiments/comparacion_final/probabilidades_oof.npz).
-BEST_CM <- list(tn = 18868, fp = 4467, fn = 2452, tp = 4178)
+XGB_CM <- list(tn = 19087, fp = 4248, fn = 2557, tp = 4073)
 CSFOF_CM <- list(tn = 19660, fp = 3675, fn = 2737, tp = 3893)
 TECH_COLORS <- c(none = GREY_BLUE, class_weight = WARM_GOLD, smote = DEEP_NAVY, adasyn = MID_BLUE)
 
@@ -180,8 +168,8 @@ fig_models_scatter <- function() {
   style_fig(p, 420, margin = list(l = 60, r = 20, t = 50, b = 55))
 }
 
-fig_best_cm <- function() {
-  c <- BEST_CM
+fig_best_cm <- function() {   # matriz de confusión de CS-FOF, el modelo de mayor F1 medio
+  c <- CSFOF_CM
   z <- matrix(c(c$tn, c$fp, c$fn, c$tp), 2, byrow = TRUE)
   txt <- matrix(c(sprintf("<b>%s</b><br>%s", num(c$tn), tx("Bien clasificados", "Correctly classified")),
                   sprintf("<b>%s</b><br>%s", num(c$fp), tx("Falsas alarmas", "False alarms")),
@@ -362,6 +350,201 @@ interp_anytime <- function(model) {
   list(basic, tech)
 }
 
+# ---------- Tabla de líderes (todas las combinaciones, ordenable y filtrable) ----------
+# Tiempo de inferencia (ms por 1,000 clientes, 25 columnas, pliegue 0, 4 núcleos), medido en
+# experiments/robustez/escalabilidad.csv del proyecto. Solo se midió para los tres mejores modelos.
+INFER_MS <- c(cs_fof = 253.1, xgboost = 4.8, random_forest = 9.4)
+
+leaderboard_df <- function() {
+  d <- MR
+  best <- vapply(split(seq_len(nrow(d)), d$model), function(i) i[which.max(d$f1_mean[i])], 0L)
+  d$mejor <- ifelse(seq_len(nrow(d)) %in% best, "★", "")
+  d <- d[order(-d$f1_mean), ]
+  r4 <- function(v) ifelse(is.na(v), NA_real_, round(v, 4))
+  data.frame(
+    `#` = seq_len(nrow(d)),
+    Mejor = d$mejor,
+    Modelo = vapply(d$model, minfo, "", "label"),
+    Balanceo = vapply(d$technique, tech_lbl, ""),
+    Busqueda = vapply(d$method, method_lbl, ""),
+    F1 = sprintf("%.4f ± %.4f", d$f1_mean, d$f1_std),
+    AUC = r4(d$roc_auc_mean), Recall = r4(d$recall_mean), Precision = r4(d$precision_mean),
+    Inferencia = ifelse(d$mejor == "★" & d$model %in% names(INFER_MS), unname(INFER_MS[d$model]), NA_real_),
+    check.names = FALSE, stringsAsFactors = FALSE)
+}
+
+# Tabla HTML propia (www/leaderboard.js la ordena al hacer clic en un encabezado y la filtra con el buscador).
+# No usa DT: su JavaScript falla al cargarse con la página dinámica y corta el dibujo de otras gráficas.
+leaderboard <- function() {
+  d <- leaderboard_df()
+  heads <- list(list("#", "num"), list(tx("Mejor", "Best"), "txt"), list(tx("Modelo", "Model"), "txt"),
+                list(tx("Balanceo", "Balancing"), "txt"), list(tx("Búsqueda", "Search"), "txt"),
+                list(tx("F1 media ± d.e.", "F1 mean ± s.d."), "num"), list("AUC-ROC", "num"), list("Recall", "num"),
+                list(tx("Precisión", "Precision"), "num"), list(tx("Inferencia (ms / 1,000)", "Inference (ms / 1,000)"), "num"))
+  fmt <- function(v) if (is.na(v)) "" else sprintf("%.4f", v)
+  filas <- lapply(seq_len(nrow(d)), function(i) {
+    r <- d[i, ]
+    cls <- paste(c(if (r$Mejor == "★") "lb-best", if (grepl("CS-FOF", r$Modelo)) "lb-cs"), collapse = " ")
+    tags$tr(class = if (nzchar(cls)) cls,
+            tags$td(r[["#"]]), tags$td(r$Mejor), tags$td(r$Modelo), tags$td(r$Balanceo), tags$td(r$Busqueda),
+            tags$td(`data-v` = sub(" .*", "", r$F1), r$F1), tags$td(fmt(r$AUC)), tags$td(fmt(r$Recall)),
+            tags$td(fmt(r$Precision)), tags$td(if (is.na(r$Inferencia)) "" else sprintf("%.1f", r$Inferencia)))
+  })
+  div(class = "lb",
+      tags$input(type = "search", class = "lb-search", placeholder = tx("Filtrar (por ejemplo, XGBoost o SMOTE)…", "Filter (for example, XGBoost or SMOTE)…"),
+                 `aria-label` = tx("Filtrar la tabla", "Filter the table")),
+      div(class = "table-wrap lb-wrap",
+          tags$table(class = "vtable lb-table",
+                     tags$thead(tags$tr(lapply(seq_along(heads), function(k)
+                       tags$th(`data-k` = k - 1, `data-t` = heads[[k]][[2]], class = "lb-sort", tabindex = "0", heads[[k]][[1]])))),
+                     tags$tbody(filas))),
+      tags$p(class = "muted lb-count", `data-tpl` = tx("{n} de {t} combinaciones", "{n} of {t} combinations"),
+             tx(sprintf("%d de %d combinaciones", nrow(d), nrow(d)), sprintf("%d of %d combinations", nrow(d), nrow(d)))))
+}
+
+# ---------- Diagnóstico del modelo elegido, diagrama de diferencia crítica y SHAP global ----------
+DIAG <- jsonlite::fromJSON("results/diagnosticos.json", simplifyVector = FALSE)
+DIAG_MODELS <- names(DIAG$modelos)
+.num <- function(v) as.numeric(unlist(v))
+
+fig_diag <- function(model) {
+  ref <- if (model == "cs_fof") "xgboost" else "cs_fof"
+  panel <- function(eje) {
+    p <- plot_ly()
+    for (m in c(ref, model)) {
+      d <- DIAG$modelos[[m]]; nm <- minfo(m, "label")
+      col <- if (m == ref) { if (ref == "cs_fof") PALE_GOLD else GREY_BLUE } else { if (model == "cs_fof") WARM_GOLD else NAVY }
+      dsh <- if (m == ref) "dot" else "solid"
+      if (eje == "roc") {
+        p <- add_trace(p, x = .num(d$roc[[1]]), y = .num(d$roc[[2]]), type = "scatter", mode = "lines", name = nm,
+                       legendgroup = m, line = list(color = col, width = 2.5, dash = dsh),
+                       hovertemplate = paste0(nm, "<br>FPR %{x:.2f} · TPR %{y:.2f}<extra></extra>"))
+      } else if (eje == "pr") {
+        p <- add_trace(p, x = .num(d$pr[[1]]), y = .num(d$pr[[2]]), type = "scatter", mode = "lines", name = nm,
+                       legendgroup = m, showlegend = FALSE, line = list(color = col, width = 2.5, dash = dsh),
+                       hovertemplate = paste0(nm, "<br>Recall %{x:.2f} · ", tx("precisión", "precision"), " %{y:.2f}<extra></extra>"))
+      } else {
+        cal <- d$cal
+        p <- add_trace(p, x = vapply(cal, function(c) c[[1]], 0), y = vapply(cal, function(c) c[[2]], 0),
+                       customdata = vapply(cal, function(c) as.numeric(c[[3]]), 0),
+                       type = "scatter", mode = "lines+markers", name = nm, legendgroup = m, showlegend = FALSE,
+                       line = list(color = col, width = 2.5, dash = dsh),
+                       hovertemplate = paste0(nm, "<br>", tx("Predicho", "Predicted"), " %{x:.2f} · ", tx("observado", "observed"),
+                                              " %{y:.2f}<br>%{customdata:,} ", tx("clientes", "clients"), "<extra></extra>"))
+      }
+    }
+    if (eje != "pr") p <- add_trace(p, x = c(0, 1), y = c(0, 1), type = "scatter", mode = "lines", showlegend = FALSE,
+                                    hoverinfo = "skip", line = list(color = GREY_BLUE, width = 1, dash = "dash"))
+    if (eje == "pr") p <- add_trace(p, x = c(0, 1), y = rep(DIAG$tasa, 2), type = "scatter", mode = "lines", showlegend = FALSE,
+                                    hoverinfo = "skip", line = list(color = GREY_BLUE, width = 1, dash = "dash"))
+    tit <- switch(eje, roc = c(tx("Tasa de falsos positivos", "False positive rate"), tx("Tasa de verdaderos positivos", "True positive rate")),
+                  pr = c("Recall", tx("Precisión", "Precision")),
+                  cal = c(tx("Probabilidad predicha", "Predicted probability"), tx("Tasa real de impago", "Observed default rate")))
+    layout(p, xaxis = list(title = tit[1], range = if (eje == "cal") c(0, 1) else NULL),
+           yaxis = list(title = tit[2], range = if (eje == "cal") c(0, 1) else NULL))
+  }
+  p <- subplot(panel("roc"), panel("pr"), panel("cal"), nrows = 1, margin = 0.05, titleX = TRUE, titleY = TRUE)
+  ann <- lapply(seq_along(c(1, 2, 3)), function(i) list(
+    text = c(tx("Curva ROC", "ROC curve"), tx("Precisión-recall", "Precision-recall"), tx("Calibración (10 grupos)", "Calibration (10 bins)"))[i],
+    x = c(0.14, 0.5, 0.86)[i], y = 1.08, xref = "paper", yref = "paper", showarrow = FALSE, font = list(size = 13)))
+  p <- layout(p, annotations = ann, legend = list(orientation = "h", x = 0.5, xanchor = "center", y = -0.3, yanchor = "top"))
+  style_fig(p, 380, legend_top = FALSE, margin = list(l = 60, r = 20, t = 50, b = 95))
+}
+
+diag_interp <- function(model) {
+  d <- DIAG$modelos[[model]]; cs <- DIAG$modelos$cs_fof; nm <- minfo(model, "label")
+  c <- d$cm; pos <- c$tp + c$fn
+  base <- tx(sprintf("%s: AUC-ROC %.3f, precisión media (AUC-PR) %.3f, Brier %.3f y error de calibración ECE %.3f. Con umbral 0.5 detecta %s de %s incumplimientos con %s falsas alarmas.",
+                     nm, d$auc, d$ap, d$brier, d$ece, num(c$tp), num(pos), num(c$fp)),
+             sprintf("%s: ROC-AUC %.3f, average precision (PR-AUC) %.3f, Brier %.3f and calibration error ECE %.3f. At the 0.5 threshold it detects %s of %s defaults with %s false alarms.",
+                     nm, d$auc, d$ap, d$brier, d$ece, num(c$tp), num(pos), num(c$fp)))
+  if (model != "cs_fof")
+    base <- paste(base, tx(sprintf("CS-FOF (línea punteada): AUC-ROC %.3f y ECE %.3f.", cs$auc, cs$ece),
+                           sprintf("CS-FOF (dotted line): ROC-AUC %.3f and ECE %.3f.", cs$auc, cs$ece)))
+  tech <- tx("Predicciones fuera de pliegue de los 29,965 clientes: cada modelo se reentrenó con los hiperparámetros que eligió en cada pliegue externo. Las curvas ROC y precisión-recall miden cómo ordena a los clientes, sin depender del umbral; la de calibración compara la probabilidad predicha con la tasa real en 10 grupos (la diagonal es la calibración perfecta). Todos los modelos con pesos de clase o SMOTE quedan por debajo de la diagonal: sobreestiman el riesgo.",
+             "Out-of-fold predictions for the 29,965 clients: each model was refit with the hyperparameters it chose in each outer fold. The ROC and precision-recall curves measure how it ranks clients, regardless of the threshold; the calibration curve compares the predicted probability with the observed rate in 10 bins (the diagonal is perfect calibration). All models with class weights or SMOTE fall below the diagonal: they overestimate risk.")
+  interp_block(base, tech)
+}
+
+fig_cd <- function(fuente) {
+  F <- DIAG$friedman[[fuente]]
+  r <- sort(unlist(F$rangos)); k <- length(r); cd <- F$cd; vals <- unname(r)
+  grupos <- list()
+  for (a in seq_len(k)) {
+    b <- max(which(vals - vals[a] <= cd))
+    if (b > a && (!length(grupos) || b > grupos[[length(grupos)]][2])) grupos[[length(grupos) + 1]] <- c(a, b)
+  }
+  shapes <- list(list(type = "line", x0 = 1, x1 = k, y0 = 0, y1 = 0, line = list(color = GREY_BLUE, width = 1.5)),
+                 list(type = "line", x0 = 1, x1 = 1 + cd, y0 = 0.9, y1 = 0.9, line = list(color = WARM_GOLD, width = 4)))
+  for (g in seq_along(grupos)) {
+    ab <- grupos[[g]]; y <- -0.35 - 0.18 * (g - 1)
+    shapes[[length(shapes) + 1]] <- list(type = "line", x0 = vals[ab[1]] - .05, x1 = vals[ab[2]] + .05, y0 = y, y1 = y,
+                                         line = list(color = NAVY, width = 6))
+  }
+  es_cs <- names(r) == "cs_fof"
+  p <- plot_ly(x = vals, y = rep(0, k), type = "scatter", mode = "markers+text",
+               text = vapply(names(r), minfo, "", "label"), customdata = vals,
+               textposition = ifelse(seq_len(k) %% 2 == 1, "top center", "bottom center"),
+               marker = list(size = ifelse(es_cs, 16, 11), color = ifelse(es_cs, WARM_GOLD, NAVY), line = list(width = 1.5, color = WHITE)),
+               textfont = list(size = 11), showlegend = FALSE,
+               hovertemplate = paste0("%{text}<br>", tx("Rango medio", "Mean rank"), ": %{customdata:.2f}<extra></extra>"))
+  p <- layout(p, shapes = shapes,
+              annotations = list(list(x = 1 + cd / 2, y = 1.05, showarrow = FALSE, font = list(color = WARM_GOLD, size = 12),
+                                      text = tx(sprintf("Diferencia crítica = %.2f", cd), sprintf("Critical difference = %.2f", cd)))),
+              xaxis = list(range = c(0.5, k + 0.5), dtick = 1, showgrid = FALSE, title = tx("Rango medio (1 = mejor)", "Mean rank (1 = best)")),
+              yaxis = list(visible = FALSE, range = c(-0.35 - 0.18 * length(grupos) - 0.2, 1.2)))
+  style_fig(p, 340, legend_top = FALSE, margin = list(l = 30, r = 30, t = 30, b = 50))
+}
+
+cd_interp <- function(fuente) {
+  F <- DIAG$friedman[[fuente]]; r <- unlist(F$rangos)
+  if (fuente == "taiwan") {
+    base <- tx(sprintf("CS-FOF tiene el mejor rango medio (%.1f), seguido de XGBoost (%.1f) y Random Forest (%.1f). Las barras azules unen modelos que no se distinguen: CS-FOF queda en el mismo grupo que esos dos.",
+                       r[["cs_fof"]], r[["xgboost"]], r[["random_forest"]]),
+               sprintf("CS-FOF has the best mean rank (%.1f), followed by XGBoost (%.1f) and Random Forest (%.1f). The blue bars join models that cannot be told apart: CS-FOF is in the same group as those two.",
+                       r[["cs_fof"]], r[["xgboost"]], r[["random_forest"]]))
+    tech <- tx(sprintf("Friedman sobre los 5 pliegues externos de Taiwán: χ² = %.1f, p = %.1e; diferencia crítica de Nemenyi %.2f. Con un solo conjunto los pliegues no son bloques independientes, así que esta vista es descriptiva; la comparación entre conjuntos es la que usa bloques independientes.", F$chi2, F$p, F$cd),
+               sprintf("Friedman over the 5 outer folds of Taiwan: χ² = %.1f, p = %.1e; Nemenyi critical difference %.2f. With a single dataset the folds are not independent blocks, so this view is descriptive; the across-datasets comparison is the one with independent blocks.", F$chi2, F$p, F$cd))
+  } else {
+    base <- tx(sprintf("En los 4 conjuntos (Taiwán, German, Australian y Polish), XGBoost es primero (%.2f), seguido de Random Forest (%.2f) y de CS-FOF (%.2f), que pierde terreno en Polish, con 4 %% de quiebras.",
+                       r[["xgboost"]], r[["random_forest"]], r[["cs_fof"]]),
+               sprintf("Across the 4 datasets (Taiwan, German, Australian and Polish), XGBoost is first (%.2f), followed by Random Forest (%.2f) and CS-FOF (%.2f), which loses ground on Polish, with 4%% bankruptcies.",
+                       r[["xgboost"]], r[["random_forest"]], r[["cs_fof"]]))
+    tech <- tx(sprintf("Friedman con corrección de Iman-Davenport, cada conjunto como bloque: F = %.2f, p = %.4f; diferencia crítica de Nemenyi %.2f. Con 4 conjuntos la potencia es baja.", F$F, F$p, F$cd),
+               sprintf("Friedman with the Iman-Davenport correction, each dataset as a block: F = %.2f, p = %.4f; Nemenyi critical difference %.2f. With 4 datasets the power is low.", F$F, F$p, F$cd))
+  }
+  interp_block(base, tech)
+}
+
+fig_shap_global <- function(model) {
+  S <- DIAG$shap_global; otro <- if (model == "cs_fof") "xgboost" else "cs_fof"
+  d <- data.frame(f = unlist(S$variables), m = .num(S[[model]]), o = .num(S[[otro]]), stringsAsFactors = FALSE)
+  d <- utils::tail(d[order(d$m), ], 10)
+  y <- fx(vapply(d$f, feat_lbl, ""))
+  p <- plot_ly()
+  p <- add_trace(p, y = y, x = d$o, type = "bar", orientation = "h", name = minfo(otro, "label"), opacity = .55,
+                 marker = list(color = if (otro == "cs_fof") PALE_GOLD else GREY_BLUE),
+                 hovertemplate = paste0("%{y}: %{x:.4f}<extra>", minfo(otro, "label"), "</extra>"))
+  p <- add_trace(p, y = y, x = d$m, type = "bar", orientation = "h", name = minfo(model, "label"),
+                 marker = list(color = if (model == "cs_fof") WARM_GOLD else NAVY),
+                 hovertemplate = paste0("%{y}: %{x:.4f}<extra>", minfo(model, "label"), "</extra>"))
+  p <- layout(p, barmode = "group", xaxis = list(title = tx("Importancia media |SHAP| (probabilidad)", "Mean |SHAP| importance (probability)")),
+              yaxis = list(title = "", showgrid = FALSE))
+  style_fig(p, 400, margin = list(l = 170, r = 20, t = 40, b = 46))
+}
+
+shap_global_interp <- function(model) {
+  S <- DIAG$shap_global
+  p2 <- function(m) { v <- stats::setNames(.num(S[[m]]), unlist(S$variables)); v[["PAY_2"]] / v[["PAY_0"]] }
+  interp_block(
+    tx(sprintf("CS-FOF y XGBoost usan casi las mismas variables (correlación de Spearman %.2f entre sus importancias): el atraso de septiembre (PAY_0) y el cupo dominan. En CS-FOF el atraso de agosto (PAY_2) pesa el %s de PAY_0; en XGBoost, el %s.",
+               S$spearman, pct(p2("cs_fof"), 0), pct(p2("xgboost"), 0)),
+       sprintf("CS-FOF and XGBoost use almost the same variables (Spearman correlation %.2f between their importances): the September delay (PAY_0) and the limit dominate. In CS-FOF the August delay (PAY_2) weighs %s of PAY_0; in XGBoost, %s.",
+               S$spearman, pct(p2("cs_fof"), 0), pct(p2("xgboost"), 0))),
+    tx("SHAP por permutación (el mismo explicador para los dos, porque CS-FOF no es un árbol de scikit-learn) en 300 clientes de prueba del pliegue externo 1, con 50 clientes de fondo; los valores suman exactamente la probabilidad de cada cliente. Las barras tenues son el otro modelo.",
+       "Permutation SHAP (the same explainer for both, because CS-FOF is not a scikit-learn tree) on 300 test clients of outer fold 1, with 50 background clients; the values add up exactly to each client's probability. The faint bars are the other model."))
+}
+
 # ---------- Carrusel de modelos (mismo diseño de tarjeta de crédito del Dash) ----------
 mc_bar <- function(label, v, scale = 1, cls = "") {
   if (is.na(v)) return(div(class = "mc-metric", tags$span(label), div(class = "mc-bar na"),
@@ -376,7 +559,7 @@ model_slide <- function(row, rank) {
   sub <- MR[MR$model == m, ]
   by_tech <- tapply(sub$f1_mean, sub$technique, max)
   top <- div(class = "mc-top", tags$span(class = "mc-rank", paste0("#", rank)),
-             if (best) tags$span(class = "mc-badge", icon_("trophy"), tx("Mejor modelo", "Best model")) else
+             if (best) tags$span(class = "mc-badge", icon_("trophy"), tx("Mayor F1 medio", "Highest mean F1")) else
                tags$span(class = "mc-fam-top", tx(sprintf("%+.4f F1 vs. el mejor", row$f1_mean - F1_MAX),
                                                   sprintf("%+.4f F1 vs. the best", row$f1_mean - F1_MAX))))
   tags$article(class = paste0("mc-slide", if (best) " best" else ""),
@@ -422,40 +605,47 @@ models_carousel <- function() {
 }
 
 page_models <- function(sel = list()) {
-  b <- BEST; best_lbl <- minfo(b$model, "label"); c <- BEST_CM
+  b <- BEST; best_lbl <- minfo(b$model, "label"); c <- CSFOF_CM
   pos <- c$tp + c$fn; flagged <- c$tp + c$fp
   tagList(
     page_title(tx("Modelos", "Models")),
     div(class = "kpi-row k4",
         kpi(tx("Combinaciones evaluadas", "Combinations evaluated"), sprintf("%d + %d", N_BASE, N_EXTRA),
-            tx(sprintf("%d del diseño factorial (7 × 4 × 4) y, aparte, %d corridas de LightGBM, CatBoost y CS-FOF", N_BASE, N_EXTRA),
-               sprintf("%d from the factorial design (7 × 4 × 4) and, separately, %d runs of LightGBM, CatBoost and CS-FOF", N_BASE, N_EXTRA)), "layers"),
-        kpi(tx("Mejor F1 (clase default)", "Best F1 (default class)"), sprintf("%.3f · %.3f", BEST_BASE$f1_mean, b$f1_mean),
-            tx(sprintf("Mejor de las %d: %s · mejor global: %s, empatado con CS-FOF. Diferencia menor que 0.002; ninguna prueba las separa.", N_BASE, minfo(BEST_BASE$model, "label"), best_lbl),
-               sprintf("Best of the %d: %s · best overall: %s, tied with CS-FOF. Difference below 0.002; no test separates them.", N_BASE, minfo(BEST_BASE$model, "label"), best_lbl)), "trophy"),
+            tx(sprintf("%d del diseño factorial (7 × 4 × 4) y, aparte, %d corridas de CS-FOF", N_BASE, N_EXTRA),
+               sprintf("%d from the factorial design (7 × 4 × 4) and, separately, %d runs of CS-FOF", N_BASE, N_EXTRA)), "layers"),
+        kpi(tx("Mejor F1 (clase default)", "Best F1 (default class)"), sprintf("%.3f", b$f1_mean),
+            tx(sprintf("CS-FOF, el mayor de los modelos comparados (%s: %.3f); la diferencia no es significativa.", minfo(BEST_BASE$model, "label"), BEST_BASE$f1_mean),
+               sprintf("CS-FOF, the highest of the models compared (%s: %.3f); the difference is not significant.", minfo(BEST_BASE$model, "label"), BEST_BASE$f1_mean)), "trophy"),
         kpi(tx("Mejora sobre la línea base", "Improvement over baseline"), sprintf("+%.3f", b$f1_mean - BASELINE),
             tx(sprintf("Regresión logística sin balanceo: %.3f", BASELINE), sprintf("Logistic regression without balancing: %.3f", BASELINE)), "bars"),
         kpi(tx("Incumplimientos detectados", "Defaults detected"), pct(c$tp / pos, 0),
             tx(sprintf("%s de %s · %s, predicciones fuera de pliegue (umbral 0.5)", num(c$tp), num(pos), best_lbl),
                sprintf("%s of %s · %s, out-of-fold predictions (threshold 0.5)", num(c$tp), num(pos), best_lbl)), "target")),
+    card(tx(sprintf("Tabla de líderes: %d combinaciones", nrow(MR)), sprintf("Leaderboard: %d combinations", nrow(MR))),
+         leaderboard(),
+         interp_block(
+           tx("Haz clic en un encabezado para ordenar y escribe en el buscador para filtrar (por ejemplo, «XGBoost» o «SMOTE»). La estrella marca la mejor combinación de cada modelo, elegida por el F1 medio del bucle externo de la validación anidada 5 × 5.",
+              "Click a header to sort and type in the search box to filter (for example, “XGBoost” or “SMOTE”). The star marks each model's best combination, chosen by the mean F1 of the outer loop of the 5 × 5 nested validation."),
+           tx("El tiempo de inferencia se midió con el pliegue 0 (5,993 clientes, 4 núcleos) para los tres mejores modelos. CS-FOF es el más lento al predecir (253 ms por cada 1,000 clientes) porque sus árboles se recorren con numpy, sin código compilado como el de las librerías de los demás.",
+              "Inference time was measured on fold 0 (5,993 clients, 4 cores) for the three best models. CS-FOF is the slowest to predict (253 ms per 1,000 clients) because its trees are traversed with numpy, without compiled code like the other models' libraries."))),
     card(tx("Comparación de modelos", "Model comparison"), models_carousel()),
     div(class = "grid g2",
         card(tx("F1 por modelo y técnica de balanceo", "F1 by model and balancing technique"),
              grafica("mdl_heat", 480),
              interp_block(
-               tx("Cada celda es el mejor F1 que logró el modelo con esa técnica. Sin balanceo todos rinden peor, porque casi no detectan a quienes incumplen; con pesos de clase, los cinco mejores llegan a 0.55. CS-FOF solo se corrió con pesos de clase (celdas vacías).",
-                  "Each cell is the best F1 the model achieved with that technique. Without balancing all of them perform worse, because they barely detect defaulters; with class weights, the top five reach 0.55. CS-FOF was only run with class weights (empty cells)."),
+               tx("Cada celda es el mejor F1 que logró el modelo con esa técnica. Sin balanceo todos rinden peor, porque casi no detectan a quienes incumplen; con pesos de clase, los tres mejores llegan a 0.55. CS-FOF solo se corrió con pesos de clase (celdas vacías).",
+                  "Each cell is the best F1 the model achieved with that technique. Without balancing all of them perform worse, because they barely detect defaulters; with class weights, the top three reach 0.55. CS-FOF was only run with class weights (empty cells)."),
                tx("Comparación por factor sobre las 112 combinaciones base (Friedman con 28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. Sin balanceo el F1 medio es 0.455, frente a 0.526 (pesos de clase), 0.520 (SMOTE) y 0.513 (ADASYN); «sin balanceo» es peor que las tres (Nemenyi, p ≤ 0.010). Pesos de clase supera a ADASYN (p < 10⁻⁴) y no se distingue de SMOTE (p = 0.35); SMOTE supera a ADASYN (p = 0.007). Naive Bayes es el único modelo al que el balanceo casi no le cambia el F1.",
                   "Comparison by factor over the 112 base combinations (Friedman with 28 model × method blocks): χ² = 76.0, p ≈ 2·10⁻¹⁶. Without balancing the mean F1 is 0.455, versus 0.526 (class weights), 0.520 (SMOTE) and 0.513 (ADASYN); “no balancing” is worse than all three (Nemenyi, p ≤ 0.010). Class weights beat ADASYN (p < 10⁻⁴) and are indistinguishable from SMOTE (p = 0.35); SMOTE beats ADASYN (p = 0.007). Naive Bayes is the only model whose F1 barely changes with balancing."))),
         card(tx("Balancear mueve el umbral, no la capacidad de ordenar", "Balancing moves the threshold, not the ranking ability"),
              grafica("mdl_scatter", 420),
              interp_block(
-               tx(sprintf("Cada punto es una combinación: las %d del diseño factorial y las %d corridas de LightGBM, CatBoost y CS-FOF (rombos: CS-FOF; %d en total). Las que no balancean (gris) quedan abajo: aciertan poco con quienes incumplen. Pero no quedan más a la izquierda: ordenan a los clientes casi igual de bien; lo que cambia es dónde se pone el corte entre «paga» e «incumple».", N_BASE, N_EXTRA, nrow(MR)),
-                  sprintf("Each point is one combination: the %d from the factorial design and the %d runs of LightGBM, CatBoost and CS-FOF (diamonds: CS-FOF; %d in total). Those without balancing (grey) sit at the bottom: they rarely get defaulters right. But they are not further to the left: they rank clients almost equally well; what changes is where the cut between “pays” and “defaults” is placed.", N_BASE, N_EXTRA, nrow(MR))),
+               tx(sprintf("Cada punto es una combinación: las %d del diseño factorial y las %d corridas de CS-FOF (rombos). Las que no balancean (gris) quedan abajo: aciertan poco con quienes incumplen. Pero no quedan más a la izquierda: ordenan a los clientes casi igual de bien; lo que cambia es dónde se pone el corte entre «paga» e «incumple».", N_BASE, N_EXTRA),
+                  sprintf("Each point is one combination: the %d from the factorial design and the %d runs of CS-FOF (diamonds). Those without balancing (grey) sit at the bottom: they rarely get defaulters right. But they are not further to the left: they rank clients almost equally well; what changes is where the cut between “pays” and “defaults” is placed.", N_BASE, N_EXTRA)),
                tx("ROC-AUC medio por técnica (96 combinaciones sin SVM): 0.759 sin balanceo, 0.762 con pesos de clase, 0.754 con SMOTE y 0.750 con ADASYN. Al umbral de 0.5 el recall pasa de 0.378 a 0.607 y la precisión baja de 0.621 a 0.464, así que la ganancia de F1 (0.458 → 0.524) viene en gran parte del umbral y no de un modelo que discrimine mejor.",
                   "Mean ROC-AUC by technique (96 combinations without SVM): 0.759 without balancing, 0.762 with class weights, 0.754 with SMOTE and 0.750 with ADASYN. At the 0.5 threshold recall goes from 0.378 to 0.607 and precision drops from 0.621 to 0.464, so the F1 gain (0.458 → 0.524) comes largely from the threshold rather than from a model that discriminates better.")))),
     div(class = "grid g2",
-        card(tx(paste("Mejor combinación:", best_lbl), paste("Best combination:", best_lbl)),
+        card(tx(paste("Mayor F1 medio:", best_lbl), paste("Highest mean F1:", best_lbl)),
              grafica("mdl_cm", 380),
              div(class = "kpi-row k2 kpi-compact",
                  kpi("Recall", pct(c$tp / pos, 0), tx("incumplimientos detectados", "defaults detected"), "target"),
@@ -468,17 +658,28 @@ page_models <- function(sel = list()) {
                           num(pos), num(c$tp), pct(c$tp / pos, 0), num(c$fp), num(flagged), pct(c$tp / flagged, 0)),
                   sprintf("Of the %s clients who defaulted, the model detects %s (%s). In exchange it raises %s false alarms: of the %s clients it flags as risky, %s actually default.",
                           num(pos), num(c$tp), pct(c$tp / pos, 0), num(c$fp), num(flagged), pct(c$tp / flagged, 0))),
-               tx(sprintf("%s y optimización %s. Predicciones out-of-fold de los cinco modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.784). Las probabilidades no están calibradas (ECE = 0.204) porque el balanceo infla la clase positiva. Ajustar el umbral según el costo de cada tipo de error es el siguiente paso natural.",
-                          tech_lbl(b$technique), tolower(method_lbl(b$method))),
-                  sprintf("%s and %s optimization. Out-of-fold predictions from the five outer-fold models, with a 0.5 threshold (pooled AUC 0.784). The probabilities are not calibrated (ECE = 0.204) because balancing inflates the positive class. Tuning the threshold to the cost of each type of error is the natural next step.",
-                          tech_lbl(b$technique), tolower(method_lbl(b$method)))))),
-        card(tx("Qué variables pesan más: SHAP en los 5 folds", "Which variables matter most: SHAP across 5 folds"),
+               tx(sprintf("%s y optimización %s. Predicciones out-of-fold de los cinco modelos de los folds externos, con umbral 0.5 (AUC agrupado 0.783). Las probabilidades no están calibradas (ECE = 0.180) porque el peso de costo infla la clase positiva. Ajustar el umbral según el costo de cada tipo de error es el siguiente paso natural. XGBoost, el mejor modelo de referencia, detecta %s incumplimientos con %s falsas alarmas.",
+                          tech_lbl(b$technique), tolower(method_lbl(b$method)), num(XGB_CM$tp), num(XGB_CM$fp)),
+                  sprintf("%s and %s optimization. Out-of-fold predictions from the five outer-fold models, with a 0.5 threshold (pooled AUC 0.783). The probabilities are not calibrated (ECE = 0.180) because the cost weight inflates the positive class. Tuning the threshold to the cost of each type of error is the natural next step. XGBoost, the best baseline model, detects %s defaults with %s false alarms.",
+                          tech_lbl(b$technique), tolower(method_lbl(b$method)), num(XGB_CM$tp), num(XGB_CM$fp))))),
+        card(tx("Qué variables pesan más: SHAP global", "Which variables matter most: global SHAP"),
              div(class = "controls", control(tx("Modelo", "Model"),
-                 radio_("shap_model", c("XGBoost" = "xgboost", "Random Forest" = "random_forest"), sel$shap_model %||% "xgboost"))),
+                 radio_("shap_model", c("XGBoost" = "xgboost", "Random Forest" = "random_forest", "CS-FOF" = "cs_fof"), sel$shap_model %||% "xgboost"))),
              grafica("shap_graph", 420),
              uiOutput("shap_interp"),
              tags$p(class = "callout", tx("Coincide con el EDA: el historial de pagos (PAY_0 primero) es la señal más fuerte del incumplimiento, le sigue el límite de crédito, y el perfil demográfico pesa poco.",
                                           "This matches the EDA: payment history (PAY_0 first) is the strongest signal of default, followed by the credit limit, and the demographic profile matters little.")))),
+    card(tx("Diagnóstico del modelo seleccionado", "Diagnostics of the selected model"),
+         div(class = "controls", control(tx("Modelo", "Model"),
+             radio_("diag_model", stats::setNames(DIAG_MODELS, vapply(DIAG_MODELS, minfo, "", "label")), sel$diag_model %||% "cs_fof"))),
+         grafica("diag_graph", 380),
+         uiOutput("diag_interp")),
+    card(tx("Comparación estadística: diagrama de diferencia crítica", "Statistical comparison: critical difference diagram"),
+         div(class = "controls", control(tx("Comparar sobre", "Compare over"),
+             radio_("cd_src", stats::setNames(c("taiwan", "conjuntos"), c(tx("Taiwán (5 pliegues)", "Taiwan (5 folds)"), tx("4 conjuntos de datos", "4 datasets"))),
+                    sel$cd_src %||% "taiwan"))),
+         grafica("cd_graph", 340),
+         uiOutput("cd_interp")),
     card(tx("¿LIME y SHAP explican lo mismo?", "Do LIME and SHAP explain the same thing?"),
          div(class = "grid g2", div(lime_shap_table()), grafica("lime_graph", 330)),
          interp_block(
