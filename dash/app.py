@@ -2270,14 +2270,23 @@ PAGE_ICONS = {"Introducción": "info", "Problema y Objetivos": "target", "Marco 
 # =============================================================================
 # 5. COMPONENTES DE INTERFAZ
 # =============================================================================
+def zoom_btn():
+    """Botón de «ampliar» de la esquina superior derecha. assets/card_focus.js lo cambia por «cerrar» al ampliar."""
+    abrir, cerrar = tx("Ampliar tarjeta", "Enlarge card"), tx("Cerrar (Esc)", "Close (Esc)")
+    return html.Button([icon("expand", "zb-open"), icon("close", "zb-close")], type="button", className="card-zoom",
+                       title=abrir, **{"aria-label": abrir, "aria-expanded": "false",
+                                       "data-label-open": abrir, "data-label-close": cerrar})
+
+
 def card(title, children, subtitle=None, cls=""):
-    head = [html.H3(title, className="card-title")]   # solo el título (subtitle se ignora a propósito)
+    head = [zoom_btn(), html.H3(title, className="card-title")]   # solo el título (subtitle se ignora a propósito)
     return html.Div(head + (children if isinstance(children, list) else [children]),
                     className=f"card {cls}".strip())
 
 
 def kpi(label, value, note="", ico=None):
-    return html.Div([html.Div([icon(ico) if ico else None, html.Div(label, className="kpi-label")],
+    return html.Div([zoom_btn(),
+                     html.Div([icon(ico) if ico else None, html.Div(label, className="kpi-label")],
                               className="kpi-head"),
                      html.Div(value, className="kpi-value"),
                      html.Div(note, className="kpi-note")], className="kpi")
@@ -2347,7 +2356,7 @@ def eda_filter_card():
     # Tarjeta plegable: arranca cerrada con una sola fila (icono, título, resumen y botón). Los controles
     # siguen en el DOM (los oculta <details>), porque cb_eda_filter los usa como entrada. El estado
     # abierto/cerrado se conserva entre páginas del EDA con assets/ef_fold.js.
-    return html.Div([html.Details([
+    return html.Div([zoom_btn(), html.Details([
         html.Summary([icon("filter", "ef-ico"), html.H3(tx("Filtros globales", "Global filters"), className="card-title"),
                       html.Span(id="ef-info", className="ef-info"),
                       html.Span(icon("chevron", "ef-chev"), className="ef-toggle", **{"aria-hidden": "true"})],
@@ -2544,7 +2553,7 @@ def page_intro():
 
 def money_kpi(label, amount, note):
     """KPI de un monto en millones de NT$ con su equivalente en dólares debajo (el valor no se parte en dos líneas)."""
-    return html.Div([html.Div(html.Div(label, className="kpi-label"), className="kpi-head"),
+    return html.Div([zoom_btn(), html.Div(html.Div(label, className="kpi-label"), className="kpi-head"),
                      html.Div(f"NT$\u00a0{amount / 1e6:,.0f}\u00a0M", className="kpi-value"),
                      html.Div(f"≈ US$\u00a0{amount / TWD_PER_USD_2005 / 1e6:,.1f}\u00a0M", className="kpi-usd"),
                      html.Div(note, className="kpi-note")], className="kpi kpi-money")
@@ -5341,6 +5350,44 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .pf-hint { font-size:12.5px; color:var(--muted); } .pf-note { margin:6px 0 12px; } .pf-row { margin-bottom:14px; }
 .pf-slider { padding-top:34px; }
 .pf-thr-info { margin-top:10px; }
+/* ---------- Modo foco: una tarjeta ampliada al centro (assets/card_focus.js) ---------- */
+.card, .kpi { position:relative; }
+.card-zoom { position:absolute; top:10px; right:10px; z-index:2; width:30px; height:30px; padding:0; display:inline-flex;
+  align-items:center; justify-content:center; background:var(--surface); color:var(--muted); cursor:pointer;
+  border:1px solid var(--line-strong); border-radius:8px; opacity:.75; transition:opacity .15s, color .15s, border-color .15s; }
+.card-zoom .ico { width:16px; height:16px; }
+.card-zoom .zb-close { display:none; }
+.card:hover > .card-zoom, .kpi:hover > .card-zoom, .card-zoom:focus-visible { opacity:1; }
+.card-zoom:hover { color:var(--accent-2); border-color:var(--accent-2); opacity:1; }
+.card > .card-title { padding-right:38px; }
+.kpi > .card-zoom { top:6px; right:6px; width:24px; height:24px; border-radius:6px; }
+.kpi > .card-zoom .ico { width:13px; height:13px; }
+.kpi > .kpi-head { padding-right:26px; }
+.ef-card > .card-zoom { top:16px; right:14px; }
+.ef-summary { padding-right:58px; }
+
+.focus-overlay { position:fixed; inset:0; z-index:10005; background:rgba(8,12,24,.72); opacity:0; visibility:hidden;
+  transition:opacity .18s ease, visibility 0s linear .18s; }
+.focus-overlay.on { opacity:1; visibility:visible; transition:opacity .18s ease, visibility 0s; }
+html.focus-open, html.focus-open body { overflow:hidden; }
+.card-zoomed { --fz:1.3; position:fixed !important; z-index:10010; zoom:var(--fz); margin:0 !important;
+  top:calc(5vh / var(--fz)) !important; left:calc(5vw / var(--fz)) !important;
+  width:calc(90vw / var(--fz)) !important; height:calc(90vh / var(--fz)) !important; max-width:none !important; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; padding-top:20px;
+  box-shadow:0 24px 80px rgba(0,0,0,.55); border-color:var(--line-strong); outline:none; }
+.card-zoomed.ef-card { padding-top:0; }
+.kpi.card-zoomed { --fz:2.6; display:flex; flex-direction:column; justify-content:center; padding:24px 40px;
+  border-left-width:6px; border-left-color:var(--accent-2); }
+.card-zoomed > .card-zoom { position:fixed; top:calc((5vh + 12px) / var(--fz)); right:calc((5vw + 12px) / var(--fz));
+  width:calc(52px / var(--fz)); height:calc(52px / var(--fz)); z-index:3; opacity:1; color:var(--text);
+  background:var(--surface-2); border-color:var(--accent-2); }
+.card-zoomed > .card-zoom .ico { width:calc(28px / var(--fz)); height:calc(28px / var(--fz)); }
+.card-zoomed > .card-zoom .zb-open { display:none; } .card-zoomed > .card-zoom .zb-close { display:inline-block; }
+.card-zoomed > .card-title { padding-right:56px; }
+/* los menús desplegables de Dash viven fuera de la tarjeta: deben quedar por encima de la capa */
+.dash-dropdown-content, [data-radix-popper-content-wrapper], .dash-tooltip { z-index:10030 !important; }
+/* el menú se posiciona en píxeles de pantalla; dentro de la tarjeta con zoom hay que deshacer el zoom */
+.card-zoomed [data-radix-popper-content-wrapper] { zoom:calc(1 / var(--fz)); }
+@media (prefers-reduced-motion:reduce) { .focus-overlay, .focus-overlay.on { transition:none; } }
 .ef-card { padding:0; }
 .ef-summary { display:flex; align-items:center; gap:12px; padding:14px 22px; cursor:pointer; list-style:none; }
 .ef-summary::-webkit-details-marker { display:none; }
