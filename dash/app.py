@@ -3934,10 +3934,10 @@ def page_models():
                    "Click a header to sort and type in the grey row to filter (for example, “XGBoost” in Model or "
                    "“> 0.54” in AUC). The star marks each model's best combination, chosen by the mean F1 of the "
                    "outer loop of the 5 × 5 nested validation."),
-                tx("El tiempo de inferencia se midió con el pliegue 0 (5,993 clientes, 4 núcleos) para los cinco "
+                tx("El tiempo de inferencia se midió con el pliegue 0 (5,993 clientes, 4 núcleos) para los tres "
                    "mejores modelos. CS-FOF es el más lento al predecir (253 ms por cada 1,000 clientes) porque sus "
                    "árboles se recorren con numpy, sin código compilado como el de las librerías de los demás.",
-                   "Inference time was measured on fold 0 (5,993 clients, 4 cores) for the five best models. CS-FOF is "
+                   "Inference time was measured on fold 0 (5,993 clients, 4 cores) for the three best models. CS-FOF is "
                    "the slowest to predict (253 ms per 1,000 clients) because its trees are traversed with numpy, without "
                    "compiled code like the other models' libraries.")),
         ]),

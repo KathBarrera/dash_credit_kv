@@ -1190,9 +1190,9 @@ def _construir(A, EN):
           ["explain the F1 heatmap", "F1 by model and balancing technique", "which balancing technique is best",
            "does balancing help", "no balancing vs class weights", "models heatmap"]),
         t("Cada celda es el **mejor F1** de un modelo con una técnica de balanceo. Sin balanceo todos rinden peor "
-          "porque casi no detectan a quienes incumplen; con **pesos de clase**, los cinco mejores llegan a 0.55.",
+          "porque casi no detectan a quienes incumplen; con **pesos de clase**, los tres mejores llegan a 0.55.",
           "Each cell is a model's **best F1** with a balancing technique. Without balancing all of them perform "
-          "worse because they barely detect defaulters; with **class weights**, the top five reach 0.55."),
+          "worse because they barely detect defaulters; with **class weights**, the top three reach 0.55."),
         tecnico=t("Friedman (28 bloques modelo × método): χ² = 76.0, p ≈ 2·10⁻¹⁶. F1 medio: 0.455 sin balanceo, 0.526 "
                   "pesos de clase, 0.520 SMOTE y 0.513 ADASYN. «Sin balanceo» es peor que las tres (Nemenyi p ≤ 0.010); "
                   "pesos de clase supera a ADASYN (p < 10⁻⁴) y empata con SMOTE (p = 0.35). Naive Bayes casi no cambia.",
@@ -1248,13 +1248,13 @@ def _construir(A, EN):
           f"- **False alarms** (false positives): {cm['fp']:,}.\n"
           f"- **Correctly classified payers:** {cm['tn']:,}.\n\n"
           f"Of the {flagged:,} it flags as risky, {cm['tp'] / flagged:.0%} actually default."),
-        tecnico=t("Predicciones out-of-fold de los cinco modelos de los folds externos (AUC agrupado 0.782). Las "
-                  "probabilidades no están calibradas (ECE = 0.196) porque el balanceo infla la clase positiva; una "
-                  "recalibración isotónica la baja de 0.180 a 0.013 en un fold. Ajustar el umbral según el costo de "
+        tecnico=t("Predicciones out-of-fold de los cinco modelos de los folds externos (AUC agrupado 0.783). Las "
+                  "probabilidades no están calibradas (ECE = 0.180) porque el peso de costo infla la clase positiva; una "
+                  "recalibración isotónica lo baja a 0.003. Ajustar el umbral según el costo de "
                   "cada error es el siguiente paso.",
-                  "Out-of-fold predictions from the five outer-fold models (pooled AUC 0.782). The probabilities are "
-                  "not calibrated (ECE = 0.196) because balancing inflates the positive class; isotonic recalibration "
-                  "lowers it from 0.180 to 0.013 on one fold. Tuning the threshold to the cost of each error is the "
+                  "Out-of-fold predictions from the five outer-fold models (pooled AUC 0.783). The probabilities are "
+                  "not calibrated (ECE = 0.180) because the cost weight inflates the positive class; isotonic recalibration "
+                  "lowers it to 0.003. Tuning the threshold to the cost of each error is the "
                   "next step."),
         pagina="/modelos", sug=t(["¿Qué es el recall?", "¿Qué es el umbral de decisión?"],
                                  ["What is recall?", "What is the decision threshold?"])))
