@@ -40,7 +40,7 @@ def _construir(A, EN):
     pos, flagged = cm["tp"] + cm["fn"], cm["tp"] + cm["fp"]
     meta = A.MODELO_META or {}
     prueba = meta.get("prueba", {})
-    n_trees = len(A.MODELO[-1].estimators_) if getattr(A, "MODELO", None) is not None else 0
+    n_trees = A.MODELO[-1].n_estimators if getattr(A, "MODELO", None) is not None else 0   # XGBoost de Predecir
     r_late = df.loc[df["PAY_0"] >= 2, T].mean()
     r_ok = df.loc[df["PAY_0"] <= 0, T].mean()
     exposure = df.loc[df[T] == 1, "LIMIT_BAL"].sum()
@@ -1544,17 +1544,19 @@ def _construir(A, EN):
            "what does the predict section do", "risk simulator", "how do I evaluate a client",
            "calculate a client's risk", "predict whether a new client will pay", "test the model with a client"]),
         t("En **Predecir** llenas los datos de un cliente y el modelo serializado calcula su riesgo **en vivo**:\n\n"
-          f"1. **Flujo:** datos → transformaciones → {n_trees} árboles opinan → puntaje y decisión.\n"
-          "2. **Formulario:** perfil (cupo, edad, sexo, educación, estado civil), estado de pago por mes y montos.\n"
-          "3. **Resultado:** una tarjeta de crédito con el puntaje y el veredicto, señales y votos de los árboles.\n"
-          "4. **Historial del cliente**, **¿Qué empuja su riesgo?** y **¿Qué pasaría si…?**\n"
-          "5. **Cómo se serializó el modelo** (joblib).",
+          f"1. **Modelo:** XGBoost (el mejor modelo de referencia) o CS-FOF, el modelo original; se elige arriba.\n"
+          f"2. **Flujo:** datos → transformaciones → {n_trees} árboles de XGBoost en cadena → puntaje y decisión.\n"
+          "3. **Formulario:** perfil (cupo, edad, sexo, educación, estado civil), estado de pago por mes y montos.\n"
+          "4. **Resultado:** una tarjeta de crédito con el puntaje y el veredicto, señales y cuántos árboles empujan hacia «incumple».\n"
+          "5. **Historial del cliente**, **¿Qué empuja su riesgo?** y **¿Qué pasaría si…?**\n"
+          "6. **Cómo se serializó el modelo** (joblib).",
           "In **Predict** you fill in a client's data and the serialized model computes their risk **live**:\n\n"
-          f"1. **Flow:** data → transformations → {n_trees} trees give their opinion → score and decision.\n"
-          "2. **Form:** profile (limit, age, sex, education, marital status), repayment status by month and amounts.\n"
-          "3. **Result:** a credit card with the score and the verdict, signals and the trees' votes.\n"
-          "4. **Client history**, **What drives their risk?** and **What if…?**\n"
-          "5. **How the model was serialized** (joblib)."),
+          f"1. **Model:** XGBoost (the best baseline model) or CS-FOF, the original model; chosen at the top.\n"
+          f"2. **Flow:** data → transformations → {n_trees} XGBoost trees in a chain → score and decision.\n"
+          "3. **Form:** profile (limit, age, sex, education, marital status), repayment status by month and amounts.\n"
+          "4. **Result:** a credit card with the score and the verdict, signals and how many trees push toward “default”.\n"
+          "5. **Client history**, **What drives their risk?** and **What if…?**\n"
+          "6. **How the model was serialized** (joblib)."),
         pagina="/predecir",
         sug=t(["¿Cómo lleno el formulario?", "¿Cómo leo el puntaje de riesgo?", "Explícame «¿Qué pasaría si…?»"],
               ["How do I fill in the form?", "How do I read the risk score?", "Explain “What if…?”"])))
@@ -1623,10 +1625,10 @@ def _construir(A, EN):
           + (f"With the {thr:.0%} threshold the model detects {prueba.get('recall', 0):.0%} of defaulters and is right about "
              f"{prueba.get('precision', 0):.0%} of those it flags (test data). " if prueba else "")
           + "It is not a calibrated probability: it is useful to **rank and classify** clients."),
-        tecnico=t("El Random Forest se entrenó con class_weight='balanced', lo que desplaza las probabilidades hacia la "
+        tecnico=t("XGBoost se entrenó con pesos de clase (scale_pos_weight ≈ 3.5) y CS-FOF con class_weight='balanced', lo que desplaza las probabilidades hacia la "
                   f"clase positiva: sobrestima el riesgo frente a la tasa real ({pct(rate)}). Para usar el puntaje "
                   "como probabilidad habría que calibrarlo (p. ej., regresión isotónica).",
-                  "The Random Forest was trained with class_weight='balanced', which shifts probabilities toward the "
+                  "XGBoost was trained with class weights (scale_pos_weight ≈ 3.5) and CS-FOF with class_weight='balanced', which shifts probabilities toward the "
                   f"positive class: it overestimates risk compared with the real rate ({pct(rate)}). To use the score "
                   "as a probability it would have to be calibrated (e.g. isotonic regression)."),
         pagina="/predecir", sug=t(["¿Qué son los votos de los árboles?", "Explícame «¿Qué empuja su riesgo?»"],
@@ -1638,14 +1640,18 @@ def _construir(A, EN):
            "por qué el puntaje no coincide con los votos", "cuántos árboles tiene el modelo"],
           ["what are the trees' votes", "forest squares", "trees vote default", "trees waffle",
            "why doesn't the score match the votes", "how many trees does the model have"]),
-        t(f"El modelo es un bosque de **{n_trees} árboles**. Cada uno opina si el cliente incumplirá; los "
-          "**cuadros** muestran qué porcentaje del bosque vota «incumple» (cada cuadro = 1 %). El puntaje promedia las "
-          "*probabilidades* de todos los árboles, no solo sus votos, por eso puede diferir un poco.",
-          f"The model is a forest of **{n_trees} trees**. Each one gives its opinion on whether the client will "
-          "default; the **squares** show what percentage of the forest votes “default” (each square = 1%). The score "
-          "averages the *probabilities* of all trees, not just their votes, so it may differ slightly."),
-        pagina="/predecir", sug=t(["¿Cómo leo el puntaje de riesgo?", "¿Qué es Random Forest?"],
-                                  ["How do I read the risk score?", "What is random forest?"])))
+        t(f"Con **XGBoost** el modelo tiene **{n_trees} árboles en cadena**: cada uno corrige los errores de los "
+          "anteriores y suma o resta un poco al puntaje. Los **cuadros** muestran qué porcentaje de los árboles empuja "
+          "hacia «incumple» (cada cuadro = 1 %). Como no todos pesan lo mismo, el puntaje puede diferir de esa "
+          "proporción.\n\nCon **CS-FOF** es un bosque: cada árbol vota y los cuadros muestran qué porcentaje vota "
+          "«incumple»; el puntaje promedia sus probabilidades.",
+          f"With **XGBoost** the model has **{n_trees} trees in a chain**: each one corrects the errors of the "
+          "previous ones and adds or subtracts a little from the score. The **squares** show what percentage of the "
+          "trees push toward “default” (each square = 1%). Since they do not all weigh the same, the score may "
+          "differ from that proportion.\n\nWith **CS-FOF** it is a forest: each tree votes and the squares show what "
+          "percentage votes “default”; the score averages their probabilities."),
+        pagina="/predecir", sug=t(["¿Cómo leo el puntaje de riesgo?", "¿Qué es XGBoost?"],
+                                  ["How do I read the risk score?", "What is XGBoost?"])))
     add(Intencion(
         "historial", t("Historial del cliente", "Client history"),
         t(["explícame el historial del cliente", "facturado vs pagado", "barras azules y doradas del historial",
@@ -1701,10 +1707,10 @@ def _construir(A, EN):
           "**What if…?** shows the score *this same* client would have if only one variable changed: September "
           "delay, limit, September payment or age. The **star** is their current situation and the upper band marks "
           "high risk. For example, with “September delay” you see how much the risk rises with each month of delay."),
-        tecnico=t("Es una curva ICE (dependencia individual): se fija el resto y se recorre una variable. En un bosque la "
+        tecnico=t("Es una curva ICE (dependencia individual): se fija el resto y se recorre una variable. En los modelos de árboles la "
                   "curva tiene escalones porque cada árbol corta en umbrales; describe al modelo, no implica causalidad.",
                   "It is an ICE curve (individual conditional expectation): the rest is fixed and one variable is "
-                  "varied. In a forest the curve has steps because each tree splits at thresholds; it describes the "
+                  "varied. In tree models the curve has steps because each tree splits at thresholds; it describes the "
                   "model and does not imply causality."),
         pagina="/predecir", sug=t(["Explícame «¿Qué empuja su riesgo?»", "¿Cómo leo el puntaje de riesgo?"],
                                   ["Explain “What drives their risk?”", "How do I read the risk score?"])))
@@ -1712,22 +1718,22 @@ def _construir(A, EN):
     add(Intencion(
         "serializacion", t("Cómo se serializó el modelo", "How the model was serialized"),
         t(["cómo se serializó el modelo", "qué es serializar", "qué es joblib", "qué es el archivo pkl",
-           "modelo_credito.pkl", "cómo se guardó el modelo", "cómo se entrenó el modelo de predecir",
+           "modelo_xgboost.pkl", "cómo se guardó el modelo", "cómo se entrenó el modelo de predecir",
            "hiperparámetros del modelo serializado", "métricas de prueba del modelo"],
           ["how was the model serialized", "what is serializing", "what is joblib", "what is the pkl file",
-           "modelo_credito.pkl", "how was the model saved", "how was the predict model trained",
+           "modelo_xgboost.pkl", "how was the model saved", "how was the predict model trained",
            "hyperparameters of the serialized model", "test metrics of the model"]),
         t("**Serializar** es guardar un modelo ya entrenado en un archivo para usarlo sin reentrenar:\n\n"
-          "1. **Entrenar** (`modelo/entrenar.py`) → 2. **Guardar** con `joblib.dump` en `modelo_credito.pkl` → "
+          "1. **Entrenar** (`modelo/entrenar_extra.py`) → 2. **Guardar** con `joblib.dump` en `modelo_xgboost.pkl` → "
           "3. **Cargar** con `joblib.load` al arrancar el tablero → 4. **Predecir** con `predict_proba` en cada cambio.\n\n"
-          f"El .pkl guarda el pipeline completo: transformaciones del proyecto + one-hot + Random Forest "
+          f"El .pkl guarda el pipeline completo: transformaciones del proyecto + one-hot + XGBoost "
           f"({meta.get('balanceo', 'pesos de clase')})."
           + (f" En prueba (20 %): F1 {prueba['f1']:.3f}, recall {prueba['recall']:.3f}, precisión "
              f"{prueba['precision']:.3f}, ROC-AUC {prueba['roc_auc']:.3f}." if prueba else ""),
           "**Serializing** means saving an already trained model to a file to use it without retraining:\n\n"
-          "1. **Train** (`modelo/entrenar.py`) → 2. **Save** with `joblib.dump` to `modelo_credito.pkl` → "
+          "1. **Train** (`modelo/entrenar_extra.py`) → 2. **Save** with `joblib.dump` to `modelo_xgboost.pkl` → "
           "3. **Load** with `joblib.load` when the dashboard starts → 4. **Predict** with `predict_proba` on each change.\n\n"
-          f"The .pkl stores the whole pipeline: project transformations + one-hot + Random Forest "
+          f"The .pkl stores the whole pipeline: project transformations + one-hot + XGBoost "
           f"({meta.get('balanceo', 'class weights')})."
           + (f" On the test set (20%): F1 {prueba['f1']:.3f}, recall {prueba['recall']:.3f}, precision "
              f"{prueba['precision']:.3f}, ROC-AUC {prueba['roc_auc']:.3f}." if prueba else "")),
@@ -1739,8 +1745,8 @@ def _construir(A, EN):
                   + ", ".join(f"{k} = {v}" for k, v in hp.items())
                   + f". Trained on {meta.get('n_entrenamiento', 0):,} clients. It must be loaded with the same "
                     f"scikit-learn version ({meta.get('versiones', {}).get('scikit-learn', '—')})."),
-        pagina="/predecir", sug=t(["¿Qué son los votos de los árboles?", "¿Qué es Random Forest?"],
-                                  ["What are the trees' votes?", "What is random forest?"])))
+        pagina="/predecir", sug=t(["¿Qué son los votos de los árboles?", "¿Qué es XGBoost?"],
+                                  ["What are the trees' votes?", "What is XGBoost?"])))
 
     # =====================================================================
     # Enlaces y equipo
