@@ -24,7 +24,7 @@ El análisis incluye:
 - Pruebas estadísticas: χ² con V de Cramér, Mann-Whitney, t de Welch y Kruskal-Wallis
 - Diagnóstico de multicolinealidad entre las variables de facturación (BILL_AMT)
 - Análisis del desbalance de clases de la variable objetivo
-- Sección **Predecir**: formulario visual (deslizadores y tarjetas con íconos) que devuelve en vivo el puntaje de riesgo de un cliente (mostrado como una tarjeta de crédito que se rompe por la mitad y se abre según el riesgo) usando un Random Forest **serializado con `joblib`** (`dash/modelo/modelo_credito.pkl`), con indicador, votos de los árboles, historial del cliente, aporte de cada grupo de variables y simulador «¿Qué pasaría si…?»
+- Sección **Predecir**: formulario visual (deslizadores y tarjetas con íconos) que devuelve en vivo el puntaje de riesgo de un cliente (mostrado como una tarjeta de crédito que se rompe por la mitad y se abre según el riesgo) con **XGBoost** (el mejor modelo de referencia) o **CS-FOF** (el modelo original), **serializados con `joblib`** (`dash/modelo/modelo_xgboost.pkl` y `dash/modelo/modelo_cs_fof.pkl`), con umbral ajustable, árboles que empujan hacia «incumple», predicción conforme, historial del cliente, aporte de cada grupo de variables y simulador «¿Qué pasaría si…?»
 - **Español e inglés**: botón **ES | EN** en la barra superior (y en la portada) que traduce todo el tablero — textos, interpretaciones, gráficas, formulario y a Kyo — y se recuerda en el navegador
 - Modo claro y oscuro, y menú lateral plegable
 - **Kyo, asistente del tablero**: una mascota fija en la esquina inferior derecha; al tocarla se abre a la derecha un panel de chat (estilo Copilot de VS Code) que explica cada página, gráfica, variable, modelo y concepto del dash. Es un bot **entrenado** con scikit-learn (TF-IDF + regresión logística) sobre preguntas de ejemplo, usa las mismas cifras que dibujan las gráficas y reconoce cuando una pregunta no es del tablero
@@ -58,9 +58,11 @@ dash_credit_kv/
     │   └── anytime_summary.csv              # costo y F1 externo de cada optimizador
     └── modelo/
         ├── features.py                      # Transformaciones de variables del proyecto (las usa el .pkl)
-        ├── entrenar.py                      # Entrena y serializa el modelo (python -m modelo.entrenar)
-        ├── modelo_credito.pkl               # Modelo serializado con joblib
-        └── modelo_credito.json              # Métricas, hiperparámetros y versiones
+        ├── entrenar.py                      # Carga de datos y receta del Random Forest anterior
+        ├── entrenar_extra.py                # Entrena y serializa XGBoost y CS-FOF (python -m modelo.entrenar_extra xgboost cs_fof)
+        ├── conformal.py · umbral.py         # Predicción conforme y umbral recomendado de cada modelo
+        ├── modelo_xgboost.pkl / .json       # XGBoost serializado con joblib, con métricas, hiperparámetros y versiones
+        └── modelo_cs_fof.pkl / .json        # CS-FOF serializado con joblib
     ├── asistente/                           # Kyo, el bot que explica el tablero
     │   ├── motor.py                         # Clasificador de intenciones (TF-IDF + regresión logística)
     │   ├── conocimiento.py                  # Qué sabe: temas, preguntas de entrenamiento y respuestas
@@ -82,17 +84,19 @@ El modelo se entrena una sola vez y se guarda en disco con `joblib`; el tablero 
 
 ```bash
 cd dash
-python -m modelo.entrenar        # entrena, guarda modelo/modelo_credito.pkl y verifica que cargue
+python -m modelo.entrenar_extra xgboost cs_fof   # entrena, guarda los .pkl y verifica que carguen
+python -m modelo.conformal xgboost cs_fof        # predicción conforme (90 %)
+python -m modelo.umbral xgboost cs_fof           # umbral recomendado
 ```
 
 ```python
 import joblib
-joblib.dump(modelo, "modelo/modelo_credito.pkl", compress=3)   # serializar
-modelo = joblib.load("modelo/modelo_credito.pkl")              # cargar en app.py
+joblib.dump(modelo, "modelo/modelo_xgboost.pkl", compress=3)   # serializar
+modelo = joblib.load("modelo/modelo_xgboost.pkl")              # cargar en app.py
 riesgo = modelo.predict_proba(cliente)[0, 1]                   # predecir
 ```
 
-El `.pkl` guarda el pipeline completo (transformaciones del proyecto + one-hot + Random Forest con `class_weight="balanced"`), así que recibe las 23 variables originales del dataset. Debe cargarse con la misma versión de scikit-learn con la que se guardó (fijada en `requirements.txt`).
+El `.pkl` guarda el pipeline completo (transformaciones del proyecto + one-hot + XGBoost con `scale_pos_weight = n₀/n₁` y los hiperparámetros finales de la validación anidada del proyecto), así que recibe las 23 variables originales del dataset. Debe cargarse con las mismas versiones de scikit-learn y xgboost con las que se guardó (fijada en `requirements.txt`).
 
 ### Idioma (español / inglés)
 
@@ -210,7 +214,7 @@ El repositorio ya trae la configuración (`railway.json`, `requirements.txt` y `
 
 El dataset está en `dash/`; si faltara, la aplicación lo descarga de UCI al arrancar (una sola vez gracias a `--preload`).
 
-El modelo de la sección Predecir ya viene serializado en `dash/modelo/modelo_credito.pkl`, así que Railway no entrena nada: solo instala dependencias y arranca. Para reentrenarlo, ejecuta `python -m modelo.entrenar` dentro de `dash/` y sube el `.pkl` y el `.json` nuevos.
+El modelo de la sección Predecir ya viene serializado en `dash/modelo/modelo_xgboost.pkl`, así que Railway no entrena nada: solo instala dependencias y arranca. Para reentrenarlo, ejecuta `python -m modelo.entrenar_extra xgboost` dentro de `dash/` y sube el `.pkl` y el `.json` nuevos.
 
 ---
 

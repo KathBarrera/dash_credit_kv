@@ -18,7 +18,7 @@
      3. Figuras + interpretaciones: EDA Univariado
      4. Figuras + interpretaciones: EDA Multivariado
         4a. Modelos (resultados de results/model_results.csv)
-        4a-bis. Predecir (carga el modelo serializado modelo/modelo_credito.pkl)
+        4a-bis. Predecir (carga el modelo serializado modelo/modelo_xgboost.pkl)
      5. Componentes de interfaz (tarjetas, KPIs, interpretaciones)
      6. Páginas (Portada, Introducción, Problema, Marco, Univariado, Multivariado, Modelos, Predecir,
         Enlaces, Equipo)
@@ -1900,15 +1900,16 @@ def interp_anytime(model):
 
 
 # =============================================================================
-# 4a-bis. PREDECIR: modelo serializado con joblib (modelo/modelo_credito.pkl)
+# 4a-bis. PREDECIR: modelo serializado con joblib (modelo/modelo_xgboost.pkl)
 # =============================================================================
-# El .pkl lo genera `python -m modelo.entrenar` (ver modelo/entrenar.py). Es un
-# Pipeline completo: transforma las 23 variables originales, aplica one-hot y
-# predice con un Random Forest con pesos de clase. Aquí solo se CARGA y se usa.
+# El .pkl lo genera `python -m modelo.entrenar_extra xgboost` (ver modelo/entrenar_extra.py).
+# Es un Pipeline completo: transforma las 23 variables originales, aplica one-hot y
+# predice con XGBoost con pesos de clase (scale_pos_weight), el mejor modelo de
+# referencia del proyecto. Aquí solo se CARGA y se usa.
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))   # para que joblib encuentre modelo.features
-MODEL_FILE = BASE_DIR / "modelo" / "modelo_credito.pkl"
-MODEL_META_FILE = BASE_DIR / "modelo" / "modelo_credito.json"
+MODEL_FILE = BASE_DIR / "modelo" / "modelo_xgboost.pkl"
+MODEL_META_FILE = BASE_DIR / "modelo" / "modelo_xgboost.json"
 try:
     import joblib
     from modelo.features import INPUT_COLS
@@ -1920,23 +1921,23 @@ except Exception as _e:   # el tablero sigue funcionando aunque falte el modelo
     INPUT_COLS = (["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "AGE"] + PAY_COLS + BILL_COLS + PAYAMT_COLS)
     print(f"[modelo] no se pudo cargar {MODEL_FILE.name}: {MODELO_ERROR}")
 
-# Selector de «Predecir»: Random Forest (el de siempre) y CS-FOF (original).
-# El segundo lo genera `python -m modelo.entrenar_extra cs_fof`; si falta, el selector solo ofrece RF.
+# Selector de «Predecir»: XGBoost (el mejor modelo de referencia) y CS-FOF (original).
+# El segundo lo genera `python -m modelo.entrenar_extra cs_fof`; si falta, el selector solo ofrece XGBoost.
 MODELOS = {}
 if MODELO is not None:
-    MODELOS["rf"] = (MODELO, MODELO_META)
+    MODELOS["xgboost"] = (MODELO, MODELO_META)
 for _k in ("cs_fof",):
     try:
         MODELOS[_k] = (joblib.load(BASE_DIR / "modelo" / f"modelo_{_k}.pkl"),
                        json.loads((BASE_DIR / "modelo" / f"modelo_{_k}.json").read_text(encoding="utf-8")))
     except Exception as _e:
         print(f"[modelo] no se pudo cargar modelo_{_k}.pkl: {type(_e).__name__}: {_e}")
-MODEL_LABELS = {"rf": ("Random Forest", "Random Forest"),
+MODEL_LABELS = {"xgboost": ("XGBoost", "XGBoost"),
                 "cs_fof": ("CS-FOF (modelo original)", "CS-FOF (original model)")}
 
 
 def _mk(key):
-    return key if key in MODELOS else "rf"
+    return key if key in MODELOS else "xgboost"
 
 
 def _meta(key):
@@ -1996,7 +1997,7 @@ def _pay_short(v):
     return L(_PAY_SHORT[v]) if v in _PAY_SHORT else tx(f"{v} m atraso", f"{v} m late")
 
 
-def predict_scores(rows, key="rf"):
+def predict_scores(rows, key="xgboost"):
     """Lista de dicts con las 23 variables -> puntajes (0-1) del modelo serializado.
 
     Para SEX = 3 («Otro») promedia las predicciones como hombre y como mujer, porque el
@@ -2014,12 +2015,27 @@ def predict_scores(rows, key="rf"):
     return p
 
 
-def predict_risk(values, key="rf"):
+def predict_risk(values, key="xgboost"):
     return float(predict_scores([values], key)[0])
 
 
-def tree_votes(values, key="rf"):
-    """Cuántos árboles del bosque dan probabilidad ≥ 0.5 de incumplir (los «votos»)."""
+_XGB_LEAVES = {}
+
+
+def _xgb_leaf_values(clf):
+    """Valor de cada hoja de cada árbol de XGBoost: {árbol: {nodo: valor}} (se calcula una vez)."""
+    if id(clf) not in _XGB_LEAVES:
+        t = clf.get_booster().trees_to_dataframe()
+        t = t[t["Feature"] == "Leaf"]
+        _XGB_LEAVES[id(clf)] = {k: dict(zip(g["Node"], g["Gain"])) for k, g in t.groupby("Tree")}
+    return _XGB_LEAVES[id(clf)]
+
+
+def tree_votes(values, key="xgboost"):
+    """Cuántos árboles empujan hacia «incumple».
+
+    En CS-FOF (un bosque) es la proporción de árboles con probabilidad ≥ 0.5. En XGBoost los árboles se suman en
+    cadena: cuenta los que llevan al cliente a una hoja de valor positivo, es decir, que suben su puntaje."""
     rows = [values] if values["SEX"] != SEX_OTHER else [{**values, "SEX": 1}, {**values, "SEX": 2}]
     X = pd.DataFrame([[r[c] for c in INPUT_COLS] for r in rows], columns=INPUT_COLS)
     modelo = MODELOS[_mk(key)][0]
@@ -2030,8 +2046,10 @@ def tree_votes(values, key="rf"):
         trees = bosque.arboles_
         yes = np.mean([np.mean(a.proba1(Z) >= 0.5) for a in trees]) * len(trees)
     else:
-        trees = modelo[-1].estimators_
-        yes = np.mean([np.mean(t.predict_proba(Xt)[:, 1] >= 0.5) for t in trees]) * len(trees)
+        clf = modelo[-1]
+        hojas, valores = clf.apply(np.asarray(Xt, dtype=float)), _xgb_leaf_values(clf)
+        trees = range(hojas.shape[1])
+        yes = np.mean([[valores[j][int(h[j])] > 0 for j in trees] for h in hojas]) * len(trees)
     return int(round(yes)), len(trees)
 
 
@@ -2072,7 +2090,7 @@ def _shap_background():
     return _SHAP_BG
 
 
-def shap_groups(values, key="rf"):
+def shap_groups(values, key="xgboost"):
     """Valores de Shapley exactos (SHAP intervencional) por grupo de variables.
 
     Con 5 grupos hay 2^5 = 32 coaliciones. Para cada coalición S, v(S) es el puntaje medio cuando el
@@ -2101,7 +2119,7 @@ def shap_groups(values, key="rf"):
     return v[frozenset()], np.array(phi), v[frozenset(range(G))]
 
 
-def fig_drivers(values, score, key="rf"):
+def fig_drivers(values, score, key="xgboost"):
     """Barras SHAP por grupo de variables (puntos de riesgo frente al puntaje medio del fondo)."""
     base, phi, full = shap_groups(values, key)
     d = pd.DataFrame({"grupo": [L(g) for g, _ in DRIVER_GROUPS], "aporte": phi * 100})
@@ -2123,8 +2141,8 @@ def fig_drivers(values, score, key="rf"):
     return fig
 
 
-def conformal_block(score, key="rf"):
-    """Conjunto de predicción conforme (90 %) a partir de los umbrales guardados en modelo_credito.json."""
+def conformal_block(score, key="xgboost"):
+    """Conjunto de predicción conforme (90 %) a partir de los umbrales guardados en el .json del modelo."""
     cf = _meta(key).get("conformal")
     if not cf:
         return ""
@@ -2144,7 +2162,7 @@ def conformal_block(score, key="rf"):
                    className="muted")], className="callout pf-conformal")
 
 
-def fig_whatif(values, var, score, key="rf", thr=None):
+def fig_whatif(values, var, score, key="xgboost", thr=None):
     """Puntaje del cliente si solo cambiara una variable."""
     lbl, grid, xtitle = WHATIF[var]
     lbl, xtitle = L(lbl), L(xtitle)
@@ -2525,8 +2543,8 @@ def page_intro():
                           f"superar el mejor F1 de esas {N_BASE}. La mejor de las {N_BASE} es "
                           f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}). CS-FOF obtiene el mayor "
                           f"F1 medio ({BEST['f1_mean']:.3f}), pero la diferencia es menor que 0.002 y "
-                          "ninguna prueba estadística las separa. Por último, la página Predecir usa un Random Forest con "
-                          "pesos de clase (estadísticamente empatado con el mejor) para estimar el riesgo de un cliente nuevo.",
+                          "ninguna prueba estadística las separa. Por último, la página Predecir usa XGBoost con pesos de "
+                          "clase, el mejor modelo de referencia, o CS-FOF, para estimar el riesgo de un cliente nuevo.",
                           "First the data is explored (univariate and multivariate EDA) to see which variables "
                           f"anticipate default. Then {N_BASE} traditional model combinations are compared (factorial "
                           "design: 7 algorithms × 4 balancing techniques × 4 optimizers) and, separately, "
@@ -2534,8 +2552,8 @@ def page_intro():
                           f"beat the best F1 of those {N_BASE}. The best of the {N_BASE} is "
                           f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}). CS-FOF has the highest "
                           f"mean F1 ({BEST['f1_mean']:.3f}), but the difference is below 0.002 and no "
-                          "statistical test separates them. Finally, the Predict page uses a Random Forest with class "
-                          "weights (statistically tied with the best) to estimate the risk of a new client.")),
+                          "statistical test separates them. Finally, the Predict page uses XGBoost with class weights, the "
+                          "best baseline model, or CS-FOF, to estimate the risk of a new client.")),
                 html.P(tx("Cada gráfico trae una interpretación básica (lenguaje cotidiano) y una técnica "
                           "(estadísticos y recomendaciones de modelado).",
                           "Each chart comes with a basic interpretation (everyday language) and a technical one "
@@ -4142,24 +4160,24 @@ def _pay_slider(col, value):
 
 SERIALIZE_CODE = ("""import joblib
 
-# 1) Entrenar y guardar (modelo/entrenar.py)
-modelo = busqueda.best_estimator_            # Pipeline: variables + one-hot + Random Forest
-joblib.dump(modelo, "modelo/modelo_credito.pkl", compress=3)
+# 1) Entrenar y guardar (modelo/entrenar_extra.py)
+modelo = pipeline("xgboost", spw).fit(X_tr, y_tr)  # Pipeline: variables + one-hot + XGBoost
+joblib.dump(modelo, "modelo/modelo_xgboost.pkl", compress=3)
 
 # 2) Cargar en el tablero (app.py), una sola vez al arrancar
-modelo = joblib.load("modelo/modelo_credito.pkl")
+modelo = joblib.load("modelo/modelo_xgboost.pkl")
 
 # 3) Predecir con los datos del formulario
 cliente = pd.DataFrame([valores], columns=INPUT_COLS)
 riesgo = modelo.predict_proba(cliente)[0, 1]  # puntaje de 0 a 1""",
                   """import joblib
 
-# 1) Train and save (modelo/entrenar.py)
-modelo = busqueda.best_estimator_            # Pipeline: features + one-hot + Random Forest
-joblib.dump(modelo, "modelo/modelo_credito.pkl", compress=3)
+# 1) Train and save (modelo/entrenar_extra.py)
+modelo = pipeline("xgboost", spw).fit(X_tr, y_tr)  # Pipeline: features + one-hot + XGBoost
+joblib.dump(modelo, "modelo/modelo_xgboost.pkl", compress=3)
 
 # 2) Load in the dashboard (app.py), once at startup
-modelo = joblib.load("modelo/modelo_credito.pkl")
+modelo = joblib.load("modelo/modelo_xgboost.pkl")
 
 # 3) Predict with the form data
 cliente = pd.DataFrame([valores], columns=INPUT_COLS)
@@ -4178,9 +4196,10 @@ def model_info_card():
              f"F1 {pr.get('f1', 0):.3f} · recall {pr.get('recall', 0):.3f} · {tx('precisión', 'precision')} "
              f"{pr.get('precision', 0):.3f} · ROC-AUC {pr.get('roc_auc', 0):.3f}" if pr else "—"),
             (tx("Entrenado", "Trained"), f"{m.get('n_entrenamiento', 0):,} {tx('clientes', 'clients')} · {m.get('fecha', '—')}"),
-            (tx("Versiones", "Versions"), f"scikit-learn {ver.get('scikit-learn', '—')} · joblib {ver.get('joblib', '—')}")]
-    steps = [(tx("Entrenar", "Train"), tx("Se ajusta el bosque con los datos históricos (modelo/entrenar.py).",
-                                          "The forest is fitted on the historical data (modelo/entrenar.py)."), "tree"),
+            (tx("Versiones", "Versions"), f"xgboost {ver.get('xgboost', '—')} · scikit-learn {ver.get('scikit-learn', '—')} · "
+                                         f"joblib {ver.get('joblib', '—')}")]
+    steps = [(tx("Entrenar", "Train"), tx("Se ajusta XGBoost con los datos históricos (modelo/entrenar_extra.py).",
+                                          "XGBoost is fitted on the historical data (modelo/entrenar_extra.py)."), "tree"),
              (tx("Guardar", "Save"), tx("joblib.dump escribe el modelo en un archivo .pkl.",
                                         "joblib.dump writes the model to a .pkl file."), "save"),
              (tx("Cargar", "Load"), tx("El tablero lo lee con joblib.load al arrancar, sin reentrenar.",
@@ -4202,18 +4221,18 @@ def model_info_card():
 
 
 def _flow():
-    n = len(MODELO[-1].estimators_) if MODELO is not None else 0
+    n = MODELO[-1].n_estimators if MODELO is not None else 0
     items = [("users", tx("1. Datos del cliente", "1. Client data"),
               tx("Perfil, pagos y montos de abril a septiembre.", "Profile, payments and amounts from April to September.")),
              ("layers", tx("2. Se transforman", "2. They are transformed"),
               tx("Logaritmos y resumen de las facturas, igual que en el proyecto.",
                  "Logarithms and bill summary, just as in the project.")),
-             ("tree", tx(f"3. {n} árboles opinan", f"3. {n} trees give their opinion"),
-              tx("Cada árbol del bosque estima si el cliente incumplirá.",
-                 "Each tree in the forest estimates whether the client will default.")),
+             ("tree", tx(f"3. {n} árboles en cadena", f"3. {n} trees in a chain"),
+              tx("XGBoost: cada árbol corrige los errores de los anteriores.",
+                 "XGBoost: each tree corrects the errors of the previous ones.")),
              ("gauge", tx("4. Puntaje y decisión", "4. Score and decision"),
-              tx("Se promedian sus opiniones; desde 50 % es «riesgo alto».",
-                 "Their opinions are averaged; from 50% it is “high risk”."))]
+              tx("Se suman sus aportes; desde el umbral elegido es «riesgo alto».",
+                 "Their contributions are added; from the chosen threshold it is “high risk”."))]
     out = []
     for i, (ic, t, d) in enumerate(items):
         out.append(html.Div([html.Span(icon(ic), className="pf-flow-ico"), html.Div([html.B(t), html.P(d)])],
@@ -4227,10 +4246,10 @@ def page_predict():
     head = page_title(tx("Predecir", "Predict"), "")
     if MODELO is None:
         return html.Div([head, card(tx("El modelo no está disponible", "The model is not available"), [
-            html.P([tx("No se encontró ", "Could not find "), html.Code("modelo/modelo_credito.pkl"),
+            html.P([tx("No se encontró ", "Could not find "), html.Code("modelo/modelo_xgboost.pkl"),
                     tx(" o no se pudo cargar.", " or it could not be loaded.")]),
             html.P([tx("Para generarlo, desde la carpeta ", "To generate it, from the "), html.Code("dash/"),
-                    tx(" ejecuta ", " folder run "), html.Code("python -m modelo.entrenar"), "."]),
+                    tx(" ejecuta ", " folder run "), html.Code("python -m modelo.entrenar_extra xgboost"), "."]),
             html.P(MODELO_ERROR, className="muted")])])
     base = PROFILES["tipico"][1]
     gcfg = {"displaylogo": False, "displayModeBar": False}
@@ -4282,7 +4301,7 @@ def page_predict():
         html.Div(id="pf-trees"),
     ], cls="pf-result")
     selector = card(tx("Modelo", "Model"), [
-        dcc.RadioItems(id="pf-model", value="rf", className="pf-tiles pf-seg", inputClassName="pf-tile-in",
+        dcc.RadioItems(id="pf-model", value="xgboost", className="pf-tiles pf-seg", inputClassName="pf-tile-in",
                        labelClassName="pf-tile", options=[{"label": L(MODEL_LABELS[k]), "value": k} for k in MODELOS],
                        **KEEP),
         html.Div(id="pf-model-info", className="muted"),
@@ -4293,7 +4312,7 @@ def page_predict():
                           html.Span(id="pf-thr-sum", className="thr-sum"),
                           html.Span(icon("chevron", "thr-chev"), className="ef-toggle", **{"aria-hidden": "true"})],
                          className="pf-h thr-summary"),
-            dcc.Slider(id="pf-thr", min=0.05, max=0.95, step=0.01, value=_rec_thr("rf"),
+            dcc.Slider(id="pf-thr", min=0.05, max=0.95, step=0.01, value=_rec_thr("xgboost"),
                        marks={v: f"{v:.0%}" for v in (0.05, 0.25, 0.5, 0.75, 0.95)},
                        tooltip={"placement": "top", "always_visible": True, "transform": "pctFormat"},
                        className="pf-slider", **KEEP),
@@ -4355,29 +4374,38 @@ def page_predict():
                    "star is their current situation. For example, with “September delay” you can see how much the "
                    "risk rises with each month of delay."),
                 tx("Es una curva de dependencia individual (ICE): se fija el resto de variables y se recorre una sola. "
-                   "En un bosque la curva tiene escalones porque cada árbol corta la variable en umbrales; no implica "
+                   "En los modelos de árboles la curva tiene escalones porque cada árbol corta la variable en umbrales; no implica "
                    "causalidad, solo describe cómo responde el modelo.",
                    "It is an individual conditional expectation (ICE) curve: the other variables are fixed and only one "
-                   "is varied. In a forest the curve has steps because each tree splits the variable at thresholds; "
+                   "is varied. In tree models the curve has steps because each tree splits the variable at thresholds; "
                    "it does not imply causality, it only describes how the model responds.")),
         ]),
         model_info_card(),
     ])
 
 
-def trees_block(values, key="rf"):
+def trees_block(values, key="xgboost"):
     yes, n = tree_votes(values, key)
+    bosque = _mk(key) == "cs_fof"
     share = yes / n if n else 0
     cells = int(round(share * 100))
     return html.Div([
         html.Div([icon("tree"), html.B(tx(f"{yes} de {n} árboles votan «incumple»",
-                                          f"{yes} of {n} trees vote “default”"))], className="pf-trees-h"),
+                                          f"{yes} of {n} trees vote “default”") if bosque else
+                                       tx(f"{yes} de {n} árboles empujan hacia «incumple»",
+                                          f"{yes} of {n} trees push toward “default”"))], className="pf-trees-h"),
         html.Div([html.Span(className="pf-cell" + (" on" if i < cells else "")) for i in range(100)],
                  className="pf-waffle", title=tx(f"{share:.0%} de los árboles", f"{share:.0%} of the trees")),
         html.P(tx("Cada cuadro es 1 % del bosque. El puntaje promedia las probabilidades de todos los árboles, "
                   "por eso puede diferir un poco de esta proporción.",
                   "Each square is 1% of the forest. The score averages the probabilities of all the trees, so it "
-                  "may differ slightly from this proportion."), className="muted"),
+                  "may differ slightly from this proportion.") if bosque else
+               tx("Cada cuadro es 1 % de los árboles. En XGBoost los árboles trabajan en cadena: cada uno corrige a "
+                  "los anteriores y suma o resta un poco al puntaje. Como no todos pesan lo mismo, el puntaje puede "
+                  "diferir de esta proporción.",
+                  "Each square is 1% of the trees. In XGBoost the trees work in a chain: each one corrects the "
+                  "previous ones and adds or subtracts a little from the score. Since they do not all weigh the same, "
+                  "the score may differ from this proportion."), className="muted"),
     ], className="pf-trees")
 
 
@@ -4474,7 +4502,7 @@ def threshold_stats(key, thr):
     return min(curva, key=lambda c: abs(c["umbral"] - thr)) if curva else {}
 
 
-def predict_verdict(values, score, key="rf", thr=None):
+def predict_verdict(values, score, key="xgboost", thr=None):
     thr = _meta(key).get("umbral", 0.5) if thr is None else thr
     pr = threshold_stats(key, thr)
     late = [m for m, c in zip(month_lbl(), PAY_CHRONO) if (values.get(c) or 0) >= 1]

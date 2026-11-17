@@ -6,4 +6,5 @@ scipy==1.18.1
 xlrd==2.0.2
 gunicorn==26.2.0
 scikit-learn==1.9.1
+xgboost==3.4.1
 joblib==1.6.0

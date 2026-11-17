@@ -1,15 +1,20 @@
-"""Entrena los otros dos modelos del selector de «Predecir»: CatBoost (mejor global) y CS-FOF (original).
+"""Entrena los modelos del selector de «Predecir»: XGBoost (el mejor de referencia) y CS-FOF (original).
+
+También conserva la receta de CatBoost, que ya no se muestra en el tablero.
 
 Se ejecuta una vez, fuera del servidor; el tablero solo carga los .pkl.
 
 - Mismas variables y la misma partición 80/20 (semilla 42) que el Random Forest de ``entrenar.py``, para
   que las métricas de prueba de los tres modelos sean comparables.
 - Hiperparámetros FIJOS: los del artefacto final de cada modelo en el proyecto
-  (``artifacts/metadata_catboost.json`` y ``artifacts/metadata.json`` de Credit_Card_Project), que salen de
+  (``artifacts/metadata_xgboost.json``, ``artifacts/metadata_catboost.json`` y ``artifacts/metadata.json`` de
+  Credit_Card_Project), que salen de
   la validación anidada 5 × 5. Aquí no hay búsqueda de hiperparámetros.
-- Pesos de clase en ambos (la mejor técnica de balanceo de los dos en la validación anidada).
+- Pesos de clase en todos (la mejor técnica de balanceo de cada uno en la validación anidada). En XGBoost es
+  ``scale_pos_weight = n_negativos / n_positivos`` del entrenamiento, como en ``src/balancing.py`` del proyecto.
 
-Uso (desde dash/): python -m modelo.entrenar_extra && python -m modelo.conformal
+Uso (desde dash/): python -m modelo.entrenar_extra xgboost cs_fof && python -m modelo.conformal xgboost cs_fof
+                   && python -m modelo.umbral xgboost cs_fof
 """
 import json
 import sys
@@ -32,16 +37,23 @@ from modelo.features import CAT_COLS, INPUT_COLS, preparar_variables
 
 # Hiperparámetros finales del proyecto (artifacts/ de Credit_Card_Project)
 PARAMS = {
+    "xgboost": {"n_estimators": 147, "max_depth": 12, "learning_rate": 0.024706324474653377,
+                "subsample": 0.6040237098213378, "colsample_bytree": 0.587191287811661,
+                "reg_lambda": 39.47069994308444},
     "catboost": {"bagging_temperature": 0.230893825622149, "depth": 5, "iterations": 466,
                  "l2_leaf_reg": 5.408216580718498, "learning_rate": 0.03243662696724643,
                  "random_strength": 3.159255390701748},
     "cs_fof": {"eps": 0.3241326804195627, "max_depth": 11, "max_features": "log2", "min_samples_leaf": 51,
                "n_estimators": 359},
 }
-NOMBRE = {"catboost": "CatBoost", "cs_fof": "CS-FOF (modelo original)"}
+NOMBRE = {"xgboost": "XGBoost", "catboost": "CatBoost", "cs_fof": "CS-FOF (modelo original)"}
 
 
-def estimador(clave):
+def estimador(clave, spw=1.0):
+    if clave == "xgboost":
+        from xgboost import XGBClassifier
+        return XGBClassifier(random_state=RANDOM_STATE, eval_metric="logloss", tree_method="hist", n_jobs=1,
+                             scale_pos_weight=spw, **PARAMS["xgboost"])
     if clave == "catboost":
         from catboost import CatBoostClassifier
         return CatBoostClassifier(auto_class_weights="Balanced", random_seed=RANDOM_STATE, thread_count=1,
@@ -50,12 +62,12 @@ def estimador(clave):
     return CSFisherObliqueForest(class_weight="balanced", random_state=RANDOM_STATE, n_jobs=1, **PARAMS["cs_fof"])
 
 
-def pipeline(clave):
+def pipeline(clave, spw=1.0):
     return Pipeline([
         ("variables", FunctionTransformer(preparar_variables)),
         ("onehot", ColumnTransformer([("cat", OneHotEncoder(handle_unknown="ignore", drop="if_binary"), CAT_COLS)],
                                      remainder="passthrough")),
-        ("modelo", estimador(clave)),
+        ("modelo", estimador(clave, spw)),
     ])
 
 
@@ -64,7 +76,8 @@ def main(claves):
     X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, stratify=y, random_state=RANDOM_STATE)
     for clave in claves:
         t0 = time.time()
-        modelo = pipeline(clave).fit(X_tr, y_tr)
+        spw = float((y_tr == 0).sum() / (y_tr == 1).sum())
+        modelo = pipeline(clave, spw).fit(X_tr, y_tr)
         seg = round(time.time() - t0, 1)
         ruta = HERE / f"modelo_{clave}.pkl"
         joblib.dump(modelo, ruta, compress=3)
@@ -75,7 +88,7 @@ def main(claves):
         meta = {
             "modelo": NOMBRE[clave], "balanceo": "pesos de clase (balanced)",
             "busqueda": "sin búsqueda: hiperparámetros finales de la validación anidada 5 × 5 del proyecto",
-            "hiperparametros": PARAMS[clave],
+            "hiperparametros": PARAMS[clave] if clave != "xgboost" else {**PARAMS[clave], "scale_pos_weight": round(spw, 4)},
             "prueba": {"n": int(len(y_te)), "f1": round(f1_score(y_te, pred), 4),
                        "precision": round(precision_score(y_te, pred), 4), "recall": round(recall_score(y_te, pred), 4),
                        "roc_auc": round(roc_auc_score(y_te, proba), 4),
@@ -88,6 +101,9 @@ def main(claves):
             "fecha": date.today().isoformat(), "segundos_entrenamiento": seg,
             "tamano_mb": round(ruta.stat().st_size / 2**20, 2),
         }
+        if clave == "xgboost":
+            import xgboost
+            meta["versiones"]["xgboost"] = xgboost.__version__
         if clave == "catboost":
             import catboost
             meta["versiones"]["catboost"] = catboost.__version__
