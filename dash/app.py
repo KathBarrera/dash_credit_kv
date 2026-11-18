@@ -3621,13 +3621,17 @@ PSEUDO = """Entrada: D = {(xᵢ, yᵢ)}, T árboles, profundidad d, hoja mínima
 9          si mejor deja ≥ h clientes por lado: dividir; si no: hoja
 10 f(x) ← promedio de las probabilidades de hoja de los T árboles  ▷ ec. (5)"""
 
-ABLATION = [  # pruebas de diseño: solo entrenamiento del pliegue externo 1, validación interna de 3 pliegues
-    (("CS-FOF base (1 candidato oblicuo, q = √p, d = 10, h = 20)", "Base CS-FOF (1 oblique candidate, q = √p, d = 10, h = 20)"), "0.5493", ("Referencia", "Reference")),
-    (("Sin corte oblicuo", "Without oblique cut"), "0.5452", ("El corte oblicuo aporta +0.004", "The oblique cut adds +0.004")),
-    (("Oblicuo con p/2 variables", "Oblique with p/2 variables"), "0.5449", ("Un corte más fuerte sobreajusta", "A stronger cut overfits")),
-    (("Dos candidatos oblicuos por nodo", "Two oblique candidates per node"), "0.5482", ("Sin mejora", "No improvement")),
-    (("Más profundo (d = 14, h = 10)", "Deeper (d = 14, h = 10)"), "0.5238", ("Sobreajuste claro", "Clear overfitting")),
-    (("128 bins", "128 bins"), "0.5458", ("Sin mejora", "No improvement")),
+ABLATION = [  # ablación en los 5 pliegues externos (experiments/paper/ablacion_pruebas.csv del proyecto)
+    (("CS-FOF completo", "Full CS-FOF"), "0.5483 ± 0.0078", ("Referencia", "Reference")),
+    (("Sin corte oblicuo", "Without oblique cut"), "0.5460 ± 0.0082",
+     ("−0.0024, peor en 4 de 5 pliegues; p ajustado 0.40: no significativo",
+      "−0.0024, worse in 4 of 5 folds; adjusted p 0.40: not significant")),
+    (("Dirección con todas las variables (q = p)", "Direction with all variables (q = p)"), "0.5443 ± 0.0104",
+     ("−0.0040, peor en 4 de 5 pliegues; p ajustado 0.27: no significativo",
+      "−0.0040, worse in 4 of 5 folds; adjusted p 0.27: not significant")),
+    (("Sin costo (c = 1)", "Without cost (c = 1)"), "0.4773 ± 0.0124",
+     ("−0.071 en los 5 pliegues; p ajustado 0.001: el costo es clave para el F1",
+      "−0.071 in all 5 folds; adjusted p 0.001: the cost is key for F1")),
 ]
 
 CHECKLIST = [  # lista de verificación de la guía; estado honesto
@@ -3640,8 +3644,8 @@ CHECKLIST = [  # lista de verificación de la guía; estado honesto
     ("ok", ("Media y desviación estándar sobre 5 pliegues externos.", "Mean and standard deviation over 5 outer folds.")),
     ("ok", ("Pruebas estadísticas: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon con Holm, DeLong y McNemar.",
             "Statistical tests: Friedman-Nemenyi, Nadeau-Bengio, Wilcoxon with Holm, DeLong and McNemar.")),
-    ("mid", ("Ablación por componente: hecha solo en el pliegue 1 y sin la variante «sin costo».",
-             "Ablation per component: done only on fold 1 and without the “no cost” variant.")),
+    ("mid", ("Ablación por componente en los 5 pliegues externos, con 3 de las 4 variantes previstas (falta «solo cortes oblicuos»).",
+             "Ablation per component on the 5 outer folds, with 3 of the 4 planned variants (“oblique cuts only” is missing).")),
     ("ok", ("Código, datos y versiones disponibles (GitHub, UCI, requirements.txt); DOI de Zenodo pendiente.",
             "Code, data and versions available (GitHub, UCI, requirements.txt); Zenodo DOI pending.")),
     ("ok", ("Figuras del artículo en PDF vectorial, en inglés, desde un solo script.", "Paper figures in vector PDF, in English, from one script.")),
@@ -3685,7 +3689,7 @@ def csfof_method():
          tx("Su aplicación a la predicción de incumplimiento en tarjetas de crédito (sin antecedentes en Web of Science ni Scopus).",
             "Its application to credit card default prediction (no precedent in Web of Science or Scopus).")),
     ])
-    abl = _tbl([tx("Variante", "Variant"), "F1", tx("Lectura", "Reading")],
+    abl = _tbl([tx("Variante", "Variant"), tx("F1 (5 pliegues)", "F1 (5 folds)"), tx("Lectura", "Reading")],
                [(L(a), (html.B(f) if i == 0 else f), L(r)) for i, (a, f, r) in enumerate(ABLATION)])
     check = html.Ul([html.Li([html.Span("✓" if s == "ok" else "◐", className=f"cs-chk {s}"), html.Span(L(txt))])
                      for s, txt in CHECKLIST], className="cs-checklist")
@@ -3730,10 +3734,14 @@ def csfof_method():
         ], className="grid g2"),
         card(tx("Qué es nuevo y qué se reutiliza", "What is new and what is reused"), [nuevo]),
         card(tx("Diseño del estudio de ablación", "Ablation study design"), [
-            html.P(tx("Cada variante cambia un solo componente y mantiene todo lo demás fijo. Se evaluó solo con el "
-                      "entrenamiento del pliegue externo 1 (validación interna de 3 pliegues), sin tocar datos de prueba.",
-                      "Each variant changes a single component and keeps everything else fixed. It was evaluated only on "
-                      "the training set of outer fold 1 (3-fold inner validation), without touching test data."),
+            html.P(tx("Cada variante cambia un solo componente y mantiene todo lo demás fijo. Se evaluó en los 5 pliegues "
+                      "externos de la validación anidada 5 × 5, con los hiperparámetros de CS-FOF de cada pliegue; F1 como "
+                      "media ± desviación y t corregida de Nadeau–Bengio con Holm. Antes, en la etapa de diseño, 14 pruebas "
+                      "con el entrenamiento del pliegue 1 solo sirvieron para fijar los rangos de búsqueda.",
+                      "Each variant changes a single component and keeps everything else fixed. It was evaluated on the 5 "
+                      "outer folds of the 5 × 5 nested validation, with CS-FOF's hyperparameters of each fold; F1 as mean ± "
+                      "standard deviation and Nadeau–Bengio corrected t with Holm. Earlier, at the design stage, 14 tests on "
+                      "the training set of fold 1 only served to set the search ranges."),
                    className="muted"), abl]),
         card(tx("Lista de verificación de la guía", "Guide checklist"), [
             check,
