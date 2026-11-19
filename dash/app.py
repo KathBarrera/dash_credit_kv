@@ -112,6 +112,10 @@ TEAM = [
 REPO_PROJECT = "https://github.com/valeriaflorezs/Credit_Card_Project"
 REPO_DASH = "https://github.com/KathBarrera/dash_credit_kv"
 BOOK_URL = "https://valeriaflorezs.github.io/Credit_Card_Project/"
+# Video del proyecto (página Enlaces). Pega aquí el enlace de YouTube, de cualquier forma:
+# https://www.youtube.com/watch?v=XXXX, https://youtu.be/XXXX o https://www.youtube.com/shorts/XXXX.
+# Mientras esté vacío, la página muestra un espacio con «Video próximamente».
+PROJECT_VIDEO_URL = ""
 NOTEBOOK_URL = BOOK_URL + "notebooks/00_eda.html"
 NOTEBOOKS = [
     ("00", ("EDA: Análisis Exploratorio de Datos", "EDA: Exploratory Data Analysis"), "00_eda.html",
@@ -2200,6 +2204,7 @@ def fig_whatif(values, var, score, key="xgboost", thr=None):
 # 4b. ICONOS (SVG propios, sin dependencias ni emojis; toman el color del texto)
 # =============================================================================
 ICONS = {
+    "play": '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z"/>',
     "flag": '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
     "panel": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
     "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>',
@@ -2968,6 +2973,31 @@ def fig_home():
                       yaxis_title=tx("% que incumple el mes siguiente", "% defaulting the next month"))
     fig.update_xaxes(type="category")
     return fig
+
+
+def youtube_id(url):
+    """Identificador de un video de YouTube a partir de cualquier forma de enlace (o None)."""
+    m = re.search(r"(?:youtu\.be/|[?&]v=|/(?:embed|shorts|live)/)([A-Za-z0-9_-]{11})", url or "")
+    return m.group(1) if m else None
+
+
+def video_card():
+    """Video del proyecto: reproductor de YouTube embebido o, sin enlace, un espacio reservado."""
+    vid = youtube_id(PROJECT_VIDEO_URL)
+    if vid:
+        body = html.Div(html.Iframe(
+            src=f"https://www.youtube-nocookie.com/embed/{vid}?rel=0", title=tx("Video del proyecto", "Project video"),
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen",
+            referrerPolicy="strict-origin-when-cross-origin"), className="video-wrap")
+        extra = html.A([icon("external"), tx("Ver en YouTube", "Watch on YouTube")],
+                       href=f"https://www.youtube.com/watch?v={vid}", target="_blank", rel="noopener noreferrer",
+                       className="video-link")
+    else:
+        body = html.Div([icon("play", "video-ico"), html.B(tx("Video próximamente", "Video coming soon")),
+                         html.Span(tx("Aquí se verá el video del proyecto.", "The project video will appear here."))],
+                        className="video-wrap video-empty")
+        extra = None
+    return card(tx("Video del proyecto", "Project video"), [body, extra] if extra else [body])
 
 
 def link_cards(compact=False):
@@ -4741,6 +4771,7 @@ def page_conclusions():
 def page_links():
     return html.Div([
         page_title(tx("Enlaces", "Links"), ""),
+        video_card(),
         book_summary(),
         link_cards(),
         pipeline_card(),
@@ -4922,6 +4953,15 @@ a { color:inherit; }
 .section-h { font-size:18px; font-weight:700; margin:30px 0 12px; }
 
 /* ---------- Tarjetas y KPI ---------- */
+.video-wrap { position:relative; width:100%; max-width:960px; margin:0 auto; aspect-ratio:16/9; border-radius:10px; overflow:hidden; background:#000; }
+.video-wrap iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+.video-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center;
+  background:var(--surface-2); border:2px dashed var(--line-strong); color:var(--muted); padding:16px;
+  aspect-ratio:auto; min-height:220px; }
+.video-empty b { color:var(--text); font-size:17px; }
+.video-ico { width:46px; height:46px; color:var(--accent-2); }
+.video-link { display:inline-flex; align-items:center; gap:6px; margin-top:10px; font-weight:600; }
+.video-link svg { width:16px; height:16px; }
 .card { background:var(--surface); border-radius:10px; padding:20px 22px; margin-bottom:20px; border:1px solid var(--line); min-width:0; }
 .card-title { margin:0 0 4px; font-size:17px; font-weight:700; }
 .card-sub { margin:0 0 12px; color:var(--muted); font-size:13px; }
