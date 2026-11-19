@@ -3,7 +3,7 @@
 #  R · Shiny · Plotly        (versión R del tablero Dash de la carpeta ../dash)
 # =============================================================================
 #  Ejecución local:
-#     1) install.packages(c("shiny", "plotly", "ranger", "readxl", "jsonlite", "commonmark", "Matrix"))
+#     1) install.packages(c("shiny", "plotly", "readxl", "jsonlite", "commonmark", "Matrix"))
 #     2) Desde esta carpeta (shiny/):  shiny::runApp()
 #
 #  Estructura (Shiny carga solo los archivos de R/ en orden alfabético antes de este archivo):
@@ -15,7 +15,8 @@
 #     R/05_modelos.R      resultados de las combinaciones de modelos
 #     R/06_variables.R    variables del modelo (mismas transformaciones del proyecto)
 #     R/06b_cs_fof.R      CS-FOF en R: recorre los árboles exportados del modelo del Dash
-#     R/07_predecir.R     página Predecir (Random Forest serializado con saveRDS y CS-FOF)
+#     R/06c_xgboost.R     XGBoost en R: recorre los árboles exportados del modelo del Dash
+#     R/07_predecir.R     página Predecir (XGBoost y CS-FOF, los mismos modelos del Dash)
 #     R/08_paginas.R      páginas, menú y navegación
 #     R/09_kyo.R          asistente Kyo (TF-IDF + regresión logística)
 #     R/10_modelo_original.R  modelo original CS-FOF: teoría, metodología, código y resultados
@@ -118,7 +119,7 @@ server <- function(input, output, session) {
                                     diag_model = input$diag_model, cd_src = input$cd_src)),
       "/modelo-original" = page_original(list(csrf_scn = input$csrf_scn, csrf_rival = input$csrf_rival)),
       "/predecir" = page_predict(pf_actual() %||% PROFILES$tipico[[2]], input$pf_whatif_var %||% "PAY_0",
-                                 input$pf_model %||% "rf", input$pf_thr),
+                                 input$pf_model %||% MODEL_KEYS[1], input$pf_thr),
       "/conclusiones" = page_conclusions(),
       "/enlaces" = page_links(),
       "/equipo" = page_team(),

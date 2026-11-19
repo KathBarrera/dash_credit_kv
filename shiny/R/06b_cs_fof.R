@@ -26,21 +26,28 @@ CSFOF <- tryCatch(local({
 # justo en el umbral de un corte (pasa con perfiles repetidos del entrenamiento).
 .suma_np <- function(M) Reduce(`+`, lapply(seq_len(ncol(M)), function(j) M[, j]))
 
-# 23 variables originales -> matriz estandarizada con las 25 columnas del pipeline (one-hot + resto)
-cs_fof_matriz <- function(d) {
-  m <- CSFOF$meta; v <- preparar_variables(d)
+# 23 variables originales -> matriz con las 25 columnas del pipeline de Python (one-hot + resto), en su orden.
+# La usan CS-FOF (que además la estandariza) y XGBoost (R/06c_xgboost.R): los dos pipelines del Dash son iguales.
+pipeline_matriz <- function(d, columnas) {
+  v <- preparar_variables(d)
   bills <- as.matrix(as.data.frame(d)[BILL_COLS]); storage.mode(bills) <- "double"
   tc <- as.numeric(5:0) - 2.5
   v$BILL_AMT_MEAN_6M_LOG <- signed_log1p(.suma_np(bills) / 6)
   v$BILL_AMT_TREND_6M_LOG <- signed_log1p(.suma_np(sweep(bills, 2, tc, "*")) / sum(tc^2))
-  cols <- lapply(m$columnas, function(cn) {
+  cols <- lapply(columnas, function(cn) {
     for (c in c("SEX", "EDUCATION", "MARRIAGE")) if (startsWith(cn, paste0(c, "_")))
       return(as.numeric(as.character(v[[c]]) == sub(paste0(c, "_"), "", cn)))
     as.numeric(v[[cn]])
   })
   X <- matrix(unlist(cols), ncol = length(cols))
   X[is.na(X)] <- 0                                   # categoría desconocida: todas las columnas en 0 (handle_unknown)
-  sweep(sweep(X, 2, m$media, "-"), 2, m$escala, "/")
+  X
+}
+
+# Matriz estandarizada de CS-FOF (la estandarización es parte del bosque en original_model.py)
+cs_fof_matriz <- function(d) {
+  m <- CSFOF$meta
+  sweep(sweep(pipeline_matriz(d, m$columnas), 2, m$media, "-"), 2, m$escala, "/")
 }
 
 # Probabilidad de cada árbol (filas = clientes, columnas = árboles)

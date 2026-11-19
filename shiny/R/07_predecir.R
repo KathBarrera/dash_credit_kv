@@ -1,19 +1,16 @@
 # =============================================================================
-# 7. PREDECIR: Random Forest serializado con saveRDS y CS-FOF (modelo original)
+# 7. PREDECIR: XGBoost (el mejor modelo de referencia) y CS-FOF (modelo original)
 # =============================================================================
-# - Random Forest: `Rscript modelo/entrenar_modelo.R` lo entrena (ranger, pesos de clase) y lo guarda en
-#   modelo/modelo_credito.rds; aquí solo se CARGA y se usa.
-# - CS-FOF: se recorre con los árboles exportados del modelo del Dash (R/06b_cs_fof.R).
-# Los dos usan la misma partición 80/20 del Dash, así que sus métricas de prueba son comparables.
-library(ranger)
-MODELO <- tryCatch(readRDS("modelo/modelo_credito.rds"), error = function(e) NULL)
-MODELO_META <- tryCatch(jsonlite::fromJSON("modelo/modelo_credito.json"), error = function(e) list())
+# Los dos se entrenaron en Python, en el tablero Dash, y se exportaron a R: aquí se recorren sus árboles
+# (R/06c_xgboost.R y R/06b_cs_fof.R) y dan la misma probabilidad que el Dash. Usan la misma partición 80/20,
+# las mismas variables y pesos de clase, así que sus métricas de prueba son comparables.
+MODELO <- XGB                                     # NULL si no se pudo cargar (la página lo avisa)
+MODELO_META <- if (is.null(XGB)) list() else XGB$meta
 UMBRAL <- MODELO_META$umbral %||% 0.5
-N_TREES <- if (is.null(MODELO)) 0 else MODELO$num.trees
-# Selector de «Predecir»: Random Forest (el de siempre) y CS-FOF (original). Si falta CS-FOF, solo se ofrece RF.
-MODEL_LABELS <- list(rf = c("Random Forest", "Random Forest"), cs_fof = c("CS-FOF (modelo original)", "CS-FOF (original model)"))
-MODEL_KEYS <- c("rf", if (!is.null(CSFOF)) "cs_fof")
-.mk <- function(key) if (!is.null(key) && key %in% MODEL_KEYS) key else "rf"
+N_TREES <- if (is.null(XGB)) 0 else length(XGB$inicio)
+MODEL_LABELS <- list(xgboost = c("XGBoost", "XGBoost"), cs_fof = c("CS-FOF (modelo original)", "CS-FOF (original model)"))
+MODEL_KEYS <- c(if (!is.null(XGB)) "xgboost", if (!is.null(CSFOF)) "cs_fof")
+.mk <- function(key) if (!is.null(key) && key %in% MODEL_KEYS) key else MODEL_KEYS[1] %||% "xgboost"
 .meta <- function(key) if (.mk(key) == "cs_fof") CSFOF$meta else MODELO_META
 .rec_thr <- function(key) .meta(key)$umbral_ajustable$recomendado %||% 0.5
 
@@ -64,9 +61,9 @@ pay_short <- function(v) if (as.character(v) %in% names(PAY_SHORT)) L(PAY_SHORT[
 # Lista de clientes (cada uno, lista con las 23 variables) -> puntajes 0–1 del modelo elegido.
 # Con SEX = 3 («Otro») promedia las predicciones como hombre y como mujer.
 .proba <- function(d, key) {
-  if (.mk(key) == "cs_fof") cs_fof_proba(d) else predict(MODELO, preparar_variables(d))$predictions[, "1"]
+  if (.mk(key) == "cs_fof") cs_fof_proba(d) else xgb_proba(d)
 }
-predict_scores <- function(rows, key = "rf") {
+predict_scores <- function(rows, key = "xgboost") {
   d <- do.call(rbind, lapply(rows, function(r) as.data.frame(r[INPUT_COLS])))
   other <- d$SEX == SEX_OTHER
   d$SEX[other] <- 1
@@ -77,19 +74,19 @@ predict_scores <- function(rows, key = "rf") {
   }
   p
 }
-predict_risk <- function(values, key = "rf") predict_scores(list(values), key)[1]
+predict_risk <- function(values, key = "xgboost") predict_scores(list(values), key)[1]
 
-# Cuántos árboles dan probabilidad ≥ 0.5 de incumplir (los «votos»)
-tree_votes <- function(values, key = "rf") {
+# CS-FOF (bosque): cuántos árboles dan probabilidad ≥ 0.5 de incumplir (los «votos»).
+# XGBoost (árboles en cadena): cuántos árboles llevan al cliente a una hoja positiva, es decir, suben su puntaje.
+tree_votes <- function(values, key = "xgboost") {
   rows <- if (values$SEX != SEX_OTHER) list(values) else list(modifyList(values, list(SEX = 1)), modifyList(values, list(SEX = 2)))
   d <- do.call(rbind, lapply(rows, function(r) as.data.frame(r[INPUT_COLS])))
   if (.mk(key) == "cs_fof") {
     H <- cs_fof_hojas(cs_fof_matriz(d)); nt <- ncol(H)
     return(c(round(mean(colMeans(H >= 0.5)) * nt), nt))
   }
-  pa <- predict(MODELO, preparar_variables(d), predict.all = TRUE)$predictions   # [cliente, clase, árbol]
-  yes <- mean(apply(pa[, 2, , drop = FALSE] >= 0.5, 1, mean)) * MODELO$num.trees
-  c(round(yes), MODELO$num.trees)
+  H <- xgb_hojas(d); nt <- ncol(H)
+  c(round(mean(rowMeans(H > 0)) * nt), nt)
 }
 
 # ---------- SHAP por grupo de variables (valores de Shapley exactos) ----------
@@ -97,7 +94,7 @@ tree_votes <- function(values, key = "rf") {
 # grupos de S y toma los de cada cliente del fondo (40 clientes reales) en el resto.
 # phi_g = sum_S |S|!(5-|S|-1)!/5! [v(S + g) - v(S)]; por construcción, base + sum(phi) = puntaje.
 SHAP_BG <- local({ set.seed(42); lapply(sample(nrow(df), 40), function(i) as.list(df[i, INPUT_COLS])) })
-shap_groups <- function(values, key = "rf") {
+shap_groups <- function(values, key = "xgboost") {
   G <- length(DRIVER_GROUPS)
   coal <- unlist(lapply(0:G, function(r) utils::combn(G, r, simplify = FALSE)), recursive = FALSE)
   coal[[1]] <- integer(0)
@@ -145,7 +142,7 @@ fig_client_history <- function(values) {
   style_fig(p, 340, margin = list(l = 60, r = 70, t = 40, b = 36))
 }
 
-fig_drivers <- function(values, score, key = "rf") {
+fig_drivers <- function(values, score, key = "xgboost") {
   s <- shap_groups(values, key)
   d <- data.frame(grupo = vapply(DRIVER_GROUPS, function(g) L(g[[1]]), ""), aporte = s$phi * 100)
   d <- d[order(abs(d$aporte)), ]
@@ -164,7 +161,7 @@ fig_drivers <- function(values, score, key = "rf") {
   style_fig(p, 340, legend_top = FALSE, margin = list(l = 150, r = 30, t = 34, b = 46))
 }
 
-fig_whatif <- function(values, var, score, key = "rf", thr = NULL) {
+fig_whatif <- function(values, var, score, key = "xgboost", thr = NULL) {
   w <- WHATIF[[var]]; lbl <- L(w[[1]]); grid <- w[[2]]; xtitle <- L(w[[3]])
   rows <- lapply(grid, function(x) { v <- values; v[[var]] <- x; v })
   pr <- predict_scores(rows, key) * 100
@@ -244,7 +241,7 @@ risk_card <- function(score, thr) {
 }
 
 # Conjunto de predicción conforme (90 %) a partir de los cuantiles guardados en el .json del modelo
-conformal_block <- function(score, key = "rf") {
+conformal_block <- function(score, key = "xgboost") {
   cf <- .meta(key)$conformal
   if (is.null(cf)) return(NULL)
   no <- score <= cf$q0; si <- 1 - score <= cf$q1
@@ -268,7 +265,7 @@ threshold_stats <- function(key, thr) {
   curva[[which.min(vapply(curva, function(c) abs(c$umbral - thr), 0))]]
 }
 
-predict_verdict <- function(values, score, key = "rf", thr = NULL) {
+predict_verdict <- function(values, score, key = "xgboost", thr = NULL) {
   thr <- thr %||% (.meta(key)$umbral %||% 0.5)
   pr <- threshold_stats(key, thr)
   late <- month_lbl()[vapply(PAY_CHRONO, function(c) (values[[c]] %||% 0) >= 1, TRUE)]
@@ -302,22 +299,27 @@ predict_verdict <- function(values, score, key = "rf", thr = NULL) {
     tags$details(class = "pf-details", tags$summary(tx("¿Cómo leer el puntaje?", "How to read the score?")), tags$p(lectura)))
 }
 
-trees_block <- function(values, key = "rf") {
+trees_block <- function(values, key = "xgboost") {
   v <- tree_votes(values, key); yes <- v[1]; n <- v[2]
   share <- if (n) yes / n else 0; cells <- round(share * 100)
+  bosque <- .mk(key) == "cs_fof"
   div(class = "pf-trees",
-      div(class = "pf-trees-h", icon_("tree"), tags$b(tx(sprintf("%d de %d árboles votan «incumple»", yes, n),
-                                                         sprintf("%d of %d trees vote “default”", yes, n)))),
+      div(class = "pf-trees-h", icon_("tree"), tags$b(
+        if (bosque) tx(sprintf("%d de %d árboles votan «incumple»", yes, n), sprintf("%d of %d trees vote “default”", yes, n))
+        else tx(sprintf("%d de %d árboles empujan hacia «incumple»", yes, n), sprintf("%d of %d trees push toward “default”", yes, n)))),
       div(class = "pf-waffle", title = tx(paste(pct(share, 0), "de los árboles"), paste(pct(share, 0), "of the trees")),
           lapply(0:99, function(i) tags$span(class = paste0("pf-cell", if (i < cells) " on" else "")))),
-      tags$p(class = "muted", tx("Cada cuadro es 1 % del bosque. El puntaje promedia las probabilidades de todos los árboles, por eso puede diferir un poco de esta proporción.",
-                                 "Each square is 1% of the forest. The score averages the probabilities of all the trees, so it may differ slightly from this proportion.")))
+      tags$p(class = "muted",
+             if (bosque) tx("Cada cuadro es 1 % del bosque. El puntaje promedia las probabilidades de todos los árboles, por eso puede diferir un poco de esta proporción.",
+                            "Each square is 1% of the forest. The score averages the probabilities of all the trees, so it may differ slightly from this proportion.")
+             else tx("Cada cuadro es 1 % de los árboles. En XGBoost los árboles trabajan en cadena: cada uno corrige a los anteriores y suma o resta un poco al puntaje. Como no todos pesan lo mismo, el puntaje puede diferir de esta proporción.",
+                     "Each square is 1% of the trees. In XGBoost the trees work in a chain: each one corrects the previous ones and adds or subtracts a little from the score. Since they do not all weigh the same, the score may differ from this proportion.")))
 }
 
 model_info <- function(key) {
   m <- .meta(key); pr <- m$prueba
   if (is.null(pr)) return("")
-  nombre <- if (.mk(key) == "cs_fof") "CS-FOF" else "Random Forest"
+  nombre <- if (.mk(key) == "cs_fof") "CS-FOF" else "XGBoost"
   tx(sprintf("%s: en %s clientes de prueba (20 %%, nunca vistos al entrenar) logra F1 %.3f, recall %.3f, precisión %.3f y AUC-ROC %.3f. Los dos modelos usan la misma partición, las mismas variables y pesos de clase.",
              nombre, num(pr$n), pr$f1, pr$recall, pr$precision, pr$roc_auc),
      sprintf("%s: on %s test clients (20%%, never seen in training) it reaches F1 %.3f, recall %.3f, precision %.3f and ROC-AUC %.3f. Both models use the same split, the same variables and class weights.",
@@ -366,50 +368,50 @@ num_in <- function(col, value, min = NULL) {
 }
 
 model_info_card <- function() {
-  m <- MODELO_META; pr <- m$prueba; hp <- m$hiperparametros; ver <- m$versiones
+  m <- MODELO_META; pr <- m$prueba; hp <- m$hiperparametros; ver <- m$versiones[["python (entrenamiento)"]]
+  fmt_hp <- function(v) if (is.numeric(v) && v != round(v)) format(signif(v, 4)) else as.character(v)
   rows <- list(
-    list(tx("Modelo", "Model"), paste(m$modelo %||% "—", "·", tx("pesos de clase balanceados", "balanced class weights"))),
-    list(tx("Hiperparámetros", "Hyperparameters"), paste(sprintf("%s = %s", names(hp), unlist(hp)), collapse = ", ")),
+    list(tx("Modelo", "Model"), paste(m$modelo %||% "—", "·", tx("pesos de clase (scale_pos_weight)", "class weights (scale_pos_weight)"))),
+    list(tx("Hiperparámetros", "Hyperparameters"), paste(sprintf("%s = %s", names(hp), vapply(hp, fmt_hp, "")), collapse = ", ")),
     list(tx("Prueba (20 %)", "Test (20%)"), if (!is.null(pr)) sprintf("F1 %.3f · recall %.3f · %s %.3f · ROC-AUC %.3f", pr$f1, pr$recall,
                                                                       tx("precisión", "precision"), pr$precision, pr$roc_auc) else "—"),
     list(tx("Entrenado", "Trained"), sprintf("%s %s · %s", num(m$n_entrenamiento %||% 0), tx("clientes", "clients"), m$fecha %||% "—")),
-    list(tx("Versiones", "Versions"), sprintf("R %s · ranger %s", ver$R %||% "—", ver$ranger %||% "—")),
-    list("CS-FOF", tx("Se entrenó en Python (tablero Dash). herramientas/exportar_cs_fof.py exporta sus 359 árboles y R/06b_cs_fof.R los recorre: da la misma probabilidad que Python en 300 clientes de prueba (diferencia máxima < 10⁻¹⁵).",
-                      "It was trained in Python (Dash dashboard). herramientas/exportar_cs_fof.py exports its 359 trees and R/06b_cs_fof.R traverses them: it gives the same probability as Python on 300 test clients (maximum difference < 10⁻¹⁵).")))
-  steps <- list(list(tx("Entrenar", "Train"), tx("Se ajusta el bosque con los datos históricos (modelo/entrenar_modelo.R).",
-                                                 "The forest is fitted on the historical data (modelo/entrenar_modelo.R)."), "tree"),
-                list(tx("Guardar", "Save"), tx("saveRDS escribe el modelo en un archivo .rds.", "saveRDS writes the model to an .rds file."), "save"),
-                list(tx("Cargar", "Load"), tx("La app lo lee con readRDS al arrancar, sin reentrenar.", "The app reads it with readRDS at startup, without retraining."), "notebook"),
-                list(tx("Predecir", "Predict"), tx("Cada cambio del formulario llama a predict().", "Every form change calls predict()."), "gauge"))
-  code <- tx('library(ranger)
+    list(tx("Versiones", "Versions"), sprintf("Python %s · xgboost %s · scikit-learn %s", ver$python %||% "—", ver$xgboost %||% "—", ver$`scikit-learn` %||% "—")),
+    list(tx("Réplica en R", "R replica"), tx(sprintf("Los %d árboles se recorren en R/06c_xgboost.R; en 300 clientes de prueba la probabilidad coincide con la de Python (diferencia menor que 10⁻⁶).", N_TREES),
+                                             sprintf("The %d trees are traversed in R/06c_xgboost.R; on 300 test clients the probability matches Python's (difference below 10⁻⁶).", N_TREES))),
+    list("CS-FOF", tx("Se exporta igual (herramientas/exportar_cs_fof.py y R/06b_cs_fof.R): mismas probabilidades que Python en 300 clientes de prueba (diferencia máxima < 10⁻¹⁵).",
+                      "It is exported the same way (herramientas/exportar_cs_fof.py and R/06b_cs_fof.R): same probabilities as Python on 300 test clients (maximum difference < 10⁻¹⁵).")))
+  steps <- list(list(tx("Entrenar", "Train"), tx("XGBoost se ajusta en Python con los datos históricos (dash/modelo/entrenar_extra.py).",
+                                                 "XGBoost is fitted in Python on the historical data (dash/modelo/entrenar_extra.py)."), "tree"),
+                list(tx("Exportar", "Export"), tx("herramientas/exportar_xgboost.py guarda sus árboles en modelo/xgboost_arboles.bin.gz.",
+                                                  "herramientas/exportar_xgboost.py saves its trees in modelo/xgboost_arboles.bin.gz."), "save"),
+                list(tx("Cargar", "Load"), tx("La app los lee al arrancar, sin reentrenar.", "The app reads them at startup, without retraining."), "notebook"),
+                list(tx("Predecir", "Predict"), tx("Cada cambio del formulario recorre los árboles en R.", "Every form change traverses the trees in R."), "gauge"))
+  code <- tx('# 1) Python: exportar los árboles del XGBoost del Dash (herramientas/exportar_xgboost.py)
+modelo = json.loads(booster.save_raw("json"))   # umbrales float32 exactos
+#    -> modelo/xgboost_arboles.bin.gz  y  modelo/xgboost_meta.json
 
-# 1) Entrenar y guardar (modelo/entrenar_modelo.R)
-modelo <- ranger(x = X, y = y, probability = TRUE, case.weights = pesos,
-                 num.trees = 291, max.depth = 14, mtry = 4, min.bucket = 10)
-saveRDS(modelo, "modelo/modelo_credito.rds", compress = "xz")
+# 2) R: cargar una sola vez al arrancar (R/06c_xgboost.R)
+XGB <- leer_arboles("modelo/xgboost_arboles.bin.gz")
 
-# 2) Cargar en la app (R/07_predecir.R), una sola vez al arrancar
-modelo <- readRDS("modelo/modelo_credito.rds")
+# 3) R: predecir con los datos del formulario
+X <- pipeline_matriz(valores, columnas)          # las 25 columnas del pipeline
+hojas <- xgb_hojas(valores)                      # en cada nodo: izquierda si x < umbral
+riesgo <- 1 / (1 + exp(-rowSums(hojas)))         # puntaje de 0 a 1',
+'# 1) Python: export the trees of the Dash XGBoost (herramientas/exportar_xgboost.py)
+modelo = json.loads(booster.save_raw("json"))   # exact float32 thresholds
+#    -> modelo/xgboost_arboles.bin.gz  and  modelo/xgboost_meta.json
 
-# 3) Predecir con los datos del formulario
-cliente <- preparar_variables(valores)
-riesgo <- predict(modelo, cliente)$predictions[, "1"]  # puntaje de 0 a 1',
-'library(ranger)
+# 2) R: load once at startup (R/06c_xgboost.R)
+XGB <- leer_arboles("modelo/xgboost_arboles.bin.gz")
 
-# 1) Train and save (modelo/entrenar_modelo.R)
-modelo <- ranger(x = X, y = y, probability = TRUE, case.weights = pesos,
-                 num.trees = 291, max.depth = 14, mtry = 4, min.bucket = 10)
-saveRDS(modelo, "modelo/modelo_credito.rds", compress = "xz")
-
-# 2) Load in the app (R/07_predecir.R), once at startup
-modelo <- readRDS("modelo/modelo_credito.rds")
-
-# 3) Predict with the form data
-cliente <- preparar_variables(valores)
-riesgo <- predict(modelo, cliente)$predictions[, "1"]  # score from 0 to 1')
-  card(tx("Cómo se serializó el modelo", "How the model was serialized"),
-       tags$p(tx("Serializar es guardar un modelo ya entrenado en un archivo para usarlo después sin volver a entrenarlo. Así funciona esta sección:",
-                 "Serializing means saving an already trained model to a file to use it later without retraining it. This is how this section works:")),
+# 3) R: predict with the form data
+X <- pipeline_matriz(valores, columnas)          # the 25 pipeline columns
+hojas <- xgb_hojas(valores)                      # at each node: left if x < threshold
+riesgo <- 1 / (1 + exp(-rowSums(hojas)))         # score from 0 to 1')
+  card(tx("Cómo se exportó el modelo a R", "How the model was exported to R"),
+       tags$p(tx("El modelo no se vuelve a entrenar en R: se usa el mismo XGBoost del tablero Dash. Se guardan sus árboles en un archivo y R los recorre igual que XGBoost, así que las dos versiones dan la misma predicción. Así funciona esta sección:",
+                 "The model is not retrained in R: the same XGBoost from the Dash dashboard is used. Its trees are saved to a file and R traverses them just like XGBoost, so both versions give the same prediction. This is how this section works:")),
        div(class = "pf-steps", lapply(seq_along(steps), function(i) div(class = "pf-step", tags$span(class = "pf-step-n", i),
                                                                         icon_(steps[[i]][[3]], "pf-step-ico"), tags$b(steps[[i]][[1]]), tags$p(steps[[i]][[2]])))),
        tags$details(class = "pf-details", tags$summary(tx("Ver el código", "Show the code")), tags$pre(class = "pf-code", tags$code(code))),
@@ -419,9 +421,9 @@ riesgo <- predict(modelo, cliente)$predictions[, "1"]  # score from 0 to 1')
 pf_flow <- function() {
   items <- list(list("users", tx("1. Datos del cliente", "1. Client data"), tx("Perfil, pagos y montos de abril a septiembre.", "Profile, payments and amounts from April to September.")),
                 list("layers", tx("2. Se transforman", "2. They are transformed"), tx("Logaritmos y resumen de las facturas, igual que en el proyecto.", "Logarithms and bill summary, just as in the project.")),
-                list("tree", tx(sprintf("3. %d árboles opinan", N_TREES), sprintf("3. %d trees give their opinion", N_TREES)),
-                     tx("Cada árbol del bosque estima si el cliente incumplirá.", "Each tree in the forest estimates whether the client will default.")),
-                list("gauge", tx("4. Puntaje y decisión", "4. Score and decision"), tx("Se promedian sus opiniones; desde 50 % es «riesgo alto».", "Their opinions are averaged; from 50% it is “high risk”.")))
+                list("tree", tx(sprintf("3. %d árboles en cadena", N_TREES), sprintf("3. %d trees in a chain", N_TREES)),
+                     tx("XGBoost: cada árbol corrige los errores de los anteriores.", "XGBoost: each tree corrects the errors of the previous ones.")),
+                list("gauge", tx("4. Puntaje y decisión", "4. Score and decision"), tx("Se suman sus aportes; desde el umbral elegido es «riesgo alto».", "Their contributions are added; from the chosen threshold it is “high risk”.")))
   out <- list()
   for (i in seq_along(items)) {
     it <- items[[i]]
@@ -432,12 +434,12 @@ pf_flow <- function() {
 }
 
 # `base`: valores con los que se dibuja el formulario (se conservan al cambiar de idioma)
-page_predict <- function(base = PROFILES$tipico[[2]], whatif = "PAY_0", key = "rf", thr = NULL) {
+page_predict <- function(base = PROFILES$tipico[[2]], whatif = "PAY_0", key = "xgboost", thr = NULL) {
   key <- .mk(key); thr <- thr %||% .rec_thr(key)
   head <- page_title(tx("Predecir", "Predict"))
   if (is.null(MODELO)) return(tagList(head, card(tx("El modelo no está disponible", "The model is not available"),
-    tags$p(tx("No se encontró modelo/modelo_credito.rds. Para generarlo, desde la carpeta shiny/ ejecuta ",
-              "modelo/modelo_credito.rds was not found. To generate it, from the shiny/ folder run "), tags$code("Rscript modelo/entrenar_modelo.R")))))
+    tags$p(tx("No se encontró modelo/xgboost_arboles.bin.gz. Para generarlo, desde la raíz del repositorio ejecuta ",
+              "modelo/xgboost_arboles.bin.gz was not found. To generate it, from the repository root run "), tags$code("python shiny/herramientas/exportar_xgboost.py")))))
   ml <- month_lbl(); k <- tx("mil", "k")
   form <- card(tx("Datos del cliente", "Client data"), cls = "pf-form",
     div(class = "pf-profiles", tags$span(class = "pf-hint", tx("Prueba un ejemplo:", "Try an example:")),
@@ -506,7 +508,7 @@ page_predict <- function(base = PROFILES$tipico[[2]], whatif = "PAY_0", key = "r
          interp_block(
            tx("La línea muestra el puntaje que tendría este mismo cliente si solo cambiara la variable elegida; la estrella es su situación actual. Por ejemplo, con «Atraso en septiembre» se ve cuánto sube el riesgo con cada mes de atraso.",
               "The line shows the score this same client would have if only the chosen variable changed; the star is their current situation. For example, with “September delay” you can see how much the risk rises with each month of delay."),
-           tx("Es una curva de dependencia individual (ICE): se fija el resto de variables y se recorre una sola. En un bosque la curva tiene escalones porque cada árbol corta la variable en umbrales; no implica causalidad, solo describe cómo responde el modelo.",
-              "It is an individual conditional expectation (ICE) curve: the other variables are fixed and only one is varied. In a forest the curve has steps because each tree splits the variable at thresholds; it does not imply causality, it only describes how the model responds."))),
+           tx("Es una curva de dependencia individual (ICE): se fija el resto de variables y se recorre una sola. En los modelos de árboles la curva tiene escalones porque cada árbol corta la variable en umbrales; no implica causalidad, solo describe cómo responde el modelo.",
+              "It is an individual conditional expectation (ICE) curve: the other variables are fixed and only one is varied. In tree models the curve has steps because each tree splits the variable at thresholds; it does not imply causality, it only describes how the model responds."))),
     model_info_card())
 }

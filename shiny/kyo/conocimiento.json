@@ -44,7 +44,7 @@
      "cómo sabes las respuestas",
      "de dónde sacas la información"
     ],
-    "texto": "Soy **Kyo**, un bot entrenado con el contenido de este tablero:\n\n- Cada página, gráfica, variable y modelo es una *intención* con varias preguntas de ejemplo.\n- Las preguntas se convierten en vectores **TF-IDF** (palabras y fragmentos de letras, así tolero errores de escritura) y con ellos se entrena una **regresión logística** de ranger (R).\n- Cuando preguntas, calculo la intención más probable. Si no me parezco a nada de lo aprendido, te lo digo en vez de inventar.\n- Las cifras salen de las mismas funciones que dibujan el tablero, así que coinciden con lo que ves.\n\nNo me conecto a servicios externos: todo corre dentro de la app. Entiendo español e inglés.",
+    "texto": "Soy **Kyo**, un bot entrenado con el contenido de este tablero:\n\n- Cada página, gráfica, variable y modelo es una *intención* con varias preguntas de ejemplo.\n- Las preguntas se convierten en vectores **TF-IDF** (palabras y fragmentos de letras, así tolero errores de escritura) y con ellos se entrena una **regresión logística** programada en R.\n- Cuando preguntas, calculo la intención más probable. Si no me parezco a nada de lo aprendido, te lo digo en vez de inventar.\n- Las cifras salen de las mismas funciones que dibujan el tablero, así que coinciden con lo que ves.\n\nNo me conecto a servicios externos: todo corre dentro de la app. Entiendo español e inglés.",
     "tecnico": null,
     "pagina": null,
     "sug": [
@@ -1377,7 +1377,7 @@
      "son comparables los resultados de SVM",
      "diferencia significativa entre modelos"
     ],
-    "texto": "**Qué tan distintos son los modelos:**\n\n- Los primeros lugares están **prácticamente empatados**: 14 de 112 combinaciones quedan a menos de una desviación del mejor F1, y Nemenyi solo separa combinaciones muy alejadas en el ranking.\n- Lo que sí importa es **balancear**. El método de optimización casi no cambia el F1 (0.5022 a 0.5040): conviene elegirlo por su costo.\n- SVM se corrió en Colab con GPU: reajustado en CPU con ranger (R) su F1 sube 0.009 en promedio, pero las conclusiones no cambian. KNN y Naive Bayes con pesos de clase usan ajustes propios.\n- Validación cruzada anidada 5×5: con 5 folds las pruebas tienen algo de potencia, pero los p-valores son optimistas porque los folds comparten datos.",
+    "texto": "**Qué tan distintos son los modelos:**\n\n- Los primeros lugares están **prácticamente empatados**: 14 de 112 combinaciones quedan a menos de una desviación del mejor F1, y Nemenyi solo separa combinaciones muy alejadas en el ranking.\n- Lo que sí importa es **balancear**. El método de optimización casi no cambia el F1 (0.5022 a 0.5040): conviene elegirlo por su costo.\n- SVM se corrió en Colab con GPU: reajustado en CPU con scikit-learn su F1 sube 0.009 en promedio, pero las conclusiones no cambian. KNN y Naive Bayes con pesos de clase usan ajustes propios.\n- Validación cruzada anidada 5×5: con 5 folds las pruebas tienen algo de potencia, pero los p-valores son optimistas porque los folds comparten datos.",
     "tecnico": "Friedman sobre las 112 combinaciones: χ² = 534.6, p ≈ 10⁻⁵². Nemenyi: diferencia crítica 89.4 frente a 108.3 de diferencia máxima de rangos; separa 224 de 6,216 pares, ninguno en el grupo de cabeza. La desviación del F1 usa ddof = 1.",
     "pagina": "/modelos",
     "sug": [
@@ -1579,7 +1579,7 @@
      "en qué puesto quedó svm",
      "F1 de svm"
     ],
-    "texto": "**SVM** · Máquina de vectores de soporte (kernel RBF) · puesto **#4** de 8.\n\nBusca la frontera que separa mejor a quienes pagan de quienes incumplen, con un margen máximo.\n\nMejor combinación: smote + random search → **F1 0.539** ± 0.005, recall 0.615, precisión 0.479, ROC-AUC 0.764.\n\nCorrió en Colab con GPU (cuML). Al reajustarlo en CPU con ranger (R), con los mismos hiperparámetros y folds, el F1 sube en promedio 0.009: su mejor combinación pasa de 0.539 a 0.545, a 0.002 de XGBoost. Aquí se muestra el valor de Colab, tal como se reportó.",
+    "texto": "**SVM** · Máquina de vectores de soporte (kernel RBF) · puesto **#4** de 8.\n\nBusca la frontera que separa mejor a quienes pagan de quienes incumplen, con un margen máximo.\n\nMejor combinación: smote + random search → **F1 0.539** ± 0.005, recall 0.615, precisión 0.479, ROC-AUC 0.764.\n\nCorrió en Colab con GPU (cuML). Al reajustarlo en CPU con scikit-learn, con los mismos hiperparámetros y folds, el F1 sube en promedio 0.009: su mejor combinación pasa de 0.539 a 0.545, a 0.002 de XGBoost. Aquí se muestra el valor de Colab, tal como se reportó.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1607,7 +1607,7 @@
      "en qué puesto quedó knn",
      "F1 de knn"
     ],
-    "texto": "**KNN** · Vecinos más cercanos · puesto **#5** de 8.\n\nClasifica a cada cliente según lo que hicieron los clientes más parecidos a él.\n\nMejor combinación: pesos de clase + random search → **F1 0.526** ± 0.012, recall 0.621, precisión 0.457, ROC-AUC 0.763.\n\nCon pesos de clase usa un ajuste propio del proyecto (el voto de cada vecino se pondera por la rareza de su clase), no un mecanismo estándar de ranger (R). Corrió en GPU (cuML), pero sus predicciones coinciden con las de ranger (R) en 99.98 % a 100 % de los casos.",
+    "texto": "**KNN** · Vecinos más cercanos · puesto **#5** de 8.\n\nClasifica a cada cliente según lo que hicieron los clientes más parecidos a él.\n\nMejor combinación: pesos de clase + random search → **F1 0.526** ± 0.012, recall 0.621, precisión 0.457, ROC-AUC 0.763.\n\nCon pesos de clase usa un ajuste propio del proyecto (el voto de cada vecino se pondera por la rareza de su clase), no un mecanismo estándar de scikit-learn. Corrió en GPU (cuML), pero sus predicciones coinciden con las de scikit-learn en 99.98 % a 100 % de los casos.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -1735,7 +1735,7 @@
      "predecir si un cliente nuevo va a pagar",
      "probar el modelo con un cliente"
     ],
-    "texto": "En **Predecir** llenas los datos de un cliente y el modelo serializado calcula su riesgo **en vivo**:\n\n1. **Flujo:** datos → transformaciones → 291 árboles opinan → puntaje y decisión.\n2. **Formulario:** perfil (cupo, edad, sexo, educación, estado civil), estado de pago por mes y montos.\n3. **Resultado:** una tarjeta de crédito con el puntaje y el veredicto, señales y votos de los árboles.\n4. **Historial del cliente**, **¿Qué empuja su riesgo?** y **¿Qué pasaría si…?**\n5. **Cómo se serializó el modelo** (saveRDS/readRDS).",
+    "texto": "En **Predecir** llenas los datos de un cliente y el modelo serializado calcula su riesgo **en vivo**:\n\n1. **Modelo:** XGBoost (el mejor modelo de referencia) o CS-FOF, el modelo original; se elige arriba.\n2. **Flujo:** datos → transformaciones → 147 árboles de XGBoost en cadena → puntaje y decisión.\n3. **Formulario:** perfil (cupo, edad, sexo, educación, estado civil), estado de pago por mes y montos.\n4. **Resultado:** una tarjeta de crédito con el puntaje y el veredicto, señales y cuántos árboles empujan hacia «incumple».\n5. **Historial del cliente**, **¿Qué empuja su riesgo?** y **¿Qué pasaría si…?**\n6. **Cómo se exportó el modelo a R**.",
     "tecnico": null,
     "pagina": "/predecir",
     "sug": [
@@ -1789,7 +1789,7 @@
      "la tarjeta de crédito del resultado"
     ],
     "texto": "La **tarjeta de crédito** del resultado muestra el puntaje de 0 a 100 %. Desde el **umbral de decisión** el veredicto es «riesgo alto: probable incumplimiento» (dorado); por debajo, «riesgo bajo» (azul).\n\n**El umbral no es fijo:** se mueve con el control «Umbral de decisión» y arranca en el recomendado de cada modelo (el de máximo F1, cerca de 52 %). Bajarlo detecta más incumplimientos a cambio de más falsas alarmas; subirlo hace lo contrario. Debajo del control se ven el recall, la precisión y las falsas alarmas de ese umbral en clientes de prueba.\n\nAdemás la tarjeta se rompe según el riesgo: aparece una fractura 20 puntos antes del umbral y, **desde el umbral**, se abre por ahí, más cuanto más alto es el puntaje.\n\nDebajo aparecen **señales** en lenguaje simple: atrasos, qué parte de lo facturado pagó y cómo es su cupo frente a los demás.\n\nCon el umbral de 50% el modelo detecta 60% de quienes incumplen y acierta en 48% de los que marca (datos de prueba). No es una probabilidad calibrada: sirve para **ordenar y clasificar** clientes.",
-    "tecnico": "El Random Forest se entrenó con class_weight='balanced', lo que desplaza las probabilidades hacia la clase positiva: sobrestima el riesgo frente a la tasa real (22.1%). Para usar el puntaje como probabilidad habría que calibrarlo (p. ej., regresión isotónica).",
+    "tecnico": "XGBoost se entrenó con pesos de clase (scale_pos_weight ≈ 3.5) y CS-FOF con class_weight='balanced', lo que desplaza las probabilidades hacia la clase positiva: sobrestima el riesgo frente a la tasa real (22.1%). Para usar el puntaje como probabilidad habría que calibrarlo (p. ej., regresión isotónica).",
     "pagina": "/predecir",
     "sug": [
      "¿Qué son los votos de los árboles?",
@@ -1808,12 +1808,12 @@
      "por qué el puntaje no coincide con los votos",
      "cuántos árboles tiene el modelo"
     ],
-    "texto": "El modelo es un bosque de **291 árboles**. Cada uno opina si el cliente incumplirá; los **cuadros** muestran qué porcentaje del bosque vota «incumple» (cada cuadro = 1 %). El puntaje promedia las *probabilidades* de todos los árboles, no solo sus votos, por eso puede diferir un poco.",
+    "texto": "Con **XGBoost** el modelo tiene **147 árboles en cadena**: cada uno corrige los errores de los anteriores y suma o resta un poco al puntaje. Los **cuadros** muestran qué porcentaje de los árboles empuja hacia «incumple» (cada cuadro = 1 %). Como no todos pesan lo mismo, el puntaje puede diferir de esa proporción.\n\nCon **CS-FOF** es un bosque: cada árbol vota y los cuadros muestran qué porcentaje vota «incumple»; el puntaje promedia sus probabilidades.",
     "tecnico": null,
     "pagina": "/predecir",
     "sug": [
      "¿Cómo leo el puntaje de riesgo?",
-     "¿Qué es Random Forest?"
+     "¿Qué es XGBoost?"
     ],
     "mood": "explaining"
    },
@@ -1872,7 +1872,7 @@
      "qué pasa si se atrasa un mes más"
     ],
     "texto": "**¿Qué pasaría si…?** muestra el puntaje que tendría *este mismo* cliente si solo cambiara una variable: atraso en septiembre, cupo, pago de septiembre o edad. La **estrella** es su situación actual y la franja superior marca el riesgo alto. Por ejemplo, con «Atraso en septiembre» ves cuánto sube el riesgo con cada mes de atraso.",
-    "tecnico": "Es una curva ICE (dependencia individual): se fija el resto y se recorre una variable. En un bosque la curva tiene escalones porque cada árbol corta en umbrales; describe al modelo, no implica causalidad.",
+    "tecnico": "Es una curva ICE (dependencia individual): se fija el resto y se recorre una variable. En los modelos de árboles la curva tiene escalones porque cada árbol corta en umbrales; describe al modelo, no implica causalidad.",
     "pagina": "/predecir",
     "sug": [
      "Explícame «¿Qué empuja su riesgo?»",
@@ -1882,31 +1882,30 @@
    },
    {
     "id": "serializacion",
-    "titulo": "Cómo se serializó el modelo",
+    "titulo": "Cómo se exportó el modelo a R",
     "ejemplos": [
      "cómo se serializó el modelo",
      "qué es serializar",
      "qué es joblib",
      "qué es el archivo pkl",
-     "modelo_credito.pkl",
+     "modelo_xgboost.pkl",
      "cómo se guardó el modelo",
      "cómo se entrenó el modelo de predecir",
      "hiperparámetros del modelo serializado",
      "métricas de prueba del modelo",
-     "qué es saveRDS",
-     "qué es el archivo rds",
-     "modelo_credito.rds",
-     "qué es readRDS",
-     "what is saveRDS",
-     "what is the rds file",
-     "what is readRDS"
+     "cómo se exportó el modelo a R",
+     "qué es xgboost_arboles",
+     "cómo funciona XGBoost en R",
+     "por qué no se reentrenó en R",
+     "how was the model exported to R",
+     "how does XGBoost run in R"
     ],
-    "texto": "**Serializar** es guardar un modelo ya entrenado en un archivo para usarlo sin reentrenar:\n\n1. **Entrenar** (`modelo/entrenar_modelo.R`) → 2. **Guardar** con `saveRDS` en `modelo_credito.rds` → 3. **Cargar** con `readRDS` al arrancar el tablero → 4. **Predecir** con `predict()` en cada cambio.\n\nEl .rds guarda el pipeline completo: transformaciones del proyecto + one-hot + Random Forest (class_weight='balanced'). En prueba (20 %): F1 0.533, recall 0.595, precisión 0.483, ROC-AUC 0.774.",
-    "tecnico": "Búsqueda: RandomizedSearchCV, 25 combinaciones, F1, 3 folds. Hiperparámetros: max_depth = 14, max_features = log2, min_samples_leaf = 10, min_samples_split = 3, n_estimators = 291. Entrenado con 23,972 clientes. Debe cargarse con la misma versión de ranger (R) (1.9.1).",
+    "texto": "Los dos modelos de **Predecir** se entrenaron en Python (tablero Dash) y se **exportaron** a R, en lugar de reentrenarlos con otro algoritmo:\n\n1. **Entrenar** en Python (`dash/modelo/entrenar_extra.py`) y guardar con `joblib`.\n2. **Exportar** los árboles: `herramientas/exportar_xgboost.py` escribe los 147 árboles de XGBoost (umbrales float32 exactos) en `modelo/xgboost_arboles.bin.gz`; `exportar_cs_fof.py` hace lo mismo con CS-FOF.\n3. **Cargar** en R al arrancar la app (`R/06c_xgboost.R` y `R/06b_cs_fof.R`).\n4. **Predecir**: R recorre los árboles igual que XGBoost y da la misma probabilidad que Python (diferencia menor que 10⁻⁶ en 300 clientes de prueba).\n\nXGBoost en prueba (20 %): F1 0.534, recall 0.601, precisión 0.480, ROC-AUC 0.773.",
+    "tecnico": "Hiperparámetros de XGBoost (los finales de la validación anidada 5 × 5 del proyecto): n_estimators = 147, max_depth = 12, learning_rate = 0.0247, subsample = 0.604, colsample_bytree = 0.5872, reg_lambda = 39.4707, scale_pos_weight = 3.5196. Entrenado con 23,972 clientes. Cada nodo envía al cliente a la izquierda si x < umbral (en float32) y el puntaje es la sigmoide de la suma de las 147 hojas.",
     "pagina": "/predecir",
     "sug": [
      "¿Qué son los votos de los árboles?",
-     "¿Qué es Random Forest?"
+     "¿Qué es XGBoost?"
     ],
     "mood": "explaining"
    },
@@ -2128,7 +2127,7 @@
      "how do you know the answers",
      "where do you get your information"
     ],
-    "texto": "I'm **Kyo**, a bot trained on the content of this dashboard:\n\n- Each page, chart, variable and model is an *intent* with several example questions.\n- Questions are turned into **TF-IDF** vectors (words and character fragments, so I tolerate typos) and a ranger (R) **logistic regression** is trained on them.\n- When you ask, I compute the most likely intent. If your question doesn't look like anything I learned, I tell you instead of making things up.\n- The figures come from the same functions that draw the dashboard, so they match what you see.\n\nI don't connect to external services: everything runs inside the app. I understand Spanish and English.",
+    "texto": "I'm **Kyo**, a bot trained on the content of this dashboard:\n\n- Each page, chart, variable and model is an *intent* with several example questions.\n- Questions are turned into **TF-IDF** vectors (words and character fragments, so I tolerate typos) and a **logistic regression** programmed in R is trained on them.\n- When you ask, I compute the most likely intent. If your question doesn't look like anything I learned, I tell you instead of making things up.\n- The figures come from the same functions that draw the dashboard, so they match what you see.\n\nI don't connect to external services: everything runs inside the app. I understand Spanish and English.",
     "tecnico": null,
     "pagina": null,
     "sug": [
@@ -3444,7 +3443,7 @@
      "are the SVM results comparable",
      "significant difference between models"
     ],
-    "texto": "**How different the models are:**\n\n- The top places are **practically tied**: 14 of 112 combinations are within one deviation of the best F1, and Nemenyi only separates combinations far apart in the ranking.\n- What does matter is **balancing**. The optimization method barely changes F1 (0.5022 to 0.5040): it should be chosen by its cost.\n- SVM was run on Colab with a GPU: refitted on CPU with ranger (R) its F1 rises 0.009 on average, but the conclusions do not change. KNN and Naive Bayes with class weights use project-specific adjustments.\n- Nested 5×5 cross-validation: with 5 folds the tests have some power, but the p-values are optimistic because the folds share data.",
+    "texto": "**How different the models are:**\n\n- The top places are **practically tied**: 14 of 112 combinations are within one deviation of the best F1, and Nemenyi only separates combinations far apart in the ranking.\n- What does matter is **balancing**. The optimization method barely changes F1 (0.5022 to 0.5040): it should be chosen by its cost.\n- SVM was run on Colab with a GPU: refitted on CPU with scikit-learn its F1 rises 0.009 on average, but the conclusions do not change. KNN and Naive Bayes with class weights use project-specific adjustments.\n- Nested 5×5 cross-validation: with 5 folds the tests have some power, but the p-values are optimistic because the folds share data.",
     "tecnico": "Friedman over the 112 combinations: χ² = 534.6, p ≈ 10⁻⁵². Nemenyi: critical difference 89.4 versus a maximum rank difference of 108.3; it separates 224 of 6,216 pairs, none in the top group. The F1 deviation uses ddof = 1.",
     "pagina": "/modelos",
     "sug": [
@@ -3639,7 +3638,7 @@
      "what rank did svm get",
      "F1 of svm"
     ],
-    "texto": "**SVM** · Support vector machine (RBF kernel) · rank **#4** of 8.\n\nLooks for the boundary that best separates payers from defaulters, with maximum margin.\n\nBest combination: smote + random search → **F1 0.539** ± 0.005, recall 0.615, precision 0.479, ROC-AUC 0.764.\n\nRun on Colab with a GPU (cuML). Refitting it on CPU with ranger (R), with the same hyperparameters and folds, raises F1 by 0.009 on average: its best combination goes from 0.539 to 0.545, 0.002 behind XGBoost. The Colab value is shown here, as reported.",
+    "texto": "**SVM** · Support vector machine (RBF kernel) · rank **#4** of 8.\n\nLooks for the boundary that best separates payers from defaulters, with maximum margin.\n\nBest combination: smote + random search → **F1 0.539** ± 0.005, recall 0.615, precision 0.479, ROC-AUC 0.764.\n\nRun on Colab with a GPU (cuML). Refitting it on CPU with scikit-learn, with the same hyperparameters and folds, raises F1 by 0.009 on average: its best combination goes from 0.539 to 0.545, 0.002 behind XGBoost. The Colab value is shown here, as reported.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3667,7 +3666,7 @@
      "what rank did knn get",
      "F1 of knn"
     ],
-    "texto": "**KNN** · Nearest neighbors · rank **#5** of 8.\n\nClassifies each client according to what the most similar clients did.\n\nBest combination: class weights + random search → **F1 0.526** ± 0.012, recall 0.621, precision 0.457, ROC-AUC 0.763.\n\nWith class weights it uses a project-specific adjustment (each neighbor's vote is weighted by the rarity of its class), not a standard ranger (R) mechanism. It ran on a GPU (cuML), but its predictions match ranger (R)'s in 99.98% to 100% of cases.",
+    "texto": "**KNN** · Nearest neighbors · rank **#5** of 8.\n\nClassifies each client according to what the most similar clients did.\n\nBest combination: class weights + random search → **F1 0.526** ± 0.012, recall 0.621, precision 0.457, ROC-AUC 0.763.\n\nWith class weights it uses a project-specific adjustment (each neighbor's vote is weighted by the rarity of its class), not a standard scikit-learn mechanism. It ran on a GPU (cuML), but its predictions match scikit-learn's in 99.98% to 100% of cases.",
     "tecnico": null,
     "pagina": "/modelos",
     "sug": [
@@ -3783,7 +3782,7 @@
      "predict whether a new client will pay",
      "test the model with a client"
     ],
-    "texto": "In **Predict** you fill in a client's data and the serialized model computes their risk **live**:\n\n1. **Flow:** data → transformations → 291 trees give their opinion → score and decision.\n2. **Form:** profile (limit, age, sex, education, marital status), repayment status by month and amounts.\n3. **Result:** a credit card with the score and the verdict, signals and the trees' votes.\n4. **Client history**, **What drives their risk?** and **What if…?**\n5. **How the model was serialized** (saveRDS/readRDS).",
+    "texto": "In **Predict** you fill in a client's data and the serialized model computes their risk **live**:\n\n1. **Model:** XGBoost (the best baseline model) or CS-FOF, the original model; chosen at the top.\n2. **Flow:** data → transformations → 147 XGBoost trees in a chain → score and decision.\n3. **Form:** profile (limit, age, sex, education, marital status), repayment status by month and amounts.\n4. **Result:** a credit card with the score and the verdict, signals and how many trees push toward “default”.\n5. **Client history**, **What drives their risk?** and **What if…?**\n6. **How the model was exported to R**.",
     "tecnico": null,
     "pagina": "/predecir",
     "sug": [
@@ -3843,7 +3842,7 @@
      "which score means high risk"
     ],
     "texto": "The result's **credit card** shows the score from 0 to 100%. From the **decision threshold** the verdict is “high risk: likely default” (gold); below it, “low risk” (blue).\n\n**The threshold is not fixed:** it moves with the “Decision threshold” control and starts at each model's recommended value (maximum F1, about 52%). Lowering it catches more defaults at the cost of more false alarms; raising it does the opposite. Below the control you see the recall, precision and false alarms of that threshold on test clients.\n\nThe card also breaks according to the risk: a crack appears 20 points before the threshold and, **from the threshold**, it splits open there, more the higher the score.\n\nBelow it there are **signals** in plain language: delays, what share of the bill was paid and how their limit compares with others.\n\nWith the 50% threshold the model detects 60% of defaulters and is right about 48% of those it flags (test data). It is not a calibrated probability: it is useful to **rank and classify** clients.",
-    "tecnico": "The Random Forest was trained with class_weight='balanced', which shifts probabilities toward the positive class: it overestimates risk compared with the real rate (22.1%). To use the score as a probability it would have to be calibrated (e.g. isotonic regression).",
+    "tecnico": "XGBoost was trained with class weights (scale_pos_weight ≈ 3.5) and CS-FOF with class_weight='balanced', which shifts probabilities toward the positive class: it overestimates risk compared with the real rate (22.1%). To use the score as a probability it would have to be calibrated (e.g. isotonic regression).",
     "pagina": "/predecir",
     "sug": [
      "What are the trees' votes?",
@@ -3862,12 +3861,12 @@
      "why doesn't the score match the votes",
      "how many trees does the model have"
     ],
-    "texto": "The model is a forest of **291 trees**. Each one gives its opinion on whether the client will default; the **squares** show what percentage of the forest votes “default” (each square = 1%). The score averages the *probabilities* of all trees, not just their votes, so it may differ slightly.",
+    "texto": "With **XGBoost** the model has **147 trees in a chain**: each one corrects the errors of the previous ones and adds or subtracts a little from the score. The **squares** show what percentage of the trees push toward “default” (each square = 1%). Since they do not all weigh the same, the score may differ from that proportion.\n\nWith **CS-FOF** it is a forest: each tree votes and the squares show what percentage votes “default”; the score averages their probabilities.",
     "tecnico": null,
     "pagina": "/predecir",
     "sug": [
      "How do I read the risk score?",
-     "What is random forest?"
+     "What is XGBoost?"
     ],
     "mood": "explaining"
    },
@@ -3926,7 +3925,7 @@
      "what happens if they are one more month late"
     ],
     "texto": "**What if…?** shows the score *this same* client would have if only one variable changed: September delay, limit, September payment or age. The **star** is their current situation and the upper band marks high risk. For example, with “September delay” you see how much the risk rises with each month of delay.",
-    "tecnico": "It is an ICE curve (individual conditional expectation): the rest is fixed and one variable is varied. In a forest the curve has steps because each tree splits at thresholds; it describes the model and does not imply causality.",
+    "tecnico": "It is an ICE curve (individual conditional expectation): the rest is fixed and one variable is varied. In tree models the curve has steps because each tree splits at thresholds; it describes the model and does not imply causality.",
     "pagina": "/predecir",
     "sug": [
      "Explain “What drives their risk?”",
@@ -3936,31 +3935,30 @@
    },
    {
     "id": "serializacion",
-    "titulo": "How the model was serialized",
+    "titulo": "How the model was exported to R",
     "ejemplos": [
      "how was the model serialized",
      "what is serializing",
      "what is joblib",
      "what is the pkl file",
-     "modelo_credito.pkl",
+     "modelo_xgboost.pkl",
      "how was the model saved",
      "how was the predict model trained",
      "hyperparameters of the serialized model",
      "test metrics of the model",
-     "qué es saveRDS",
-     "qué es el archivo rds",
-     "modelo_credito.rds",
-     "qué es readRDS",
-     "what is saveRDS",
-     "what is the rds file",
-     "what is readRDS"
+     "cómo se exportó el modelo a R",
+     "qué es xgboost_arboles",
+     "cómo funciona XGBoost en R",
+     "por qué no se reentrenó en R",
+     "how was the model exported to R",
+     "how does XGBoost run in R"
     ],
-    "texto": "**Serializing** means saving an already trained model to a file to use it without retraining:\n\n1. **Train** (`modelo/entrenar_modelo.R`) → 2. **Save** with `saveRDS` to `modelo_credito.rds` → 3. **Load** with `readRDS` when the dashboard starts → 4. **Predict** with `predict()` on each change.\n\nThe .rds stores the whole pipeline: project transformations + one-hot + Random Forest (class_weight='balanced'). On the test set (20%): F1 0.533, recall 0.595, precision 0.483, ROC-AUC 0.774.",
-    "tecnico": "Search: RandomizedSearchCV, 25 combinaciones, F1, 3 folds. Hyperparameters: max_depth = 14, max_features = log2, min_samples_leaf = 10, min_samples_split = 3, n_estimators = 291. Trained on 23,972 clients. It must be loaded with the same ranger (R) version (1.9.1).",
+    "texto": "Both **Predict** models were trained in Python (Dash dashboard) and **exported** to R, instead of retraining them with another algorithm:\n\n1. **Train** in Python (`dash/modelo/entrenar_extra.py`) and save with `joblib`.\n2. **Export** the trees: `herramientas/exportar_xgboost.py` writes the 147 XGBoost trees (exact float32 thresholds) to `modelo/xgboost_arboles.bin.gz`; `exportar_cs_fof.py` does the same for CS-FOF.\n3. **Load** them in R when the app starts (`R/06c_xgboost.R` and `R/06b_cs_fof.R`).\n4. **Predict**: R traverses the trees like XGBoost and gives the same probability as Python (difference below 10⁻⁶ on 300 test clients).\n\nXGBoost on the test set (20%): F1 0.534, recall 0.601, precision 0.480, ROC-AUC 0.773.",
+    "tecnico": "XGBoost hyperparameters (the final ones from the project's 5 × 5 nested validation): n_estimators = 147, max_depth = 12, learning_rate = 0.0247, subsample = 0.604, colsample_bytree = 0.5872, reg_lambda = 39.4707, scale_pos_weight = 3.5196. Trained on 23,972 clients. Each node sends the client left if x < threshold (in float32) and the score is the sigmoid of the sum of the 147 leaves.",
     "pagina": "/predecir",
     "sug": [
      "What are the trees' votes?",
-     "What is random forest?"
+     "What is XGBoost?"
     ],
     "mood": "explaining"
    },

@@ -44,20 +44,58 @@ for m in ("happy", "thinking", "explaining", "proud", "alert"):
 (SHINY / "kyo" / "walker.html").write_text(A.WALKER_HTML, encoding="utf-8")
 
 # --- 3. Conocimiento de Kyo ---------------------------------------------------
-# Ajustes para la versión Shiny: el modelo se guarda con saveRDS (no joblib) y la app es de R.
+# Ajustes para la versión Shiny. Los dos modelos de Predecir (XGBoost y CS-FOF) se entrenan en Python en el
+# Dash y se exportan a R (herramientas/exportar_xgboost.py y exportar_cs_fof.py); Kyo de Shiny es una regresión
+# logística programada en R (R/09_kyo.R). Los reemplazos son puntuales: scikit-learn se sigue usando en el
+# proyecto (por ejemplo, para reajustar SVM en CPU), así que no se reemplaza en general.
 REEMPLAZOS = [
-    (r"joblib\.dump", "saveRDS"), (r"joblib\.load", "readRDS"), (r"\bjoblib\b", "saveRDS/readRDS"),
-    (r"modelo_credito\.pkl", "modelo_credito.rds"), (r"\.pkl\b", ".rds"),
-    (r"predict_proba", "predict()"), (r"modelo/entrenar\.py", "modelo/entrenar_modelo.R"),
-    (r"python -m modelo\.entrenar", "Rscript modelo/entrenar_modelo.R"),
-    (r"scikit-learn", "ranger (R)"), (r"\bapp\.py\b", "app.R"), (r"python app\.R", "shiny::runApp()"),
+    (r"\*\*regresión logística\*\* de scikit-learn", "**regresión logística** programada en R"),
+    (r"a scikit-learn \*\*logistic regression\*\*", "a **logistic regression** programmed in R"),
+    (r"\*\*Cómo se serializó el modelo\*\* \(joblib\)", "**Cómo se exportó el modelo a R**"),
+    (r"\*\*How the model was serialized\*\* \(joblib\)", "**How the model was exported to R**"),
+    (r"\bapp\.py\b", "app.R"), (r"python app\.R", "shiny::runApp()"),
     (r"http://127\.0\.0\.1:8050", "http://127.0.0.1:8060"),
     (r"`pip install -r requirements\.txt`", "`install.packages()`"),
 ]
 EXTRA_EJEMPLOS = {   # preguntas propias de la versión R
-    "serializacion": ["qué es saveRDS", "qué es el archivo rds", "modelo_credito.rds", "qué es readRDS",
-                      "what is saveRDS", "what is the rds file", "what is readRDS"],
+    "serializacion": ["cómo se exportó el modelo a R", "qué es xgboost_arboles", "cómo funciona XGBoost en R",
+                      "por qué no se reentrenó en R", "how was the model exported to R", "how does XGBoost run in R"],
 }
+
+
+def textos_shiny(lg):
+    """Textos de la intención «serializacion» para Shiny: el modelo se exporta del Dash, no se reentrena."""
+    m = json.loads((SHINY / "modelo" / "xgboost_meta.json").read_text(encoding="utf-8"))
+    pr, hp = m["prueba"], m["hiperparametros"]
+    n = len(m["nodos_por_arbol"])
+    hps = ", ".join(f"{k} = {round(v, 4) if isinstance(v, float) else v}" for k, v in hp.items())
+    if lg == "es":
+        return (f"Los dos modelos de **Predecir** se entrenaron en Python (tablero Dash) y se **exportaron** a R, en "
+                f"lugar de reentrenarlos con otro algoritmo:\n\n"
+                f"1. **Entrenar** en Python (`dash/modelo/entrenar_extra.py`) y guardar con `joblib`.\n"
+                f"2. **Exportar** los árboles: `herramientas/exportar_xgboost.py` escribe los {n} árboles de XGBoost "
+                f"(umbrales float32 exactos) en `modelo/xgboost_arboles.bin.gz`; `exportar_cs_fof.py` hace lo mismo con CS-FOF.\n"
+                f"3. **Cargar** en R al arrancar la app (`R/06c_xgboost.R` y `R/06b_cs_fof.R`).\n"
+                f"4. **Predecir**: R recorre los árboles igual que XGBoost y da la misma probabilidad que Python "
+                f"(diferencia menor que 10⁻⁶ en 300 clientes de prueba).\n\n"
+                f"XGBoost en prueba (20 %): F1 {pr['f1']:.3f}, recall {pr['recall']:.3f}, precisión {pr['precision']:.3f}, "
+                f"ROC-AUC {pr['roc_auc']:.3f}.",
+                f"Hiperparámetros de XGBoost (los finales de la validación anidada 5 × 5 del proyecto): {hps}. "
+                f"Entrenado con {m['n_entrenamiento']:,} clientes. Cada nodo envía al cliente a la izquierda si "
+                f"x < umbral (en float32) y el puntaje es la sigmoide de la suma de las {n} hojas.")
+    return (f"Both **Predict** models were trained in Python (Dash dashboard) and **exported** to R, instead of "
+            f"retraining them with another algorithm:\n\n"
+            f"1. **Train** in Python (`dash/modelo/entrenar_extra.py`) and save with `joblib`.\n"
+            f"2. **Export** the trees: `herramientas/exportar_xgboost.py` writes the {n} XGBoost trees (exact float32 "
+            f"thresholds) to `modelo/xgboost_arboles.bin.gz`; `exportar_cs_fof.py` does the same for CS-FOF.\n"
+            f"3. **Load** them in R when the app starts (`R/06c_xgboost.R` and `R/06b_cs_fof.R`).\n"
+            f"4. **Predict**: R traverses the trees like XGBoost and gives the same probability as Python "
+            f"(difference below 10⁻⁶ on 300 test clients).\n\n"
+            f"XGBoost on the test set (20%): F1 {pr['f1']:.3f}, recall {pr['recall']:.3f}, precision {pr['precision']:.3f}, "
+            f"ROC-AUC {pr['roc_auc']:.3f}.",
+            f"XGBoost hyperparameters (the final ones from the project's 5 × 5 nested validation): {hps}. "
+            f"Trained on {m['n_entrenamiento']:,} clients. Each node sends the client left if x < threshold "
+            f"(in float32) and the score is the sigmoid of the sum of the {n} leaves.")
 
 
 def ajustar(s):
@@ -68,16 +106,18 @@ def ajustar(s):
     return s
 
 
-def intencion(it):
-    return {"id": it.id, "titulo": it.titulo, "ejemplos": list(it.ejemplos) + EXTRA_EJEMPLOS.get(it.id, []),
-            "texto": ajustar(it.texto),
-            "tecnico": ajustar(it.tecnico), "pagina": it.pagina, "sug": list(it.sug), "mood": it.mood}
+def intencion(it, lg):
+    texto, tecnico = textos_shiny(lg) if it.id == "serializacion" else (ajustar(it.texto), ajustar(it.tecnico))
+    titulo = (("Cómo se exportó el modelo a R" if lg == "es" else "How the model was exported to R")
+              if it.id == "serializacion" else it.titulo)
+    return {"id": it.id, "titulo": titulo, "ejemplos": list(it.ejemplos) + EXTRA_EJEMPLOS.get(it.id, []),
+            "texto": texto, "tecnico": tecnico, "pagina": it.pagina, "sug": list(it.sug), "mood": it.mood}
 
 
 salida = {}
 for lg in ("es", "en"):
     intenciones, paginas, de_pagina, sug = construir_conocimiento(A, lg)
-    salida[lg] = {"intenciones": [intencion(i) for i in intenciones], "paginas": paginas,
+    salida[lg] = {"intenciones": [intencion(i, lg) for i in intenciones], "paginas": paginas,
                   "intencion_de_pagina": de_pagina, "sug_de_pagina": sug, "textos": TEXTOS[lg]}
 (SHINY / "kyo" / "conocimiento.json").write_text(json.dumps(salida, ensure_ascii=False, indent=1), encoding="utf-8")
 
