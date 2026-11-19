@@ -481,9 +481,33 @@ link_cards <- function(compact = FALSE) {
 PIPE_ICONS <- c("00" = "receipt", "01" = "card", "02" = "pos", "03" = "chip", "04" = "wallet", "05" = "cardpay", "06" = "contactless",
                 "08" = "layers", "09" = "bars")
 
+youtube_id <- function(url) {
+  m <- regmatches(url, regexec("(?:youtu\\.be/|[?&]v=|/(?:embed|shorts|live)/)([A-Za-z0-9_-]{11})", url, perl = TRUE))[[1]]
+  if (length(m) == 2) m[2] else NULL
+}
+
+video_card <- function() {
+  vid <- youtube_id(PROJECT_VIDEO_URL)
+  if (!is.null(vid)) {
+    card(tx("Video del proyecto", "Project video"),
+         div(class = "video-wrap",
+             tags$iframe(src = paste0("https://www.youtube-nocookie.com/embed/", vid, "?rel=0"),
+                         title = tx("Video del proyecto", "Project video"),
+                         allow = "accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen",
+                         referrerpolicy = "strict-origin-when-cross-origin", allowfullscreen = NA)),
+         tags$a(class = "video-link", href = paste0("https://www.youtube.com/watch?v=", vid), target = "_blank",
+                rel = "noopener noreferrer", icon_("external"), tx("Ver en YouTube", "Watch on YouTube")))
+  } else {
+    card(tx("Video del proyecto", "Project video"),
+         div(class = "video-wrap video-empty", icon_("play", "video-ico"), tags$b(tx("Video próximamente", "Video coming soon")),
+             tags$span(tx("Aquí se verá el video del proyecto.", "The project video will appear here."))))
+  }
+}
+
 page_links <- function() {
   tagList(
     page_title(tx("Enlaces", "Links")),
+    video_card(),
     card(tx("Sobre el proyecto", "About the project"),
          tags$p(tx("Flujo completo de ciencia de datos y aprendizaje automático para predecir el incumplimiento de pago en clientes de tarjetas de crédito, a partir de los 30,000 registros del repositorio UCI.",
                    "A complete data science and machine learning workflow to predict payment default among credit card clients, based on the 30,000 records of the UCI repository.")),
