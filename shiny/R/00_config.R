@@ -53,6 +53,8 @@ TEAM <- list(
 REPO_PROJECT <- "https://github.com/valeriaflorezs/Credit_Card_Project"
 REPO_DASH <- "https://github.com/KathBarrera/dash_credit_kv"
 BOOK_URL <- "https://valeriaflorezs.github.io/Credit_Card_Project/"
+# Video del proyecto (página Enlaces): enlace de YouTube en cualquier forma; vacío = «Video próximamente».
+PROJECT_VIDEO_URL <- "https://youtu.be/Cgmp3mpy-kk"
 NOTEBOOK_URL <- paste0(BOOK_URL, "notebooks/00_eda.html")
 DATA_URL <- "https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients"
 NOTEBOOKS <- list(

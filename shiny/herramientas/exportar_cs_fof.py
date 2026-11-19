@@ -12,7 +12,6 @@ Genera en shiny/modelo/:
     cs_fof_bosque.bin.gz    nodos de todos los árboles (binario little-endian, comprimido con gzip)
     cs_fof_meta.json        columnas del one-hot, estandarización, tamaño de cada árbol y metadatos del Dash
     cs_fof_verificacion.csv 300 clientes de prueba con la probabilidad que da Python, para comprobar la réplica
-    particion_dash.csv.gz   los 29,965 clientes con su conjunto (entrenamiento, calibración o verificación)
 """
 import gzip
 import json
@@ -62,17 +61,8 @@ meta = {
 }
 (SALIDA / "cs_fof_meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
 
-# Partición del Dash (80/20 estratificada, semilla 42; la prueba se divide en calibración y verificación):
-# el Random Forest de R (modelo/entrenar_modelo.R) se entrena y evalúa con los mismos clientes.
 X, y = cargar_datos()
 X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, stratify=y, random_state=RANDOM_STATE)
-X_cal, X_ver, _, _ = train_test_split(X_te, y_te, test_size=0.5, stratify=y_te, random_state=RANDOM_STATE)
-part = X.copy()
-part["default_payment_next_month"] = y
-part["conjunto"] = "entrenamiento"
-part.loc[X_cal.index, "conjunto"] = "calibracion"
-part.loc[X_ver.index, "conjunto"] = "verificacion"
-part.to_csv(SALIDA / "particion_dash.csv.gz", index=False, compression="gzip")
 
 # Verificación de la réplica en R: 300 clientes de prueba con la probabilidad de Python
 v = X_te.sample(300, random_state=0).copy()

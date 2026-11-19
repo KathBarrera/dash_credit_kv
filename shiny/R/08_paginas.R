@@ -85,9 +85,9 @@ page_intro <- function() {
                        sprintf("This dashboard walks through the whole project using the Default of Credit Card Clients dataset (UCI): %s clients observed between April and September 2005, with their credit limit, demographics, six-month payment history, billed and paid amounts, and whether they defaulted the following month.", num(I$filas_originales)))),
              tags$p(tx("Tras la limpieza quedan 24 variables (23 predictoras y 1 objetivo); el conjunto final de modelado tiene 21 columnas porque las 6 BILL_AMT se resumen en 3 variables derivadas.",
                        "After cleaning there are 24 variables (23 predictors and 1 target); the final modeling set has 21 columns because the 6 BILL_AMT are summarized into 3 derived variables.")),
-             tags$p(tx(sprintf("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables anticipan el incumplimiento. Luego se comparan %d combinaciones de modelos tradicionales (diseño factorial: 7 algoritmos × 4 técnicas de balanceo × 4 optimizadores) y, aparte, %d corridas de CS-FOF, el modelo original del proyecto, que busca superar el mejor F1 de esas %d. La mejor de las %d es %s (F1 %.3f). CS-FOF obtiene el mayor F1 medio (%.3f), pero la diferencia es menor que 0.002 y ninguna prueba estadística las separa. Por último, la página Predecir usa un Random Forest con pesos de clase (estadísticamente empatado con el mejor) para estimar el riesgo de un cliente nuevo.",
+             tags$p(tx(sprintf("Primero se exploran los datos (EDA univariado y multivariado) para entender qué variables anticipan el incumplimiento. Luego se comparan %d combinaciones de modelos tradicionales (diseño factorial: 7 algoritmos × 4 técnicas de balanceo × 4 optimizadores) y, aparte, %d corridas de CS-FOF, el modelo original del proyecto, que busca superar el mejor F1 de esas %d. La mejor de las %d es %s (F1 %.3f). CS-FOF obtiene el mayor F1 medio (%.3f), pero la diferencia es menor que 0.002 y ninguna prueba estadística las separa. Por último, la página Predecir usa XGBoost con pesos de clase, el mejor modelo de referencia, o CS-FOF, para estimar el riesgo de un cliente nuevo.",
                                N_BASE, N_EXTRA, N_BASE, N_BASE, minfo(BEST_BASE$model, "label"), BEST_BASE$f1_mean, BEST$f1_mean),
-                       sprintf("First the data is explored (univariate and multivariate EDA) to see which variables anticipate default. Then %d traditional model combinations are compared (factorial design: 7 algorithms × 4 balancing techniques × 4 optimizers) and, separately, %d runs of CS-FOF, the project's original model, which tries to beat the best F1 of those %d. The best of the %d is %s (F1 %.3f). CS-FOF has the highest mean F1 (%.3f), but the difference is below 0.002 and no statistical test separates them. Finally, the Predict page uses a Random Forest with class weights (statistically tied with the best) to estimate the risk of a new client.",
+                       sprintf("First the data is explored (univariate and multivariate EDA) to see which variables anticipate default. Then %d traditional model combinations are compared (factorial design: 7 algorithms × 4 balancing techniques × 4 optimizers) and, separately, %d runs of CS-FOF, the project's original model, which tries to beat the best F1 of those %d. The best of the %d is %s (F1 %.3f). CS-FOF has the highest mean F1 (%.3f), but the difference is below 0.002 and no statistical test separates them. Finally, the Predict page uses XGBoost with class weights, the best baseline model, or CS-FOF, to estimate the risk of a new client.",
                                N_BASE, N_EXTRA, N_BASE, N_BASE, minfo(BEST_BASE$model, "label"), BEST_BASE$f1_mean, BEST$f1_mean))),
              tags$p(tx("Cada gráfico trae una interpretación básica (lenguaje cotidiano) y una técnica (estadísticos y recomendaciones de modelado).",
                        "Each chart comes with a basic interpretation (everyday language) and a technical one (statistics and modeling recommendations)."))),
@@ -481,9 +481,33 @@ link_cards <- function(compact = FALSE) {
 PIPE_ICONS <- c("00" = "receipt", "01" = "card", "02" = "pos", "03" = "chip", "04" = "wallet", "05" = "cardpay", "06" = "contactless",
                 "08" = "layers", "09" = "bars")
 
+youtube_id <- function(url) {
+  m <- regmatches(url, regexec("(?:youtu\\.be/|[?&]v=|/(?:embed|shorts|live)/)([A-Za-z0-9_-]{11})", url, perl = TRUE))[[1]]
+  if (length(m) == 2) m[2] else NULL
+}
+
+video_card <- function() {
+  vid <- youtube_id(PROJECT_VIDEO_URL)
+  if (!is.null(vid)) {
+    card(tx("Video del proyecto", "Project video"),
+         div(class = "video-wrap",
+             tags$iframe(src = paste0("https://www.youtube-nocookie.com/embed/", vid, "?rel=0"),
+                         title = tx("Video del proyecto", "Project video"),
+                         allow = "accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen",
+                         referrerpolicy = "strict-origin-when-cross-origin", allowfullscreen = NA)),
+         tags$a(class = "video-link", href = paste0("https://www.youtube.com/watch?v=", vid), target = "_blank",
+                rel = "noopener noreferrer", icon_("external"), tx("Ver en YouTube", "Watch on YouTube")))
+  } else {
+    card(tx("Video del proyecto", "Project video"),
+         div(class = "video-wrap video-empty", icon_("play", "video-ico"), tags$b(tx("Video próximamente", "Video coming soon")),
+             tags$span(tx("Aquí se verá el video del proyecto.", "The project video will appear here."))))
+  }
+}
+
 page_links <- function() {
   tagList(
     page_title(tx("Enlaces", "Links")),
+    video_card(),
     card(tx("Sobre el proyecto", "About the project"),
          tags$p(tx("Flujo completo de ciencia de datos y aprendizaje automático para predecir el incumplimiento de pago en clientes de tarjetas de crédito, a partir de los 30,000 registros del repositorio UCI.",
                    "A complete data science and machine learning workflow to predict payment default among credit card clients, based on the 30,000 records of the UCI repository.")),
@@ -499,7 +523,7 @@ page_links <- function() {
     }))),
     card(tx("Reproducir el análisis", "Reproduce the analysis"), ul_(list(
       tagList(tx("Clona el repositorio del tablero e instala los paquetes de R con ", "Clone the dashboard repository and install the R packages with "),
-              tags$code('install.packages(c("shiny", "plotly", "ranger", "readxl", "jsonlite", "commonmark", "glmnet", "Matrix"))'), "."),
+              tags$code('install.packages(c("shiny", "plotly", "readxl", "jsonlite", "commonmark", "Matrix"))'), "."),
       tagList(tx("Desde la carpeta ", "From the "), tags$code("shiny/"), tx(" ejecuta ", " folder run "), tags$code("shiny::runApp()"),
               tx(" y abre la dirección que aparece en la consola.", " and open the address shown in the console.")),
       tagList(tx("La versión en Python (Dash) está en la carpeta ", "The Python (Dash) version is in the "), tags$code("dash/"),

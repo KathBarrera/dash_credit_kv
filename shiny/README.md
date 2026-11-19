@@ -1,13 +1,13 @@
 # Riesgo de Incumplimiento en Tarjetas de Crédito · versión Shiny (R)
 
-Réplica en **R + Shiny + Plotly** del tablero Dash de la carpeta [`../dash`](../dash). Tiene las mismas páginas, el mismo diseño, los mismos textos en español e inglés, modo claro u oscuro, el formulario **Predecir** con dos modelos (un Random Forest serializado y el modelo original CS-FOF) y el asistente **Kyo**.
+Réplica en **R + Shiny + Plotly** del tablero Dash de la carpeta [`../dash`](../dash). Tiene las mismas páginas, el mismo diseño, los mismos textos en español e inglés, modo claro u oscuro, el formulario **Predecir** con dos modelos (XGBoost, el mejor modelo de referencia, y el modelo original CS-FOF, los mismos del Dash) y el asistente **Kyo**.
 
 ## Ejecutar en tu computador
 
 1. Instala R (4.1 o superior) y los paquetes:
 
    ```r
-   install.packages(c("shiny", "plotly", "ranger", "readxl", "jsonlite", "commonmark", "Matrix"))
+   install.packages(c("shiny", "plotly", "readxl", "jsonlite", "commonmark", "Matrix"))
    ```
 
 2. Abre la carpeta `shiny/` en RStudio (o en una consola de R ubicada en ella) y ejecuta:
@@ -53,16 +53,16 @@ shiny/
 │   ├── 05_modelos.R           # Modelos: tabla de líderes, diagnóstico, diferencia crítica y SHAP (CS-FOF y los 7 de referencia)
 │   ├── 06_variables.R         # Variables del modelo (mismas transformaciones del proyecto)
 │   ├── 06b_cs_fof.R           # CS-FOF en R: recorre los árboles exportados del modelo del Dash
+│   ├── 06c_xgboost.R          # XGBoost en R: recorre los árboles exportados del modelo del Dash
 │   ├── 07_predecir.R          # Página Predecir
 │   ├── 08_paginas.R           # Páginas, menú y navegación
 │   ├── 09_kyo.R               # Asistente Kyo (TF-IDF + regresión logística)
 │   └── 10_modelo_original.R   # Modelo original CS-FOF: teoría, metodología, código y resultados
 ├── modelo/
 │   ├── cs_fof/                # Copia de original_model.py y sus pruebas (se muestran en la pestaña Código)
-│   ├── entrenar_modelo.R      # Entrena y serializa el Random Forest (Rscript modelo/entrenar_modelo.R)
-│   ├── modelo_credito.rds     # Modelo serializado con saveRDS
-│   ├── modelo_credito.json    # Métricas, umbral ajustable, predicción conforme, hiperparámetros y versiones
-│   ├── particion_dash.csv.gz  # Partición 80/20 del Dash (la usan los dos modelos de Predecir)
+│   ├── xgboost_arboles.bin.gz # Nodos de los 147 árboles de XGBoost (exportados del Dash, umbrales float32 exactos)
+│   ├── xgboost_meta.json      # Columnas, margen base, métricas, umbral y predicción conforme de XGBoost
+│   ├── xgboost_verificacion.csv # 300 clientes de prueba con la probabilidad de Python, para comprobar la réplica
 │   ├── cs_fof_bosque.bin.gz   # Nodos de los 359 árboles de CS-FOF (exportados del Dash)
 │   ├── cs_fof_meta.json       # Columnas, estandarización, métricas, umbral y predicción conforme de CS-FOF
 │   └── cs_fof_verificacion.csv # 300 clientes de prueba con la probabilidad de Python, para comprobar la réplica
@@ -74,34 +74,23 @@ shiny/
 ├── results/                   # Los mismos CSV de dash/results: modelos (5 x 5), SHAP por fold, LIME vs SHAP y anytime
 └── herramientas/
     ├── exportar_desde_dash.py # Copia del Dash el CSS, el JS y el conocimiento de Kyo
-    ├── exportar_cs_fof.py     # Exporta los árboles de CS-FOF y la partición del Dash a modelo/
+    ├── exportar_cs_fof.py     # Exporta los árboles de CS-FOF del Dash a modelo/
+    ├── exportar_xgboost.py    # Exporta los árboles de XGBoost del Dash a modelo/
     └── evaluar_kyo.R          # Evalúa a Kyo con las mismas preguntas de prueba del Dash
 ```
 
 ## Modelos de la página Predecir
 
-El selector de Predecir ofrece dos modelos. Los dos usan la misma partición 80/20 del Dash (`modelo/particion_dash.csv.gz`), así que sus métricas de prueba se comparan sobre los mismos 5,993 clientes.
+El selector de Predecir ofrece dos modelos: **XGBoost** (el mejor de los modelos de referencia) y **CS-FOF** (el modelo original). Los dos se entrenaron en Python, en el Dash, con la misma partición 80/20, las mismas variables y pesos de clase. El `.pkl` de scikit-learn no se puede abrir en R, pero en lugar de reentrenarlos con otro algoritmo se **exportan sus árboles** y R los recorre. Así Shiny y el Dash dan exactamente la misma predicción.
 
-**Random Forest.** El `.pkl` de scikit-learn no se puede abrir en R, así que este modelo se volvió a entrenar en R:
-
-- Es un Random Forest del paquete `ranger` con pesos de clase balanceados.
-- Usa los mismos hiperparámetros del modelo del Dash: 291 árboles, profundidad 14, 4 variables por corte y hojas de al menos 10 clientes.
-- Usa las mismas variables transformadas del proyecto.
-- En el 20 % de prueba logra F1 0.532, recall 0.587 y ROC-AUC 0.773 (el del Dash: F1 0.533).
-- `entrenar_modelo.R` también calcula el umbral recomendado (máximo F1 en una mitad de la prueba) y la predicción conforme al 90 %.
-
-```r
-modelo <- ranger(x = X, y = y, probability = TRUE, case.weights = pesos, num.trees = 291, max.depth = 14, mtry = 4)
-saveRDS(modelo, "modelo/modelo_credito.rds")      # serializar
-modelo <- readRDS("modelo/modelo_credito.rds")    # cargar en la app
-riesgo <- predict(modelo, cliente)$predictions[, "1"]
-```
+**XGBoost.** `herramientas/exportar_xgboost.py` toma los 147 árboles del JSON interno del modelo (que guarda los umbrales y las hojas en float32 exacto) y `R/06c_xgboost.R` los recorre como XGBoost: en cada nodo el cliente va a la izquierda si `x < umbral`, comparando en float32, y el puntaje es la sigmoide de la suma de las hojas. Da la misma probabilidad que Python en 300 clientes de prueba (diferencia máxima de 1.7 × 10⁻⁷, por sumar en double en lugar de float32). En el 20 % de prueba: F1 0.534, recall 0.601 y ROC-AUC 0.773; umbral recomendado 0.60. El archivo pesa 0.54 MB y no necesita el paquete `xgboost`.
 
 **CS-FOF (modelo original).** Se entrenó en Python, en el Dash. `herramientas/exportar_cs_fof.py` exporta sus 359 árboles (columnas, coeficientes, umbral, hijos y valor de cada nodo) y `R/06b_cs_fof.R` los recorre igual que `original_model.py`. Da la misma probabilidad que Python en 300 clientes de prueba (diferencia máxima menor que 10⁻¹⁵). Las sumas se hacen en el mismo orden que numpy, porque algunos clientes caen justo en el umbral de un corte y una diferencia en el último decimal cambiaría la rama.
 
-Para actualizar los archivos de CS-FOF después de reentrenarlo en el Dash, desde la raíz del repositorio:
+Para actualizar los archivos después de reentrenar los modelos en el Dash, desde la raíz del repositorio:
 
 ```bash
+python shiny/herramientas/exportar_xgboost.py
 python shiny/herramientas/exportar_cs_fof.py
 ```
 

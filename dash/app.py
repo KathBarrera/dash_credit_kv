@@ -115,7 +115,7 @@ BOOK_URL = "https://valeriaflorezs.github.io/Credit_Card_Project/"
 # Video del proyecto (página Enlaces). Pega aquí el enlace de YouTube, de cualquier forma:
 # https://www.youtube.com/watch?v=XXXX, https://youtu.be/XXXX o https://www.youtube.com/shorts/XXXX.
 # Mientras esté vacío, la página muestra un espacio con «Video próximamente».
-PROJECT_VIDEO_URL = ""
+PROJECT_VIDEO_URL = "https://youtu.be/Cgmp3mpy-kk"
 NOTEBOOK_URL = BOOK_URL + "notebooks/00_eda.html"
 NOTEBOOKS = [
     ("00", ("EDA: Análisis Exploratorio de Datos", "EDA: Exploratory Data Analysis"), "00_eda.html",
