@@ -46,6 +46,7 @@ El dataset utilizado es [Default of Credit Card Clients](https://archive.ics.uci
 dash_credit_kv/
 ├── README.md                                # Este archivo
 ├── .gitignore
+├── tests/                                   # Pruebas del tablero (python -m pytest tests/ -q); las corre .github/workflows/pruebas.yml
 ├── assets/
 │   └── imagen_presentacion.jpeg             # Captura del dashboard
 └── dash/
@@ -187,7 +188,7 @@ La carpeta [`shiny/`](shiny) tiene la misma aplicación escrita en **R + Shiny +
 El repositorio trae `render.yaml`, así que Render toma la configuración solo:
 
 1. En [render.com](https://render.com) entra con GitHub y elige **New + → Blueprint**, con el repositorio `KathBarrera/dash_credit_kv` (rama `main`).
-2. Render instala `requirements.txt` y arranca un solo worker de gunicorn (con 4 hilos y sin `--preload`). El plan gratis tiene 512 MB y así el tablero usa unos 350 MB; con 2 workers se pasaría.
+2. Render instala `requirements.txt` y arranca un solo worker de gunicorn (con un solo hilo y sin `--preload`, igual que el `Procfile`). El plan gratis tiene 512 MB y así el tablero usa unos 350 MB; con 2 workers se pasaría.
 3. Copia la URL pública que te da Render (algo como `https://dash-credit-kv.onrender.com`).
 
 ### Mantenerlo despierto
