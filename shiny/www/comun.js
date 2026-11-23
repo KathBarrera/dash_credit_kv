@@ -1,4 +1,4 @@
-// Copiado del tablero Dash (dash/app.py: COVER_JS + BOT_JS)
+// Copiado del tablero Dash (dash/tablero/estilos.py: COVER_JS + BOT_JS)
 
 (function () {
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

@@ -24,7 +24,7 @@ jobs:
       - name: Arrancar con gunicorn como en Render y consultar /health
         run: |
           PORT=8050
-          gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 1 --threads 1 --timeout 120 &
+          gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 &
           for i in $(seq 1 60); do
             if curl -fs "http://127.0.0.1:$PORT/health"; then echo; exit 0; fi
             sleep 2

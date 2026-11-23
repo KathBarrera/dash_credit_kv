@@ -47,10 +47,21 @@ dash_credit_kv/
 ├── README.md                                # Este archivo
 ├── .gitignore
 ├── tests/                                   # Pruebas del tablero (python -m pytest tests/ -q); las corre .github/workflows/pruebas.yml
-├── assets/
-│   └── imagen_presentacion.jpeg             # Captura del dashboard
 └── dash/
-    ├── app.py                               # Aplicación completa (datos, figuras, páginas y callbacks)
+    ├── app.py                               # Punto de entrada: arma la app (gunicorn usa app:server)
+    ├── tablero/                             # El código del tablero, dividido por tema
+    │   ├── config.py                        # Autores, equipo, enlaces, rutas, paleta e idioma  <- editar aquí
+    │   ├── datos.py                         # Carga y limpieza de datos y filtro global del EDA
+    │   ├── utilidades.py                    # Formato, estadísticos y estilo de las figuras
+    │   ├── eda_uni.py · eda_multi.py        # Figuras e interpretaciones del EDA
+    │   ├── resultados.py                    # Resultados de los modelos (results/*.csv)
+    │   ├── prediccion.py                    # Modelos serializados y cálculos de Predecir
+    │   ├── iconos.py · componentes.py       # Íconos SVG, tarjetas, KPIs y controles compartidos
+    │   ├── paginas/                         # Una página (o grupo de páginas) por archivo
+    │   ├── servidor.py                      # La app Dash y las rutas /ping y /health
+    │   ├── estilos.py · tema.py             # CSS y JS; tema claro / oscuro de las figuras
+    │   ├── kyo.py · layout.py               # Panel de Kyo; barra lateral, barra superior y layout
+    │   └── callbacks/                       # Callbacks por sección (navegación, EDA, modelos, Predecir, Kyo)
     ├── results/
     │   ├── model_results.csv                # 112 combinaciones de modelos, corrida 5 x 5 (Credit_Card_Project)
     │   ├── shap_by_fold.csv                 # importancia SHAP por fold (Random Forest y XGBoost)
@@ -188,7 +199,7 @@ La carpeta [`shiny/`](shiny) tiene la misma aplicación escrita en **R + Shiny +
 El repositorio trae `render.yaml`, así que Render toma la configuración solo:
 
 1. En [render.com](https://render.com) entra con GitHub y elige **New + → Blueprint**, con el repositorio `KathBarrera/dash_credit_kv` (rama `main`).
-2. Render instala `requirements.txt` y arranca un solo worker de gunicorn (con un solo hilo y sin `--preload`, igual que el `Procfile`). El plan gratis tiene 512 MB y así el tablero usa unos 350 MB; con 2 workers se pasaría.
+2. Render instala `requirements.txt` y arranca un solo worker de gunicorn (con 4 hilos y sin `--preload`, igual que el `Procfile`). El plan gratis tiene 512 MB y así el tablero usa unos 350 MB; con 2 workers se pasaría.
 3. Copia la URL pública que te da Render (algo como `https://dash-credit-kv.onrender.com`).
 
 ### Mantenerlo despierto
