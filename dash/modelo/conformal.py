@@ -6,9 +6,9 @@ clientes de esa clase. Así la cobertura de 90 % se garantiza en ambas clases.
 
 La partición de prueba del entrenamiento (20 %, semilla 42) nunca se usó para ajustar el modelo. Se
 divide en dos mitades estratificadas: una calibra q_0 y q_1 y la otra verifica la cobertura empírica.
-Los resultados se guardan en modelo_credito.json (clave "conformal").
+Los resultados se guardan en el .json de cada modelo (clave "conformal").
 
-Uso (desde dash/): python -m modelo.conformal [rf catboost cs_fof]
+Uso (desde dash/): python -m modelo.conformal [xgboost cs_fof rf catboost]
 """
 import json
 import sys
@@ -66,4 +66,4 @@ def calibrar(clave, X_cal, X_ver, y_cal, y_ver):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or ["rf", "cs_fof"])
+    main(sys.argv[1:] or ["xgboost", "cs_fof"])   # los dos modelos de «Predecir»
