@@ -1,0 +1,32 @@
+# Pruebas del tablero en cada push y pull request: instala las mismas dependencias que Render,
+# corre pytest (arranque, /ping, /health, todas las páginas, predicción de XGBoost y CS-FOF,
+# filtro del EDA y evaluación de Kyo) y levanta gunicorn con el comando de render.yaml.
+name: Pruebas del tablero
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+      - name: Instalar dependencias (las mismas de Render) y pytest
+        run: pip install -r requirements.txt pytest
+      - name: Ejecutar pytest
+        run: python -m pytest tests/ -q
+      - name: Arrancar con gunicorn como en Render y consultar /health
+        run: |
+          PORT=8050
+          gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 1 --threads 1 --timeout 120 &
+          for i in $(seq 1 60); do
+            if curl -fs "http://127.0.0.1:$PORT/health"; then echo; exit 0; fi
+            sleep 2
+          done
+          echo "gunicorn no respondió /health en 2 minutos"; exit 1

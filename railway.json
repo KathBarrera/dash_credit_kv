@@ -5,7 +5,7 @@
   },
   "deploy": {
     "startCommand": "gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 2 --preload --timeout 120",
-    "healthcheckPath": "/",
+    "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 5

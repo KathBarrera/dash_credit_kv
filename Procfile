@@ -1,1 +1,1 @@
-web: gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 2 --preload --timeout 120
+web: gunicorn --chdir dash app:server --bind 0.0.0.0:$PORT --workers 1 --threads 1 --timeout 120
