@@ -288,50 +288,35 @@ def prepare(raw):
     return d, info
 
 
-df, DATA_INFO = prepare(load_raw())
+DF, DATA_INFO = prepare(load_raw())
 
 # Grupos de edad (para el análisis AGE vs. PAY)
 AGE_BINS = [20, 25, 30, 35, 40, 45, 50, 55, 60, 80]
 AGE_LABELS = ["21-25", "26-30", "31-35", "36-40", "41-45",
               "46-50", "51-55", "56-60", "61+"]
-df["AGE_GRP"] = pd.cut(df["AGE"], bins=AGE_BINS, labels=AGE_LABELS)
+DF["AGE_GRP"] = pd.cut(DF["AGE"], bins=AGE_BINS, labels=AGE_LABELS)
 
 # ----- Filtros globales del EDA ------------------------------------------------
-# Los gráficos del EDA leen la variable global `df`. Para filtrarlos todos a la vez, cada callback del EDA
-# calcula su figura dentro de `filtrado(f)`, que cambia `df` por el subconjunto filtrado y lo restaura al
-# terminar. El candado evita que dos peticiones se crucen; en Render, gunicorn usa además un solo hilo.
-import threading
-from contextlib import contextmanager
-DF_FULL = df
-_DF_LOCK = threading.RLock()
+# DF no cambia nunca después de cargarse. Cada callback del EDA calcula el subconjunto con
+# `aplicar_filtro(f)` y se lo pasa a la función de la figura como `data=`; las funciones lo usan
+# en lugar de DF. Así dos peticiones simultáneas (hilos o workers) no comparten ningún estado.
 EDA_MIN_ROWS = 200
 
 
 def aplicar_filtro(f):
-    """Subconjunto de DF_FULL según el filtro global del EDA (None o vacío = todos los clientes)."""
+    """Subconjunto de DF según el filtro global del EDA (None o vacío = todos los clientes)."""
     if not f:
-        return DF_FULL
-    m = pd.Series(True, index=DF_FULL.index)
+        return DF
+    m = pd.Series(True, index=DF.index)
     for col, key in (("SEX", "sex"), ("EDUCATION", "edu"), ("MARRIAGE", "mar")):
         if f.get(key):
-            m &= DF_FULL[col].isin(f[key])
+            m &= DF[col].isin(f[key])
     if f.get("age"):
-        m &= DF_FULL["AGE"].between(*f["age"])
+        m &= DF["AGE"].between(*f["age"])
     if f.get("lim"):
-        m &= DF_FULL["LIMIT_BAL"].between(*f["lim"])
-    sub = DF_FULL[m]
-    return sub if len(sub) >= EDA_MIN_ROWS else DF_FULL
-
-
-@contextmanager
-def filtrado(f):
-    global df
-    with _DF_LOCK:
-        df = aplicar_filtro(f)
-        try:
-            yield df
-        finally:
-            df = DF_FULL
+        m &= DF["LIMIT_BAL"].between(*f["lim"])
+    sub = DF[m]
+    return sub if len(sub) >= EDA_MIN_ROWS else DF
 
 # Etiquetas de categorías (es, en)
 _CAT_LABELS = {
@@ -389,19 +374,19 @@ def pretty(col):
     return col
 
 
-def as_cat(col):
+def as_cat(col, data=DF):
     """Devuelve la columna como categoría ordenada con etiquetas legibles."""
     if col in _CAT_LABELS:
         lab = cat_labels(col)
         order = list(lab.values())
-        return pd.Categorical(df[col].map(lab), categories=order, ordered=True)
-    vals = sorted(df[col].unique())
-    return pd.Categorical(df[col].astype(int).astype(str),
+        return pd.Categorical(data[col].map(lab), categories=order, ordered=True)
+    vals = sorted(data[col].unique())
+    return pd.Categorical(data[col].astype(int).astype(str),
                           categories=[str(int(v)) for v in vals], ordered=True)
 
 
-def cat_order(col):
-    return list(as_cat(col).categories)
+def cat_order(col, data=DF):
+    return list(as_cat(col, data=data).categories)
 
 
 # =============================================================================
@@ -456,15 +441,15 @@ def winsorize(s, lo=0.01, hi=0.99):
     return s.clip(s.quantile(lo), s.quantile(hi))
 
 
-GLOBAL_RATE = df[TARGET].mean()
+GLOBAL_RATE = DF[TARGET].mean()
 
 
 # =============================================================================
 # 3. EDA UNIVARIADO: FIGURAS E INTERPRETACIONES
 # =============================================================================
-def fig_target():
+def fig_target(data=DF):
     """Barras de la variable objetivo con conteo y porcentaje (un solo color)."""
-    vc = df[TARGET].value_counts().sort_index()
+    vc = data[TARGET].value_counts().sort_index()
     pr = vc / vc.sum()
     fig = go.Figure(go.Bar(
         x=["No default (0)", "Default (1)"], y=vc.values,
@@ -481,8 +466,8 @@ def fig_target():
 
 def target_strip():
     """Barra apilada 100 % con la proporción de clases y la razón de desbalance."""
-    vc = df[TARGET].value_counts()
-    p0, p1 = vc[0] / len(df), vc[1] / len(df)
+    vc = DF[TARGET].value_counts()
+    p0, p1 = vc[0] / len(DF), vc[1] / len(DF)
     return html.Div([
         html.Div([html.Span(tx("Proporción de clases", "Class proportion"), className="ts-lbl"),
                   html.Span([tx("Razón ", "Ratio "), html.B(f"{vc[0] / vc[1]:.1f} : 1")], className="ts-ratio")],
@@ -493,9 +478,9 @@ def target_strip():
     ], className="target-strip")
 
 
-def interp_target():
-    vc = df[TARGET].value_counts()
-    p1, p0 = vc[1] / len(df), vc[0] / len(df)
+def interp_target(data=DF):
+    vc = data[TARGET].value_counts()
+    p1, p0 = vc[1] / len(data), vc[0] / len(data)
     ratio = vc[0] / vc[1]
     basic = tx(
         f"Aproximadamente {p1 * 100:.0f} de cada 100 clientes ({vc[1]:,} personas) no pagó "
@@ -516,10 +501,10 @@ def interp_target():
     return basic, tech
 
 
-def fig_uni(col):
+def fig_uni(col, data=DF):
     """Distribución univariada de cualquier variable (numérica o categórica), un solo color."""
     if col in DISCRETE:
-        cats = as_cat(col)
+        cats = as_cat(col, data=data)
         vc = pd.Series(cats).value_counts().reindex(list(cats.categories))
         pr = vc / vc.sum()
         fig = go.Figure(go.Bar(
@@ -533,7 +518,7 @@ def fig_uni(col):
         fig.update_yaxes(range=[0, vc.max() * 1.15])
         return style_fig(fig, 470, legend_top=False)
 
-    s = df[col]
+    s = data[col]
     q1, q3 = s.quantile([0.25, 0.75])
     top = max(s.quantile(0.99), min(q3 + 1.5 * (q3 - q1), s.max()))
     view = s[s <= top]
@@ -559,18 +544,18 @@ def fig_uni(col):
     return style_fig(fig, 520, legend_top=False)
 
 
-def interp_uni(col):
+def interp_uni(col, data=DF):
     """Interpretación básica y técnica para la variable elegida."""
-    n = len(df)
+    n = len(data)
     # ---------- variables discretas ----------
     if col in DISCRETE:
-        cats = as_cat(col)
+        cats = as_cat(col, data=data)
         vc = pd.Series(cats).value_counts().reindex(list(cats.categories))
         pr = vc / vc.sum()
         top = pr.idxmax()
         if col in PAY_COLS:
-            al_dia = df[col].le(0).mean()
-            atraso = df[col].ge(1).mean()
+            al_dia = data[col].le(0).mean()
+            atraso = data[col].ge(1).mean()
             mes = month(int(col[-1]) if col != "PAY_0" else 1)
             basic = tx(
                 f"En {mes}, {al_dia:.0%} de los clientes estaba al día "
@@ -581,19 +566,19 @@ def interp_uni(col):
                 f"The most common value is {top} ({pr[top]:.0%}).")
             tech = tx(
                 f"Variable ordinal con {len(vc)} niveles; moda = {top} ({pr[top]:.1%}). "
-                f"Los valores −2, −1 y 0 concentran {df[col].le(0).mean():.1%} de los casos; "
+                f"Los valores −2, −1 y 0 concentran {data[col].le(0).mean():.1%} de los casos; "
                 f"atraso ≥1 mes: {atraso:.1%}. La definición exacta de −2/−1/0 no está "
                 "estandarizada en la fuente: se conservan sin recodificar y no se sobre-interpreta "
                 "la frontera entre ellos. Se recomienda tratarla como ordinal/categórica (dummies) "
                 "pues el efecto de pasar de 'al día' a 1 mes de atraso no es lineal.",
                 f"Ordinal variable with {len(vc)} levels; mode = {top} ({pr[top]:.1%}). "
-                f"Values −2, −1 and 0 account for {df[col].le(0).mean():.1%} of cases; "
+                f"Values −2, −1 and 0 account for {data[col].le(0).mean():.1%} of cases; "
                 f"delay ≥1 month: {atraso:.1%}. The exact definition of −2/−1/0 is not "
                 "standardized in the source: they are kept without recoding and the boundary between "
                 "them is not over-interpreted. Treating it as ordinal/categorical (dummies) is "
                 "recommended, since going from 'up to date' to 1 month late is not a linear effect.")
         elif col == TARGET:
-            return interp_target()
+            return interp_target(data=data)
         else:
             parts = ", ".join(f"{k} {v:.1%}" for k, v in pr.items())
             basic = tx(f"La categoría más frecuente es «{top}» con {pr[top]:.0%} de los clientes. "
@@ -609,7 +594,7 @@ def interp_uni(col):
         return basic, tech
 
     # ---------- variables numéricas ----------
-    s = df[col]
+    s = data[col]
     q1, q3 = s.quantile([0.25, 0.75])
     iqr = q3 - q1
     sk, ku = stats.skew(s), stats.kurtosis(s)
@@ -678,25 +663,25 @@ def _rgba(hex_color, a):
     return f"rgba({r},{g},{b},{a})"
 
 
-def fig_quant(family, kind):
+def fig_quant(family, kind, data=DF):
     """LIMIT_BAL y AGE: un solo color. BILL_AMT y PAY_AMT: un color por mes (con leyenda)."""
     cols = FAMILIES[family]
-    allv = df[cols].values.ravel()
+    allv = data[cols].values.ravel()
     lo, hi = np.percentile(allv, 1), np.percentile(allv, 99)   # vista P1 a P99
     fig = go.Figure()
     for i, c in enumerate(cols):
         color = SERIES6[i % 6] if len(cols) > 1 else MONO
         name = c
         if kind == "hist":
-            v = df[c][(df[c] >= lo) & (df[c] <= hi)]
+            v = data[c][(data[c] >= lo) & (data[c] <= hi)]
             fig.add_trace(go.Histogram(x=v, nbinsx=50, name=name, marker_color=color,
                                        opacity=0.65 if len(cols) > 1 else 0.95,
                                        showlegend=len(cols) > 1))
         elif kind == "box":
-            fig.add_trace(go.Box(y=df[c], name=name, marker_color=color,
+            fig.add_trace(go.Box(y=data[c], name=name, marker_color=color,
                                  boxpoints=False, boxmean=True, showlegend=len(cols) > 1))
         else:  # densidad
-            g, d = kde_curve(df[c], lo, hi)
+            g, d = kde_curve(data[c], lo, hi)
             fig.add_trace(go.Scatter(x=g, y=d, name=name, mode="lines",
                                      line=dict(color=color, width=2.5),
                                      fill="tozeroy",
@@ -718,18 +703,18 @@ def fig_quant(family, kind):
     return style_fig(fig, 480, legend_top=len(cols) > 1)
 
 
-def interp_quant(family):
+def interp_quant(family, data=DF):
     if family == "LIMIT_BAL":
-        return interp_uni("LIMIT_BAL")
+        return interp_uni("LIMIT_BAL", data=data)
     if family == "AGE":
-        return interp_uni("AGE")
+        return interp_uni("AGE", data=data)
     cols = FAMILIES[family]
-    med = df[cols].median()
-    sk = df[cols].apply(stats.skew)
+    med = data[cols].median()
+    sk = data[cols].apply(stats.skew)
     if family == "BILL_AMT":
-        neg = df[cols].lt(0).any(axis=1).mean()
-        o_lo = min(tukey_outliers_pct(df[c]) for c in cols)
-        o_hi = max(tukey_outliers_pct(df[c]) for c in cols)
+        neg = data[cols].lt(0).any(axis=1).mean()
+        o_lo = min(tukey_outliers_pct(data[c]) for c in cols)
+        o_hi = max(tukey_outliers_pct(data[c]) for c in cols)
         basic = tx(f"Los seis meses de facturación se parecen mucho entre sí: la mediana ronda "
                    f"{nt(med.min())} a {nt(med.max())} y casi todos los meses tienen unos pocos clientes con "
                    f"saldos muy altos. Además, {neg:.1%} de los clientes tuvo saldo a favor (negativo) en algún mes.",
@@ -747,7 +732,7 @@ def interp_quant(family):
                   "are kept. This redundancy anticipates severe multicollinearity (see VIF in the notebook / "
                   "Multivariate page).")
     else:
-        zeros = df[cols].eq(0).mean()
+        zeros = data[cols].eq(0).mean()
         basic = tx(f"Los pagos son pequeños frente a las facturas: la mediana mensual va de "
                    f"{nt(med.min())} a {nt(med.max())}. Entre {zeros.min():.0%} y {zeros.max():.0%} "
                    "de los clientes no pagó nada en cada mes; unos pocos hacen pagos enormes.",
@@ -755,11 +740,11 @@ def interp_quant(family):
                    f"{nt(med.min())} to {nt(med.max())}. Between {zeros.min():.0%} and {zeros.max():.0%} "
                    "of clients paid nothing in each month; a few make huge payments.")
         tech = tx(f"Asimetría entre {sk.min():.1f} y {sk.max():.1f} (hasta ≈ {sk.max():.0f}), curtosis muy "
-                  f"alta y cola derecha extrema (máx. {nt(df[cols].max().max())}). La masa en cero "
+                  f"alta y cola derecha extrema (máx. {nt(data[cols].max().max())}). La masa en cero "
                   "(sin pago) y los valores extremos justifican transformación log con signo y "
                   "métodos robustos (medianas, Mann-Whitney) antes de comparar grupos.",
                   f"Skewness between {sk.min():.1f} and {sk.max():.1f} (up to ≈ {sk.max():.0f}), very high "
-                  f"kurtosis and an extreme right tail (max. {nt(df[cols].max().max())}). The mass at zero "
+                  f"kurtosis and an extreme right tail (max. {nt(data[cols].max().max())}). The mass at zero "
                   "(no payment) and the extreme values justify a signed log transformation and robust "
                   "methods (medians, Mann-Whitney) before comparing groups.")
     return basic, tech
@@ -772,12 +757,20 @@ def interp_quant(family):
 # Spearman trabaja con rangos: no exige linealidad ni normalidad, resiste los
 # valores extremos y es adecuado para PAY_x (ordinales) y la variable objetivo
 # (binaria). Al ser invariante a transformaciones monótonas, no se winsoriza.
-_C = df[NUM_COLS + [TARGET]].rename(columns={TARGET: "default"})
-CORR = _C.corr(method="spearman")
+def _corr_input(data=DF):
+    return data[NUM_COLS + [TARGET]].rename(columns={TARGET: "default"})
 
 
-def fig_corr():
-    c = CORR
+CORR = _corr_input().corr(method="spearman")
+
+
+def spearman(data=DF):
+    """Matriz de Spearman de `data` (la de todos los clientes se calcula una sola vez)."""
+    return CORR if data is DF else _corr_input(data).corr(method="spearman")
+
+
+def fig_corr(data=DF):
+    c = spearman(data)
     fig = go.Figure(go.Heatmap(
         z=c.values, x=c.columns, y=c.columns, colorscale=DIVERGING, zmid=0, zmin=-1, zmax=1,
         text=c.round(2).values, texttemplate="%{text}", textfont=dict(size=8),
@@ -825,19 +818,19 @@ def interp_corr():
 
 
 # ----- 4.2 Tasa de default por EDUCATION / MARRIAGE / SEX ---------------------
-def rate_table(col):
-    g = df.groupby(col)[TARGET].agg(["mean", "size"])
+def rate_table(col, data=DF):
+    g = data.groupby(col)[TARGET].agg(["mean", "size"])
     lab = cat_labels(col)
     g.index = [lab[i] for i in g.index]
     return g
 
 
-def fig_rates():
+def fig_rates(data=DF):
     fig = make_subplots(rows=1, cols=3, subplot_titles=[tx("Nivel educativo", "Education level"),
                                                          tx("Estado civil", "Marital status"), tx("Sexo", "Sex")],
                         shared_yaxes=True, horizontal_spacing=0.05)
     for j, col in enumerate(["EDUCATION", "MARRIAGE", "SEX"], start=1):
-        t = rate_table(col)
+        t = rate_table(col, data=data)
         fig.add_trace(go.Bar(
             x=t.index, y=t["mean"], marker_color=[WARM_GOLD if r > GLOBAL_RATE else NAVY for r in t["mean"]],
             text=[f"{r:.1%}" for r in t["mean"]], textposition="outside", customdata=t["size"],
@@ -864,7 +857,7 @@ def interp_rates():
     te, tm, ts = rate_table("EDUCATION"), rate_table("MARRIAGE"), rate_table("SEX")
     chi = {}
     for col in ["EDUCATION", "MARRIAGE", "SEX"]:
-        ct = pd.crosstab(df[col], df[TARGET])
+        ct = pd.crosstab(DF[col], DF[TARGET])
         chi[col] = (*stats.chi2_contingency(ct)[:2], cramers_v(ct))
     top_e = te["mean"].idxmax()
     sx = cat_labels("SEX")
@@ -884,23 +877,23 @@ def interp_rates():
         f"χ² EDUCATION = {chi['EDUCATION'][0]:.1f} ({sig(chi['EDUCATION'][1])}, V de Cramér = "
         f"{chi['EDUCATION'][2]:.3f}); MARRIAGE = {chi['MARRIAGE'][0]:.1f} ({sig(chi['MARRIAGE'][1])}, "
         f"V = {chi['MARRIAGE'][2]:.3f}); SEX = {chi['SEX'][0]:.1f} ({sig(chi['SEX'][1])}, "
-        f"V = {chi['SEX'][2]:.3f}). Con n ≈ {len(df):,} casi cualquier diferencia es significativa; "
+        f"V = {chi['SEX'][2]:.3f}). Con n ≈ {len(DF):,} casi cualquier diferencia es significativa; "
         "los tamaños de efecto (V < 0.1) son pequeños, así que lo relevante es la magnitud y no el "
         f"p-value. Tasas por MARRIAGE: {mar}.",
         f"χ² EDUCATION = {chi['EDUCATION'][0]:.1f} ({sig(chi['EDUCATION'][1])}, Cramér's V = "
         f"{chi['EDUCATION'][2]:.3f}); MARRIAGE = {chi['MARRIAGE'][0]:.1f} ({sig(chi['MARRIAGE'][1])}, "
         f"V = {chi['MARRIAGE'][2]:.3f}); SEX = {chi['SEX'][0]:.1f} ({sig(chi['SEX'][1])}, "
-        f"V = {chi['SEX'][2]:.3f}). With n ≈ {len(df):,} almost any difference is significant; the effect "
+        f"V = {chi['SEX'][2]:.3f}). With n ≈ {len(DF):,} almost any difference is significant; the effect "
         "sizes (V < 0.1) are small, so what matters is the magnitude, not the p-value. "
         f"Rates by MARRIAGE: {mar}.")
     return basic, tech
 
 
 # ----- 4.3 Boxplot LIMIT_BAL por estado de default ----------------------------
-def fig_limit_box(scale):
+def fig_limit_box(scale, data=DF):
     fig = go.Figure()
     for k, name, color in [(0, "No default", DEEP_NAVY), (1, "Default", WARM_GOLD)]:
-        fig.add_trace(go.Box(y=df.loc[df[TARGET] == k, "LIMIT_BAL"], name=name, marker_color=color,
+        fig.add_trace(go.Box(y=data.loc[data[TARGET] == k, "LIMIT_BAL"], name=name, marker_color=color,
                              boxmean=True, boxpoints="outliers", marker_size=3, line_width=1.6))
     fig.update_layout(title=tx("Límite de crédito (LIMIT_BAL) según estado de incumplimiento",
                                "Credit limit (LIMIT_BAL) by default status"),
@@ -911,8 +904,8 @@ def fig_limit_box(scale):
 
 
 def interp_limit():
-    g0 = df.loc[df[TARGET] == 0, "LIMIT_BAL"]
-    g1 = df.loc[df[TARGET] == 1, "LIMIT_BAL"]
+    g0 = DF.loc[DF[TARGET] == 0, "LIMIT_BAL"]
+    g1 = DF.loc[DF[TARGET] == 1, "LIMIT_BAL"]
     u, p = stats.mannwhitneyu(g0, g1, alternative="two-sided")
     tt, pt = stats.ttest_ind(g0, g1, equal_var=False)
     basic = tx(f"Los clientes que cayeron en default tenían, en la mitad de los casos, un límite de "
@@ -934,11 +927,11 @@ def interp_limit():
 
 
 # ----- 4.4 AGE vs. patrones de atraso -----------------------------------------
-def fig_age(view):
+def fig_age(view, data=DF):
     fig = go.Figure()
     ml = month_lbl()
     if view == "lines":
-        g = df.groupby("AGE_GRP", observed=True)[MONTH_ORDER].mean()
+        g = data.groupby("AGE_GRP", observed=True)[MONTH_ORDER].mean()
         cols = [DEEP_NAVY, NAVY, MID_BLUE, GREY_BLUE, PALE_GOLD, GOLD_SOFT, WARM_GOLD, GOLD_MID, GOLD_DARK]
         for i, grp in enumerate(g.index):
             fig.add_trace(go.Scatter(x=ml, y=g.loc[grp], mode="lines+markers", name=str(grp),
@@ -949,7 +942,7 @@ def fig_age(view):
                           yaxis_title=tx("PAY promedio", "Average PAY"))
         return style_fig(fig, 470)
     if view == "heat":
-        g = (df[MONTH_ORDER].ge(1).groupby(df["AGE_GRP"], observed=True).mean() * 100)
+        g = (data[MONTH_ORDER].ge(1).groupby(data["AGE_GRP"], observed=True).mean() * 100)
         fig.add_trace(go.Heatmap(
             z=g.values, x=ml, y=[str(i) for i in g.index], colorscale=SEQ_GOLD,
             text=g.round(1).values, texttemplate="%{text}%",
@@ -961,7 +954,7 @@ def fig_age(view):
                           xaxis_title=tx("Mes", "Month"), yaxis_title=tx("Grupo de edad", "Age group"))
         fig.update_yaxes(autorange="reversed")
         return style_fig(fig, 470, legend_top=False)
-    g = df.groupby("AGE_GRP", observed=True)[TARGET].agg(["mean", "size"])
+    g = data.groupby("AGE_GRP", observed=True)[TARGET].agg(["mean", "size"])
     fig.add_trace(go.Bar(x=[str(i) for i in g.index], y=g["mean"],
                          marker_color=[WARM_GOLD if r > GLOBAL_RATE else NAVY for r in g["mean"]],
                          text=[f"{r:.1%}" for r in g["mean"]], textposition="outside", customdata=g["size"],
@@ -977,11 +970,11 @@ def fig_age(view):
     return style_fig(fig, 470, legend_top=False)
 
 
-def interp_age(view):
-    gm = df.groupby("AGE_GRP", observed=True)[MONTH_ORDER].mean()
-    gd = df.groupby("AGE_GRP", observed=True)[TARGET].mean()
-    gp = df[MONTH_ORDER].ge(1).groupby(df["AGE_GRP"], observed=True).mean()
-    rho, p = stats.spearmanr(df["AGE"], df["PAY_0"])
+def interp_age(view, data=DF):
+    gm = data.groupby("AGE_GRP", observed=True)[MONTH_ORDER].mean()
+    gd = data.groupby("AGE_GRP", observed=True)[TARGET].mean()
+    gp = data[MONTH_ORDER].ge(1).groupby(data["AGE_GRP"], observed=True).mean()
+    rho, p = stats.spearmanr(data["AGE"], data["PAY_0"])
     hi, lo = gd.idxmax(), gd.idxmin()
     if view == "lines":
         basic = tx("Todas las edades siguen una forma parecida: el atraso promedio sube hacia los últimos meses "
@@ -1033,7 +1026,7 @@ def interp_age(view):
 
 
 # ----- 4.5 Módulo interactivo de cruce de variables ---------------------------
-def cross_fig(x, y, c):
+def cross_fig(x, y, c, data=DF):
     """Cruza 2 (o 3) variables y devuelve (figura, interpretación básica, técnica)."""
     cdisc = c not in (None, "none") and c in DISCRETE
     cnum = c not in (None, "none") and c not in DISCRETE
@@ -1042,27 +1035,27 @@ def cross_fig(x, y, c):
 
     # ------ numérica × numérica: dispersión + recta de tendencia --------------
     if not xd and not yd:
-        d = df.sample(min(4000, len(df)), random_state=7).copy()
+        d = data.sample(min(4000, len(data)), random_state=7).copy()
         if cdisc:
-            d["_c"] = pd.Series(as_cat(c), index=df.index).loc[d.index].astype(str)
+            d["_c"] = pd.Series(as_cat(c, data=data), index=data.index).loc[d.index].astype(str)
             fig = px.scatter(d, x=x, y=y, color="_c", opacity=0.55, color_discrete_sequence=PALETTE,
-                             category_orders={"_c": cat_order(c)}, labels={"_c": c})
+                             category_orders={"_c": cat_order(c, data=data)}, labels={"_c": c})
         elif cnum:
             fig = px.scatter(d, x=x, y=y, color=c, opacity=0.6,
                              color_continuous_scale=[[0, NAVY], [1, WARM_GOLD]])
         else:
             fig = px.scatter(d, x=x, y=y, opacity=0.45, color_discrete_sequence=[NAVY])
         if x != y:
-            m, b = np.polyfit(df[x], df[y], 1)
-            xs = np.array([df[x].min(), df[x].max()])
+            m, b = np.polyfit(data[x], data[y], 1)
+            xs = np.array([data[x].min(), data[x].max()])
             fig.add_trace(go.Scatter(x=xs, y=m * xs + b, mode="lines", name=tx("Tendencia lineal", "Linear trend"),
                                      line=dict(color=WARM_GOLD, width=3, dash="dash")))
-        fig.update_xaxes(range=[df[x].min(), df[x].quantile(0.99) * 1.05])
-        fig.update_yaxes(range=[df[y].min(), df[y].quantile(0.99) * 1.05])
+        fig.update_xaxes(range=[data[x].min(), data[x].quantile(0.99) * 1.05])
+        fig.update_yaxes(range=[data[y].min(), data[y].quantile(0.99) * 1.05])
         fig.update_layout(title=tx(f"{y} vs. {x} (muestra de {len(d):,} clientes)",
                                    f"{y} vs. {x} (sample of {len(d):,} clients)"))
-        r, pr = stats.pearsonr(df[x], df[y])
-        rho, ps = stats.spearmanr(df[x], df[y])
+        r, pr = stats.pearsonr(data[x], data[y])
+        rho, ps = stats.spearmanr(data[x], data[y])
         a = abs(rho)
         fuerza = (tx("muy débil", "very weak") if a < 0.2 else tx("débil", "weak") if a < 0.4
                   else tx("moderada", "moderate") if a < 0.7 else tx("fuerte", "strong"))
@@ -1072,7 +1065,7 @@ def cross_fig(x, y, c):
                    "Cada punto es un cliente; la línea dorada resume la tendencia general.",
                    f"There is a {fuerza}, {sentido} relationship between {x} and {y}. "
                    "Each point is a client; the gold line summarizes the overall trend.")
-        tech = (f"Spearman ρ = {rho:+.3f} ({sig(ps)}); Pearson r = {r:+.3f} ({sig(pr)}); n = {len(df):,}. "
+        tech = (f"Spearman ρ = {rho:+.3f} ({sig(ps)}); Pearson r = {r:+.3f} ({sig(pr)}); n = {len(data):,}. "
                 + tx("Pendiente OLS", "OLS slope") + f" = {m:.4g}." if x != y
                 else tx("x e y son la misma variable.", "x and y are the same variable."))
         return style_fig(fig, 520), basic, tech
@@ -1086,12 +1079,12 @@ def cross_fig(x, y, c):
                                             "Select different variables for X and Y."), "")
         if TARGET in (x, y):
             other = y if x == TARGET else x
-            d = pd.DataFrame({"_o": as_cat(other), TARGET: df[TARGET]})
+            d = pd.DataFrame({"_o": as_cat(other, data=data), TARGET: data[TARGET]})
             if cdisc and c not in (other, TARGET):
-                d["_c"] = as_cat(c)
+                d["_c"] = as_cat(c, data=data)
                 g = d.groupby(["_o", "_c"], observed=True)[TARGET].agg(["mean", "size"]).reset_index()
                 fig = px.bar(g, x="_o", y="mean", color="_c", barmode="group",
-                             color_discrete_sequence=PALETTE, category_orders={"_o": cat_order(other), "_c": cat_order(c)},
+                             color_discrete_sequence=PALETTE, category_orders={"_o": cat_order(other, data=data), "_c": cat_order(c, data=data)},
                              labels={"_o": other, "mean": rate_lbl, "_c": c}, custom_data=["size"])
                 fig.update_traces(hovertemplate="%{x}<br>" + tx("Tasa", "Rate")
                                                 + ": %{y:.1%}<br>n=%{customdata[0]:,}<extra></extra>")
@@ -1102,14 +1095,14 @@ def cross_fig(x, y, c):
                     marker_color=[WARM_GOLD if r > GLOBAL_RATE else NAVY for r in g["mean"]],
                     text=[f"{r:.1%}" for r in g["mean"]], textposition="outside",
                     hovertemplate="%{x}<br>" + tx("Tasa", "Rate") + ": %{y:.1%}<br>n=%{customdata:,}<extra></extra>"))
-                fig.update_xaxes(type="category", categoryorder="array", categoryarray=cat_order(other))
+                fig.update_xaxes(type="category", categoryorder="array", categoryarray=cat_order(other, data=data))
             fig.add_hline(y=GLOBAL_RATE, line_dash="dash", line_color=DEEP_NAVY,
                           annotation_text=f"Global {GLOBAL_RATE:.1%}", annotation_position="top left")
             fig.update_layout(title=tx(f"Tasa de default según {other}", f"Default rate by {other}"),
                               xaxis_title=other, yaxis_title=rate_lbl, yaxis_tickformat=".0%")
             tab = d.groupby("_o", observed=True)[TARGET].agg(["mean", "size"])
             tab = tab[tab["size"] >= 30]
-            ct = pd.crosstab(df[other], df[TARGET])
+            ct = pd.crosstab(data[other], data[TARGET])
             chi, p, dof, _ = stats.chi2_contingency(ct)
             basic = tx(f"La tasa de default más alta aparece en «{tab['mean'].idxmax()}» "
                        f"({tab['mean'].max():.1%}) y la más baja en «{tab['mean'].idxmin()}» "
@@ -1127,7 +1120,7 @@ def cross_fig(x, y, c):
                            " (The numeric color variable is ignored in this chart.)")
             return style_fig(fig, 500, legend_top=bool(cdisc)), basic, tech
         # discreta × discreta (sin target): heatmap de la tasa de default por celda
-        g = df.groupby([y, x])[TARGET].agg(["mean", "size"]).reset_index()
+        g = data.groupby([y, x])[TARGET].agg(["mean", "size"]).reset_index()
         piv = g.pivot(index=y, columns=x, values="mean")
         cnt = g.pivot(index=y, columns=x, values="size")
         lab = lambda col, v: cat_labels(col)[v] if col in _CAT_LABELS else str(int(v))
@@ -1144,7 +1137,7 @@ def cross_fig(x, y, c):
         fig.update_layout(title=tx(f"Tasa de default por combinación de {x} × {y} (celdas con n ≥ 30 rotuladas)",
                                    f"Default rate by combination of {x} × {y} (cells with n ≥ 30 labeled)"),
                           xaxis_title=x, yaxis_title=y)
-        ct = pd.crosstab(df[x], df[y])
+        ct = pd.crosstab(data[x], data[y])
         chi, p, dof, _ = stats.chi2_contingency(ct)
         ok = g[g["size"] >= 30]
         top = ok.loc[ok["mean"].idxmax()]
@@ -1164,12 +1157,12 @@ def cross_fig(x, y, c):
 
     # ------ discreta × numérica (cualquier orientación) ------------------------
     catv, numv = (x, y) if xd else (y, x)
-    d = pd.DataFrame({"_k": as_cat(catv), numv: df[numv]})
+    d = pd.DataFrame({"_k": as_cat(catv, data=data), numv: data[numv]})
     horizontal = not xd
-    kw = dict(category_orders={"_k": cat_order(catv)}, labels={"_k": catv})
+    kw = dict(category_orders={"_k": cat_order(catv, data=data)}, labels={"_k": catv})
     if cdisc and c != catv:
-        d["_c"] = as_cat(c)
-        kw["category_orders"]["_c"] = cat_order(c)
+        d["_c"] = as_cat(c, data=data)
+        kw["category_orders"]["_c"] = cat_order(c, data=data)
         kw["labels"]["_c"] = c
         kw["color"] = "_c"
         kw["color_discrete_sequence"] = PALETTE
@@ -1189,15 +1182,15 @@ def cross_fig(x, y, c):
     pad = (hi - lo) * 0.06
     (fig.update_xaxes if horizontal else fig.update_yaxes)(range=[lo - pad, hi + pad])
     fig.update_layout(title=tx(f"{numv} según {catv}", f"{numv} by {catv}"))
-    cats = as_cat(catv)
-    groups = [df.loc[cats == k, numv] for k in cat_order(catv)]
+    cats = as_cat(catv, data=data)
+    groups = [data.loc[cats == k, numv] for k in cat_order(catv, data=data)]
     groups = [g for g in groups if len(g) > 5]
-    meds = {k: df.loc[cats == k, numv].median() for k in cat_order(catv)}
+    meds = {k: data.loc[cats == k, numv].median() for k in cat_order(catv, data=data)}
     meds_txt = "; ".join(f"{k}: {fmt_val(numv, v)}" for k, v in list(meds.items())[:8])
     hi_k, lo_k = max(meds, key=meds.get), min(meds, key=meds.get)
     if len(groups) >= 2:
         H, p = stats.kruskal(*groups)
-        eps = H / (len(df) - 1)
+        eps = H / (len(data) - 1)
     else:
         H, p, eps = np.nan, np.nan, np.nan
     basic = tx(f"La mediana de {numv} es mayor en «{hi_k}» ({fmt_val(numv, meds[hi_k])}) y menor en "
@@ -1211,8 +1204,8 @@ def cross_fig(x, y, c):
     return style_fig(fig, 520, legend_top=bool(cdisc and c != catv)), basic, tech
 
 
-def fig_splom(vars_):
-    d = df.sample(min(1500, len(df)), random_state=3)
+def fig_splom(vars_, data=DF):
+    d = data.sample(min(1500, len(data)), random_state=3)
     fig = go.Figure(go.Splom(
         dimensions=[dict(label=v, values=d[v]) for v in vars_],
         marker=dict(color=d[TARGET], colorscale=[[0, NAVY], [1, WARM_GOLD]], size=4, opacity=0.55,
@@ -1224,8 +1217,8 @@ def fig_splom(vars_):
     return style_fig(fig, max(480, 170 * len(vars_) + 120), legend_top=False)
 
 
-def interp_splom(vars_):
-    sub = _C[[("default" if v == TARGET else v) for v in vars_]]
+def interp_splom(vars_, data=DF):
+    sub = _corr_input(data)[[("default" if v == TARGET else v) for v in vars_]]
     c = sub.corr(method="spearman")
     iu = np.triu_indices(len(vars_), 1)
     pairs = [(c.index[i], c.columns[j], c.values[i, j]) for i, j in zip(*iu)]
@@ -1252,9 +1245,9 @@ def key_findings():
     t_ser = c["default"].drop("default")
     t_top = t_ser.abs().idxmax()
     t_rho = t_ser[t_top]
-    g1 = df.loc[df[TARGET] == 1, "LIMIT_BAL"].median()
-    g0 = df.loc[df[TARGET] == 0, "LIMIT_BAL"].median()
-    r_pay0 = df.groupby(df["PAY_0"].ge(1))[TARGET].mean()
+    g1 = DF.loc[DF[TARGET] == 1, "LIMIT_BAL"].median()
+    g0 = DF.loc[DF[TARGET] == 0, "LIMIT_BAL"].median()
+    r_pay0 = DF.groupby(DF["PAY_0"].ge(1))[TARGET].mean()
     te = rate_table("EDUCATION")["mean"]
     return [
         (tx("El historial de pagos domina", "Payment history dominates"),
@@ -1955,10 +1948,10 @@ PAYAMT_CHRONO = [f"PAY_AMT{i}" for i in range(6, 0, -1)]
 
 def _profile_typical():
     """Cliente «típico»: mediana de las numéricas y moda de las categóricas."""
-    out = {c: int(df[c].mode()[0]) for c in CAT_COLS + PAY_COLS}
-    out.update({c: int(round(df[c].median(), -2)) for c in BILL_COLS + PAYAMT_COLS})
-    out["LIMIT_BAL"] = int(round(df["LIMIT_BAL"].median(), -4))
-    out["AGE"] = int(df["AGE"].median())
+    out = {c: int(DF[c].mode()[0]) for c in CAT_COLS + PAY_COLS}
+    out.update({c: int(round(DF[c].median(), -2)) for c in BILL_COLS + PAYAMT_COLS})
+    out["LIMIT_BAL"] = int(round(DF["LIMIT_BAL"].median(), -4))
+    out["AGE"] = int(DF["AGE"].median())
     return out
 
 
@@ -2090,7 +2083,7 @@ _SHAP_BG = None
 def _shap_background():
     global _SHAP_BG
     if _SHAP_BG is None:
-        _SHAP_BG = df[INPUT_COLS].sample(40, random_state=42).to_dict("records")
+        _SHAP_BG = DF[INPUT_COLS].sample(40, random_state=42).to_dict("records")
     return _SHAP_BG
 
 
@@ -2401,14 +2394,14 @@ def page_uni():
         page_title(tx("EDA Univariado", "Univariate EDA"), ""),
         eda_filter_card(),
         html.Div([
-            kpi(tx("Total de registros", "Total records"), f"{len(df):,}",
+            kpi(tx("Total de registros", "Total records"), f"{len(DF):,}",
                 tx("tras eliminar duplicados", "after removing duplicates"), ico="users"),
             kpi(tx("Tasa global de default", "Overall default rate"), f"{GLOBAL_RATE:.1%}",
-                f"{int(df[TARGET].sum()):,} {tx('clientes', 'clients')}", ico="alert"),
-            kpi(tx("Límite de crédito promedio", "Average credit limit"), nt(df["LIMIT_BAL"].mean()),
-                f"{tx('mediana', 'median')} {nt(df['LIMIT_BAL'].median())}", ico="coin"),
-            kpi(tx("Edad promedio", "Average age"), f"{df['AGE'].mean():.1f} {tx('años', 'years')}",
-                f"{tx('mediana', 'median')} {df['AGE'].median():.0f}", ico="clock"),
+                f"{int(DF[TARGET].sum()):,} {tx('clientes', 'clients')}", ico="alert"),
+            kpi(tx("Límite de crédito promedio", "Average credit limit"), nt(DF["LIMIT_BAL"].mean()),
+                f"{tx('mediana', 'median')} {nt(DF['LIMIT_BAL'].median())}", ico="coin"),
+            kpi(tx("Edad promedio", "Average age"), f"{DF['AGE'].mean():.1f} {tx('años', 'years')}",
+                f"{tx('mediana', 'median')} {DF['AGE'].median():.0f}", ico="clock"),
         ], className="kpi-row k4"),
         html.Div([
             card(tx("Variable objetivo: Default vs. No Default", "Target variable: Default vs. No Default"),
@@ -2504,14 +2497,14 @@ def _tbl(header, rows):
 
 
 def page_intro():
-    n_def = int(df[TARGET].sum())
+    n_def = int(DF[TARGET].sum())
     I = DATA_INFO
     best_lbl = minfo(BEST["model"], "label")
     return html.Div([
         page_title(tx("Introducción", "Introduction"), ""),
         quick_look(),
         html.Div([
-            kpi(tx("Clientes analizados", "Clients analyzed"), f"{len(df):,}", tx("tras la limpieza", "after cleaning"),
+            kpi(tx("Clientes analizados", "Clients analyzed"), f"{len(DF):,}", tx("tras la limpieza", "after cleaning"),
                 ico="users"),
             kpi("Variables", "24", tx("23 predictoras + 1 objetivo · 21 columnas al modelar",
                                       "23 predictors + 1 target · 21 columns for modeling"), ico="columns"),
@@ -2590,9 +2583,9 @@ def money_kpi(label, amount, note):
 
 
 def page_problem():
-    n_def = int(df[TARGET].sum())
-    exposure = df.loc[df[TARGET] == 1, "LIMIT_BAL"].sum()
-    bill_def = df.loc[df[TARGET] == 1, "BILL_AMT1"].clip(lower=0).sum()
+    n_def = int(DF[TARGET].sum())
+    exposure = DF.loc[DF[TARGET] == 1, "LIMIT_BAL"].sum()
+    bill_def = DF.loc[DF[TARGET] == 1, "BILL_AMT1"].clip(lower=0).sum()
     hip = [
         ("H1", tx("El historial reciente de pagos (PAY_0 … PAY_6) es el factor más fuertemente asociado al incumplimiento.",
                   "Recent payment history (PAY_0 … PAY_6) is the factor most strongly associated with default."),
@@ -2958,7 +2951,7 @@ def page_marco():
 # ---------------------------------------------------------------- Portada y vistazo rápido
 def fig_home():
     """Tasa de default según el estado de pago de septiembre (el hallazgo más claro del EDA)."""
-    g = df.groupby("PAY_0")[TARGET].agg(["mean", "size"])
+    g = DF.groupby("PAY_0")[TARGET].agg(["mean", "size"])
     g = g[g["size"] >= 100]
     fig = go.Figure(go.Bar(
         x=[str(int(i)) for i in g.index], y=g["mean"] * 100, marker_color=MONO, customdata=g["size"],
@@ -3016,8 +3009,8 @@ def link_cards(compact=False):
 
 def quick_look():
     """Gráfica de PAY_0 (antes en la portada), ahora al inicio de Introducción."""
-    r_late = df.loc[df["PAY_0"] >= 2, TARGET].mean()
-    r_ok = df.loc[df["PAY_0"] <= 0, TARGET].mean()
+    r_late = DF.loc[DF["PAY_0"] >= 2, TARGET].mean()
+    r_ok = DF.loc[DF["PAY_0"] <= 0, TARGET].mean()
     return card(tx("Vistazo rápido: el atraso de septiembre anticipa el incumplimiento",
                    "Quick look: September's delay anticipates default"),
                 [dcc.Graph(id="home-graph", figure=fig_home(),
@@ -3051,7 +3044,7 @@ def page_home():
     back = html.Div([
         html.Div(className="cc-gloss"),
         html.Div(className="cc-mag"),
-        html.Div([_stat(tx("Clientes", "Clients"), f"{len(df):,}"), _stat("Default", f"{GLOBAL_RATE:.1%}"),
+        html.Div([_stat(tx("Clientes", "Clients"), f"{len(DF):,}"), _stat("Default", f"{GLOBAL_RATE:.1%}"),
                   _stat(tx("Periodo", "Period"), tx("Abr a Sep 2005", "Apr to Sep 2005"))], className="cc-sig"),
         html.P(tx("Datos: UCI · Banco de Taiwán · Yeh & Lien (2009)", "Data: UCI · Taiwanese bank · Yeh & Lien (2009)"),
                className="cc-fine"),
@@ -3066,9 +3059,9 @@ def page_home():
             html.Div([
                 html.Div([icon("card"), tx("Proyecto EDA", "EDA Project")], className="cover-tag"),
                 html.H1(L(PROJECT_TITLE)),
-                html.P(tx(f"Quién deja de pagar el mes siguiente y qué señales lo anticipan: {len(df):,} clientes de "
+                html.P(tx(f"Quién deja de pagar el mes siguiente y qué señales lo anticipan: {len(DF):,} clientes de "
                           "tarjeta de crédito de un banco de Taiwán, de abril a septiembre de 2005.",
-                          f"Who stops paying the following month and which signals anticipate it: {len(df):,} credit "
+                          f"Who stops paying the following month and which signals anticipate it: {len(DF):,} credit "
                           "card clients of a Taiwanese bank, from April to September 2005."), className="hero-lead"),
                 dcc.Link([tx("Iniciar recorrido", "Start the tour"), icon("arrow")], href="/introduccion",
                          className="btn primary big"),
@@ -3164,9 +3157,9 @@ CROSS_DATA = [  # (modelo, taiwan, german, australian, polish, rango medio entre
 # corte en la dirección de Fisher ponderada por costo, que es lo que CS-FOF evalúa en cada nodo.
 def _csfof_toy():
     from sklearn.tree import DecisionTreeClassifier
-    a = np.log10(df["LIMIT_BAL"].to_numpy(float))
-    b = np.log10(df["PAY_AMT1"].clip(lower=0).to_numpy(float) + 1)
-    y = df[TARGET].to_numpy(int)
+    a = np.log10(DF["LIMIT_BAL"].to_numpy(float))
+    b = np.log10(DF["PAY_AMT1"].clip(lower=0).to_numpy(float) + 1)
+    y = DF[TARGET].to_numpy(int)
     X = np.column_stack([a, b])
     c = (y == 0).sum() / (y == 1).sum()                 # costo del moroso, como en CS-FOF
     w = np.where(y == 1, c, 1.0)
@@ -3297,7 +3290,7 @@ def csfof_theory():
     T = CS_TOY
     rho_pay = CORR.loc["PAY_0", "PAY_2"]
     bill = [f"BILL_AMT{i}" for i in range(1, 7)]
-    bmin = df[bill].corr(method="spearman").values[np.triu_indices(6, 1)].min()
+    bmin = DF[bill].corr(method="spearman").values[np.triu_indices(6, 1)].min()
     gcfg = {"displaylogo": False, "displayModeBar": False}
     mejora = T["g_obl"] / T["g_axis"] - 1
     return [card(tx("La idea en una imagen", "The idea in one picture"), [
@@ -4561,7 +4554,7 @@ def predict_verdict(values, score, key="xgboost", thr=None):
     if bills > 0:
         signals.append(("coin", tx(f"Pagó el {min(paid / bills, 9.99):.0%} de lo facturado en el periodo.",
                                    f"Paid {min(paid / bills, 9.99):.0%} of the amount billed in the period.")))
-    q = (df["LIMIT_BAL"] < (values.get("LIMIT_BAL") or 0)).mean()
+    q = (DF["LIMIT_BAL"] < (values.get("LIMIT_BAL") or 0)).mean()
     signals.append(("card", tx(f"Su cupo supera al de {q:.0%} de los clientes.",
                                f"Their limit is higher than that of {q:.0%} of clients.")))
     return html.Div([
@@ -4620,12 +4613,12 @@ def pipeline_card():
 def page_conclusions():
     """Cierre del proyecto: responde la pregunta de investigación y da veredicto a cada hipótesis."""
     rho = CORR["default"].drop("default")
-    r_late = df.loc[df["PAY_0"] >= 2, TARGET].mean()
-    q = df.groupby(pd.qcut(df["LIMIT_BAL"], 4), observed=True)[TARGET].mean()
-    med = df.groupby(TARGET)["LIMIT_BAL"].median()
-    cv = {v: cramers_v(pd.crosstab(df[v], df[TARGET])) for v in ["SEX", "EDUCATION", "MARRIAGE"]}
+    r_late = DF.loc[DF["PAY_0"] >= 2, TARGET].mean()
+    q = DF.groupby(pd.qcut(DF["LIMIT_BAL"], 4), observed=True)[TARGET].mean()
+    med = DF.groupby(TARGET)["LIMIT_BAL"].median()
+    cv = {v: cramers_v(pd.crosstab(DF[v], DF[TARGET])) for v in ["SEX", "EDUCATION", "MARRIAGE"]}
     bill = [f"BILL_AMT{i}" for i in range(1, 7)]
-    bc = df[bill].corr(method="spearman").values[np.triu_indices(6, 1)]
+    bc = DF[bill].corr(method="spearman").values[np.triu_indices(6, 1)]
     ratio = (1 - GLOBAL_RATE) / GLOBAL_RATE
     c = CSFOF_CM
     pos, flagged = c["tp"] + c["fn"], c["tp"] + c["fp"]
@@ -6211,8 +6204,8 @@ def cb_chrome(lang, path):
     path = (path or "/").rstrip("/") or "/"
     return (sidebar_content(path), footer_content(),
             L(PROJECT_TITLE), L(COURSE),
-            [icon("chip"), tx(f"{len(df):,} clientes · {GLOBAL_RATE:.1%} default",
-                              f"{len(df):,} clients · {GLOBAL_RATE:.1%} default")],
+            [icon("chip"), tx(f"{len(DF):,} clientes · {GLOBAL_RATE:.1%} default",
+                              f"{len(DF):,} clients · {GLOBAL_RATE:.1%} default")],
             tx("Mostrar u ocultar el menú lateral", "Show or hide the side menu"),
             tx("Abrir el notebook del EDA", "Open the EDA notebook"),
             tx("Abrir el repositorio del proyecto", "Open the project repository"),
@@ -6245,14 +6238,14 @@ def cb_eda_filter(sex, edu, mar, age, lim, lang):
     todos = (set(sex or []) >= {1, 2} and set(edu or []) >= {1, 2, 3, 4} and set(mar or []) >= {1, 2, 3}
              and (not age or list(age) == [21, 79]) and (not lim or list(lim) == [10000, 1000000]))
     if todos:
-        return None, tx(f"Mostrando a todos los clientes ({len(DF_FULL):,}).", f"Showing all clients ({len(DF_FULL):,}).")
+        return None, tx(f"Mostrando a todos los clientes ({len(DF):,}).", f"Showing all clients ({len(DF):,}).")
     sub = aplicar_filtro(f)
-    if sub is DF_FULL:
+    if sub is DF:
         return None, tx(f"El filtro deja menos de {EDA_MIN_ROWS} clientes: se muestran todos.",
                         f"The filter leaves fewer than {EDA_MIN_ROWS} clients: showing all of them.")
-    return f, tx(f"Mostrando {len(sub):,} de {len(DF_FULL):,} clientes ({len(sub) / len(DF_FULL):.0%}); tasa de impago "
+    return f, tx(f"Mostrando {len(sub):,} de {len(DF):,} clientes ({len(sub) / len(DF):.0%}); tasa de impago "
                  f"{sub[TARGET].mean():.1%} (global {GLOBAL_RATE:.1%}).",
-                 f"Showing {len(sub):,} of {len(DF_FULL):,} clients ({len(sub) / len(DF_FULL):.0%}); default rate "
+                 f"Showing {len(sub):,} of {len(DF):,} clients ({len(sub) / len(DF):.0%}); default rate "
                  f"{sub[TARGET].mean():.1%} (overall {GLOBAL_RATE:.1%}).")
 
 
@@ -6264,20 +6257,20 @@ def cb_eda_reset(_):
 
 @graph_cb(Output("target-graph", "figure"), Input("eda-filter", "data"), mono=True)
 def cb_target(f):
-    with filtrado(f):
-        return fig_target()
+    data = aplicar_filtro(f)
+    return fig_target(data=data)
 
 
 @graph_cb(Output("rates-graph", "figure"), Input("eda-filter", "data"))
 def cb_rates(f):
-    with filtrado(f):
-        return fig_rates()
+    data = aplicar_filtro(f)
+    return fig_rates(data=data)
 
 
 @graph_cb(Output("corr-graph", "figure"), Input("eda-filter", "data"))
 def cb_corr(f):
-    with filtrado(f):
-        return fig_corr()
+    data = aplicar_filtro(f)
+    return fig_corr(data=data)
 
 
 # ---------- Callbacks: Modelos ------------------------------------------------
@@ -6502,55 +6495,55 @@ def _route(path):
 @graph_cb(Output("uni-graph", "figure"), Output("uni-interp", "children"),
           Input("uni-var", "value"), Input("eda-filter", "data"), mono=True)
 def cb_uni(var, f):
-    with filtrado(f):
-        return fig_uni(var), interp_block(*interp_uni(var))
+    data = aplicar_filtro(f)
+    return fig_uni(var, data=data), interp_block(*interp_uni(var, data=data))
 
 
 @graph_cb(Output("q-graph", "figure"), Output("q-interp", "children"),
           Input("q-family", "value"), Input("q-kind", "value"), Input("eda-filter", "data"),
           mono=lambda family, kind, f: family in ("LIMIT_BAL", "AGE"))
 def cb_quant(family, kind, f):
-    with filtrado(f):
-        return fig_quant(family, kind), interp_block(*interp_quant(family))
+    data = aplicar_filtro(f)
+    return fig_quant(family, kind, data=data), interp_block(*interp_quant(family, data=data))
 
 
 # ---------- Callbacks: Multivariado -------------------------------------------
 @graph_cb(Output("lim-graph", "figure"), Input("lim-scale", "value"), Input("eda-filter", "data"))
 def cb_limit(scale, f):
-    with filtrado(f):
-        return fig_limit_box(scale)
+    data = aplicar_filtro(f)
+    return fig_limit_box(scale, data=data)
 
 
 @graph_cb(Output("age-graph", "figure"), Output("age-interp", "children"), Input("age-view", "value"),
           Input("eda-filter", "data"))
 def cb_age(view, f):
-    with filtrado(f):
-        return fig_age(view), interp_block(*interp_age(view))
+    data = aplicar_filtro(f)
+    return fig_age(view, data=data), interp_block(*interp_age(view, data=data))
 
 
 @graph_cb(Output("x-graph", "figure"), Output("x-interp", "children"),
           Input("x-var", "value"), Input("y-var", "value"), Input("c-var", "value"), Input("eda-filter", "data"))
 def cb_cross(x, y, c, f):
-    with filtrado(f):
-        fig, b, t = cross_fig(x, y, c)
+    data = aplicar_filtro(f)
+    fig, b, t = cross_fig(x, y, c, data=data)
     return fig, interp_block(b, t)
 
 
 @graph_cb(Output("s-graph", "figure"), Output("s-interp", "children"), Input("s-vars", "value"),
           Input("eda-filter", "data"))
 def cb_splom(vars_, f):
-    with filtrado(f):
-        return _cb_splom(vars_)
+    data = aplicar_filtro(f)
+    return _cb_splom(vars_, data=data)
 
 
-def _cb_splom(vars_):
+def _cb_splom(vars_, data=DF):
     vars_ = (vars_ or [])[:6]
     if len(vars_) < 2:
         fig = go.Figure()
         fig.update_layout(title=tx("Selecciona al menos 2 variables", "Select at least 2 variables"))
         return style_fig(fig, 380, legend_top=False), interp_block(
             tx("Elige al menos dos variables numéricas.", "Choose at least two numeric variables."), "")
-    return fig_splom(vars_), interp_block(*interp_splom(vars_))
+    return fig_splom(vars_, data=data), interp_block(*interp_splom(vars_, data=data))
 
 
 # ---------- Callbacks: Asistente Kyo -------------------------------------------

@@ -28,7 +28,7 @@ def construir_conocimiento(A, lang="es"):
 
 def _construir(A, EN):
     t = (lambda es, en: en) if EN else (lambda es, en: es)
-    df, T = A.df, A.TARGET
+    df, T = A.DF, A.TARGET
     n, n_def, rate = len(df), int(df[T].sum()), A.GLOBAL_RATE
     DI = A.DATA_INFO
     nt = A.nt
