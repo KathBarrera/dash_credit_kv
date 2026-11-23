@@ -47,10 +47,21 @@ dash_credit_kv/
 ├── README.md                                # Este archivo
 ├── .gitignore
 ├── tests/                                   # Pruebas del tablero (python -m pytest tests/ -q); las corre .github/workflows/pruebas.yml
-├── assets/
-│   └── imagen_presentacion.jpeg             # Captura del dashboard
 └── dash/
-    ├── app.py                               # Aplicación completa (datos, figuras, páginas y callbacks)
+    ├── app.py                               # Punto de entrada: arma la app (gunicorn usa app:server)
+    ├── tablero/                             # El código del tablero, dividido por tema
+    │   ├── config.py                        # Autores, equipo, enlaces, rutas, paleta e idioma  <- editar aquí
+    │   ├── datos.py                         # Carga y limpieza de datos y filtro global del EDA
+    │   ├── utilidades.py                    # Formato, estadísticos y estilo de las figuras
+    │   ├── eda_uni.py · eda_multi.py        # Figuras e interpretaciones del EDA
+    │   ├── resultados.py                    # Resultados de los modelos (results/*.csv)
+    │   ├── prediccion.py                    # Modelos serializados y cálculos de Predecir
+    │   ├── iconos.py · componentes.py       # Íconos SVG, tarjetas, KPIs y controles compartidos
+    │   ├── paginas/                         # Una página (o grupo de páginas) por archivo
+    │   ├── servidor.py                      # La app Dash y las rutas /ping y /health
+    │   ├── estilos.py · tema.py             # CSS y JS; tema claro / oscuro de las figuras
+    │   ├── kyo.py · layout.py               # Panel de Kyo; barra lateral, barra superior y layout
+    │   └── callbacks/                       # Callbacks por sección (navegación, EDA, modelos, Predecir, Kyo)
     ├── results/
     │   ├── model_results.csv                # 112 combinaciones de modelos, corrida 5 x 5 (Credit_Card_Project)
     │   ├── shap_by_fold.csv                 # importancia SHAP por fold (Random Forest y XGBoost)

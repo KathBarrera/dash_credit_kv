@@ -27,16 +27,19 @@ def test_portada_y_layout_responden(client):
     assert client.get("/_dash-dependencies").status_code == 200
 
 
+def test_assets_se_sirven_desde_dash_assets(client):
+    """La app se crea en tablero/, pero los JS e imágenes siguen en dash/assets/."""
+    html = client.get("/").get_data(as_text=True)
+    assert "/assets/card_focus.js" in html
+    assert client.get("/assets/card_focus.js").status_code == 200
+    assert client.get("/assets/team/katherin.jpg").status_code == 200
+
+
 # --- cada página del menú se construye sin errores en los dos idiomas ---
-
-def _rutas():
-    import app
-    return [ruta for ruta, *_ in app.NAV]
-
 
 @pytest.mark.parametrize("lang", ["es", "en"])
 def test_todas_las_paginas_se_construyen(app_mod, lang):
-    for ruta in _rutas():
+    for ruta in [ruta for ruta, *_ in app_mod.NAV]:
         assert app_mod.route(ruta, lang) is not None, ruta
 
 

@@ -24,7 +24,9 @@ RAIZ = Path(__file__).resolve().parents[2]
 DASH, SHINY = RAIZ / "dash", RAIZ / "shiny"
 sys.path.insert(0, str(DASH))
 
-import app as A                                    # noqa: E402  (carga datos, modelo y Kyo)
+import app  # noqa: E402,F401                      (carga datos, modelo y Kyo)
+from tablero import estilos as A                    # noqa: E402  (CSS, COVER_JS, BOT_JS y WALKER_HTML)
+from tablero.kyo import CONTENIDO                   # noqa: E402  (lo que Kyo sabe del tablero)
 from asistente import evaluar                       # noqa: E402
 from asistente.conocimiento import construir_conocimiento  # noqa: E402
 from asistente.mascota import mascota_svg           # noqa: E402
@@ -35,7 +37,7 @@ css = A.CSS
 (SHINY / "www" / "estilos.css").write_text(css, encoding="utf-8")
 
 # --- 1b. JavaScript de interacción (portada, tarjetas del equipo, carrusel, Predecir y panel de Kyo) ---
-(SHINY / "www" / "comun.js").write_text("// Copiado del tablero Dash (dash/app.py: COVER_JS + BOT_JS)\n" + A.COVER_JS + "\n" + A.BOT_JS,
+(SHINY / "www" / "comun.js").write_text("// Copiado del tablero Dash (dash/tablero/estilos.py: COVER_JS + BOT_JS)\n" + A.COVER_JS + "\n" + A.BOT_JS,
                                          encoding="utf-8")
 
 # --- 2. Kyo: SVG por ánimo y el Kyo fijo de la esquina ------------------------
@@ -116,7 +118,7 @@ def intencion(it, lg):
 
 salida = {}
 for lg in ("es", "en"):
-    intenciones, paginas, de_pagina, sug = construir_conocimiento(A, lg)
+    intenciones, paginas, de_pagina, sug = construir_conocimiento(CONTENIDO, lg)
     salida[lg] = {"intenciones": [intencion(i, lg) for i in intenciones], "paginas": paginas,
                   "intencion_de_pagina": de_pagina, "sug_de_pagina": sug, "textos": TEXTOS[lg]}
 (SHINY / "kyo" / "conocimiento.json").write_text(json.dumps(salida, ensure_ascii=False, indent=1), encoding="utf-8")

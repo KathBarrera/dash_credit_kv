@@ -15,8 +15,16 @@ if str(DASH_DIR) not in sys.path:
 
 @pytest.fixture(scope="session")
 def app_mod():
+    """La aplicación completa: app.py y los nombres de los módulos de tablero/ en un solo espacio."""
+    from types import SimpleNamespace
+
     import app  # carga datos, modelos y entrena a Kyo (≈ 10 s)
-    return app
+    from tablero import config, datos, eda_multi, eda_uni, kyo, prediccion
+    from tablero.callbacks import navegacion
+    ns = {}
+    for m in (config, datos, eda_uni, eda_multi, prediccion, navegacion, kyo, app):
+        ns.update(vars(m))
+    return SimpleNamespace(**ns)
 
 
 @pytest.fixture(scope="session")
