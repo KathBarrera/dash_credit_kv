@@ -15,7 +15,6 @@ from tablero.utilidades import GLOBAL_RATE
 def page_intro():
     n_def = int(DF[TARGET].sum())
     I = DATA_INFO
-    best_lbl = minfo(BEST["model"], "label")
     return html.Div([
         page_title(tx("Introducción", "Introduction"), ""),
         quick_look(),
