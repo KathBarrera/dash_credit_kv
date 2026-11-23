@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Entrena y SERIALIZA el modelo de la página «Predecir».
+"""Carga de datos compartida y receta del Random Forest que usó antes la página «Predecir».
+
+Hoy «Predecir» usa XGBoost y CS-FOF (modelo/entrenar_extra.py); este módulo sigue dando
+`cargar_datos()` y la partición a entrenar_extra.py, umbral.py y conformal.py. El Random Forest
+ya no se versiona: si se necesita, se regenera con el comando de abajo (y queda en .gitignore).
 
 Uso (desde la carpeta dash/):
     python -m modelo.entrenar

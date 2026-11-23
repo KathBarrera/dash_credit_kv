@@ -6,7 +6,7 @@ Usa la misma división de la partición de prueba que la predicción conforme (`
 Así el umbral recomendado no se elige y se evalúa con los mismos clientes.
 
 Guarda en el .json de cada modelo la clave "umbral_ajustable" (umbral recomendado y curva de 5 % a 95 %).
-Uso (desde dash/): python -m modelo.umbral [rf catboost cs_fof]
+Uso (desde dash/): python -m modelo.umbral [xgboost cs_fof rf catboost]
 """
 import json
 import sys
@@ -53,4 +53,4 @@ def main(claves):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or ["rf", "cs_fof"])
+    main(sys.argv[1:] or ["xgboost", "cs_fof"])   # los dos modelos de «Predecir»

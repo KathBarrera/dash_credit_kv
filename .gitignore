@@ -7,3 +7,7 @@ venv/
 .RData
 .Rproj.user/
 shiny/rsconnect/
+
+# Modelos que el tablero ya no carga (se regeneran con python -m modelo.entrenar / entrenar_extra catboost)
+dash/modelo/modelo_credito.*
+dash/modelo/modelo_catboost.*
