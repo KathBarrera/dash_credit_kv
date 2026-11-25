@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Base de conocimiento de Kyo: qué sabe del tablero y con qué preguntas se entrena (español e inglés).
 
-`construir_conocimiento(A, lang)` recibe el módulo de la aplicación (app.py ya cargado) y arma las
+`construir_conocimiento(A, lang)` recibe el contenido del tablero (tablero.kyo.CONTENIDO) y arma las
 intenciones en el idioma pedido, con las cifras reales del tablero: las interpretaciones de cada
 gráfica salen de las mismas funciones que usa la página (interp_corr, interp_rates, ...), así el bot
 nunca contradice lo que se ve en pantalla.
@@ -28,7 +28,7 @@ def construir_conocimiento(A, lang="es"):
 
 def _construir(A, EN):
     t = (lambda es, en: en) if EN else (lambda es, en: es)
-    df, T = A.df, A.TARGET
+    df, T = A.DF, A.TARGET
     n, n_def, rate = len(df), int(df[T].sum()), A.GLOBAL_RATE
     DI = A.DATA_INFO
     nt = A.nt

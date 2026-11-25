@@ -162,8 +162,8 @@ def _probar(bot, casos):
 
 
 def main():
-    import app as A   # carga datos, modelo y entrena a Kyo
-    bot = A.BOT
+    import app  # noqa: F401  carga datos, modelo y entrena a Kyo
+    from tablero.kyo import BOT as bot
     print(f"Kyo · {bot.n_temas} intenciones · {bot.n_ejemplos} preguntas de entrenamiento (es + en)\n")
 
     # 1) validación cruzada sobre los ejemplos
