@@ -481,6 +481,12 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 [data-theme="dark"] .hl-kw { color:#D49BE8; } [data-theme="dark"] .hl-def { color:#8EC1FF; } [data-theme="dark"] .hl-str { color:#9AD7A8; }
 [data-theme="dark"] .hl-com { color:#9AA3BA; } [data-theme="dark"] .hl-num { color:#F2B37A; } [data-theme="dark"] .hl-bi { color:#D2BB89; }
 @media (max-width:1100px) { .cs-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.beyond-sub { margin:18px 0 10px; font-size:15px; color:var(--accent-2); }
+.beyond-model { border:1px solid var(--line-strong); border-radius:10px; padding:14px 16px; background:var(--surface-2); }
+.beyond-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.beyond-head .tag { margin-left:0; white-space:nowrap; }
+.beyond-model .muted { margin:0 0 6px; }
+.beyond-list { margin:4px 0 14px; padding-left:20px; line-height:1.6; } .beyond-list li { margin-bottom:6px; }
 @media (max-width:600px) { .cs-flow { grid-template-columns:1fr; } .cs-eq-n { width:26px; } }
 .cs-h { margin:22px 0 6px; font-size:15px; color:var(--text); }
 .cs-fig-t { font-weight:600; font-size:13px; color:var(--muted); margin:6px 0 2px; }

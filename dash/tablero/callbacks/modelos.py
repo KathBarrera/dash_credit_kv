@@ -6,6 +6,7 @@ from dash import Input, Output, dcc
 from tablero.componentes import interp_block
 from tablero.config import set_lang
 from tablero.paginas.modelo_original import (_rival, cs_vs_rf_interp, fig_cs_vs_rf, fig_csfof_toy)
+from tablero.paginas.mejoras import fig_beyond_diff, fig_beyond_plateau
 from tablero.resultados import (
     DIAG, anytime_table, cd_interp, diag_interp, fig_anytime, fig_best_cm, fig_cd, fig_diag, fig_lime_cells,
     fig_models_heat, fig_models_scatter, fig_shap_folds, fig_shap_global, interp_anytime, interp_shap_folds,
@@ -39,6 +40,16 @@ def cb_cs_toy_tree():
 @graph_cb(Output("cs-toy-obl", "figure"))
 def cb_cs_toy_obl():
     return fig_csfof_toy("oblique")
+
+
+@graph_cb(Output("cs-beyond-diff", "figure"))
+def cb_cs_beyond_diff():
+    return fig_beyond_diff()
+
+
+@graph_cb(Output("cs-beyond-plateau", "figure"))
+def cb_cs_beyond_plateau():
+    return fig_beyond_plateau()
 
 
 @graph_cb(Output("mdl-scatter", "figure"))

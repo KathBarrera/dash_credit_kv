@@ -11,6 +11,7 @@ from tablero.config import (
 from tablero.datos import DF, TARGET
 from tablero.eda_multi import CORR
 from tablero.iconos import icon
+from tablero.paginas.mejoras import csfof_beyond
 from tablero.resultados import CSFOF_CM, minfo
 from tablero.utilidades import GLOBAL_RATE, style_fig
 
@@ -829,5 +830,6 @@ def page_original():
             tab(tx("2 · Metodología", "2 · Methodology"), "metodologia", csfof_method()),
             tab(tx("3 · Código", "3 · Code"), "codigo", csfof_code()),
             tab(tx("4 · Resultados", "4 · Results"), "resultados", _csfof_results()),
+            tab(tx("5 · ¿Se puede mejorar?", "5 · Can it be improved?"), "mejorar", csfof_beyond()),
         ]),
     ])
