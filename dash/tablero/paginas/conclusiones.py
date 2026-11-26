@@ -100,7 +100,7 @@ def page_conclusions():
     ]
 
     return html.Div([
-        page_title(tx("Conclusiones", "Conclusions"), ""),
+        page_title(tx("Conclusiones", "Conclusions"), "", stage="confirmar"),
         card(tx("Respuesta a la pregunta de investigación", "Answer to the research question"), [
             html.Div(tx("El incumplimiento del mes siguiente lo anticipa sobre todo el comportamiento de pago "
                         "reciente: cuántos meses de atraso lleva el cliente, en especial en septiembre. Le sigue, "
@@ -159,6 +159,29 @@ def page_conclusions():
             dcc.Link([tx("Ver el detalle en Modelo original", "See the details in Original model"), icon("arrow")],
                      href="/modelo-original", className="btn"),
         ]),
+        card(tx("¿Se pudo mejorar el F1? De CS-FOF a HIB", "Could F1 be raised? From CS-FOF to HIB"), [
+            html.Div(tx("A partir del modelo original se hizo un ensamble (stacking) con XGBoost, CatBoost, LightGBM, Random Forest, Extra "
+                        "Trees, HistGradientBoosting y regresión logística: HIB. Gana a los 7 modelos base con Wilcoxon-Holm, DeLong y McNemar, "
+                        "pero la mejora sobre XGBoost es pequeña.",
+                        "From the original model an ensemble (stacking) was built with XGBoost, CatBoost, LightGBM, Random Forest, Extra "
+                        "Trees, HistGradientBoosting and logistic regression: HIB. It beats the 7 baseline models with Wilcoxon-Holm, DeLong "
+                        "and McNemar, but the improvement over XGBoost is small."), className="callout"),
+            html.Div([
+                kpi("HIB · F1", "0.5505", tx("+0.0037 sobre XGBoost (0.5468); gana en 21 de 25 pliegues",
+                                             "+0.0037 over XGBoost (0.5468); wins 21 of 25 folds"), "trophy"),
+                kpi(tx("Wilcoxon con Holm", "Wilcoxon with Holm"), "p = 0.0001",
+                    tx("frente a XGBoost; DeLong p = 0.0003 y McNemar p < 0.0001", "vs XGBoost; DeLong p = 0.0003 and McNemar p < 0.0001"), "target"),
+                kpi(tx("Frente a un promedio simple", "Against a plain average"), "+0.0004",
+                    tx("p = 0.33: la ventaja viene de combinar 8 modelos, no de la regla de pesos",
+                       "p = 0.33: the advantage comes from combining 8 models, not from the weighting rule"), "layers"),
+            ], className="kpi-row k3"),
+            _ul([tx("Nadeau-Bengio, que corrige la dependencia entre pliegues, no rechaza frente a XGBoost (p = 0.049 sin ajustar, no sobrevive a Holm).",
+                    "Nadeau-Bengio, which corrects for dependence between folds, does not reject against XGBoost (p = 0.049 unadjusted, it does not survive Holm)."),
+                 tx("Los modelos alcanzan una meseta de F1 ≈ 0.55 y AUC ≈ 0.78: el límite está en la información de las variables, no en el modelo.",
+                    "The models reach a plateau of F1 ≈ 0.55 and AUC ≈ 0.78: the limit is in the information in the variables, not in the model.")]),
+            dcc.Link([tx("Ver el detalle en «Del CS-FOF al HIB»", "See the details in “From CS-FOF to HIB”"), icon("arrow")],
+                     href="/modelo-original", className="btn"),
+        ]),
         html.Div([
             card(tx("Qué significa para el banco", "What it means for the bank"), _ul([
                 tx("Vigilar el atraso reciente como alerta temprana: un cliente con 2 o más meses de atraso merece "
@@ -176,10 +199,10 @@ def page_conclusions():
                    "discrimination risk."),
             ])),
             card(tx("Limitaciones y próximos pasos", "Limitations and next steps"), _ul([
-                tx("La comparación se limita a los siete modelos de referencia exigidos por el curso. Variantes recientes "
-                   "de boosting, como CatBoost y LightGBM, quedan fuera de su alcance.",
-                   "The comparison is limited to the seven baseline models required by the course. Recent boosting "
-                   "variants, such as CatBoost and LightGBM, are outside its scope."),
+                tx("Las 112 combinaciones comparan los siete modelos de referencia exigidos por el curso. CatBoost y LightGBM "
+                   "entran solo como miembros del ensamble HIB y como referencias, sin el mismo presupuesto de ajuste.",
+                   "The 112 combinations compare the seven baseline models required by the course. CatBoost and LightGBM "
+                   "enter only as members of the HIB ensemble and as references, without the same tuning budget."),
                 tx("Datos de un solo banco de Taiwán en 2005: antes de usarlo en otro mercado hay que reentrenarlo con "
                    "datos actuales.",
                    "Data from a single Taiwanese bank in 2005: before using it in another market it must be retrained "

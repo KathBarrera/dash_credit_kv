@@ -15,7 +15,7 @@ from tablero.utilidades import GLOBAL_RATE, nt
 def page_uni():
     b_t, t_t = interp_target()
     return html.Div([
-        page_title(tx("EDA Univariado", "Univariate EDA"), ""),
+        page_title(tx("EDA Univariado", "Univariate EDA"), "", stage="eda"),
         eda_filter_card(),
         html.Div([
             kpi(tx("Total de registros", "Total records"), f"{len(DF):,}",
@@ -60,7 +60,7 @@ def page_multi():
                 for t, x in key_findings()]
     num_opts = var_options(NUM_COLS)
     return html.Div([
-        page_title(tx("EDA Multivariado", "Multivariate EDA"), ""),
+        page_title(tx("EDA Multivariado", "Multivariate EDA"), "", stage="eda"),
         eda_filter_card(),
         card(tx("Matriz de correlación de Spearman", "Spearman correlation matrix"),
              [dcc.Graph(id="corr-graph", figure=fig_corr(), config={"displaylogo": False}),

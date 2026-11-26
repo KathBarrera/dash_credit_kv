@@ -28,12 +28,14 @@
      tablero/tema.py           Tema claro / oscuro de las figuras y el decorador graph_cb
      tablero/kyo.py            Entrenamiento y panel del asistente Kyo (su lógica está en asistente/)
      tablero/layout.py         Barra lateral, barra superior y layout final
-     tablero/callbacks/        Callbacks por sección (navegación, EDA, modelos, Predecir, Kyo)
+     tablero/callbacks/        Callbacks por sección (navegación, EDA, modelos, Predecir, Kyo, pipeline)
+     tablero/pipeline.py       El botón «Pipeline» y la ventana con las etapas del proyecto
+     tablero/glosario.py       Glosario de símbolos de las ecuaciones (burbujas e iluminación)
 ===============================================================================
 """
 from tablero.servidor import app, server  # noqa: F401  (gunicorn usa app:server)
 from tablero import layout  # noqa: F401,E402  (define app.layout)
-from tablero.callbacks import eda, kyo, modelos, navegacion, predecir  # noqa: F401,E402  (registran los callbacks)
+from tablero.callbacks import eda, kyo, modelos, navegacion, pipeline, predecir  # noqa: F401,E402  (registran los callbacks)
 
 if __name__ == "__main__":
     app.run(debug=True, port=8050)

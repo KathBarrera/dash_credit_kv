@@ -138,3 +138,96 @@ def test_kyo_pasa_su_evaluacion(app_mod):
 
 def test_kyo_rechaza_preguntas_fuera_del_tablero(app_mod):
     assert app_mod.BOT.responder("recommend me a movie", "/")["i"] is None
+
+
+# --- CS-FOF y HIB: glosario de símbolos, pipeline y pestaña de mejora ---
+
+def _texto(c):
+    """Todo el texto de un componente de Dash, en orden."""
+    if isinstance(c, (str, int, float)):
+        return str(c)
+    if isinstance(c, (list, tuple)):
+        return " ".join(_texto(x) for x in c)
+    return _texto(getattr(c, "children", None)) if c is not None else ""
+
+
+def test_glosario_completo_en_los_dos_idiomas():
+    from tablero.glosario import CODIGO, GLOSARIO
+    assert set(GLOSARIO) == {"csfof", "hib"}
+    for sc, d in GLOSARIO.items():
+        for tok, (sym, es, en) in d.items():
+            assert sym and len(es) == 2 and len(en) == 2 and all(es) and all(en), (sc, tok)
+    for sc, m in CODIGO.items():
+        assert set(m.values()) <= set(GLOSARIO[sc]), sc   # cada identificador del código apunta a un símbolo del glosario
+
+
+def test_el_glosario_llega_a_la_pagina(client):
+    html = client.get("/").get_data(as_text=True)
+    assert "window.EQ_GLOSS=" in html and "Regularización" in html
+    assert client.get("/assets/ecuaciones.js").status_code == 200
+    assert client.get("/assets/pipeline.js").status_code == 200
+
+
+@pytest.mark.parametrize("lang", ["es", "en"])
+def test_pipeline_tiene_todas_las_etapas(app_mod, lang):
+    from tablero.pipeline import ETAPAS, pipeline_body
+    app_mod.set_lang(lang)
+    try:
+        cuerpo = pipeline_body()
+        assert len(ETAPAS) == 11
+        assert _texto(cuerpo).count("HIB") >= 2
+    finally:
+        app_mod.set_lang("es")
+
+
+@pytest.mark.parametrize("lang", ["es", "en"])
+def test_botones_de_pipeline_apuntan_a_etapas_que_existen(app_mod, lang):
+    from tablero.pipeline import ETAPAS
+    ids = {e[0] for e in ETAPAS}
+    for ruta in ("/introduccion", "/univariado", "/multivariado", "/modelos", "/modelo-original", "/predecir", "/conclusiones"):
+        pagina = app_mod.route(ruta, lang)
+        encontrados = set()
+
+        def recorrer(c):
+            if isinstance(c, (list, tuple)):
+                for x in c:
+                    recorrer(x)
+            elif hasattr(c, "children"):
+                etapa = getattr(c, "data-pipe-open", None)
+                if etapa:
+                    encontrados.add(etapa)
+                recorrer(c.children)
+        recorrer(pagina)
+        assert encontrados and encontrados <= ids, (ruta, encontrados)
+
+
+@pytest.mark.parametrize("lang", ["es", "en"])
+def test_pestana_de_mejora_sin_stacking_lr_ni_redes(app_mod, lang):
+    from tablero.paginas.mejoras import csfof_beyond
+    app_mod.set_lang(lang)
+    try:
+        txt = _texto(csfof_beyond())
+        assert "HIB" in txt and "Wilcoxon" in txt
+        # el stacking con regresión logística como combinador y las redes neuronales no se muestran
+        assert "Stacking con regresión logística" not in txt and "Logistic regression stacking" not in txt
+        for red in ("TabM", "TabPFN"):
+            assert red not in txt
+    finally:
+        app_mod.set_lang("es")
+
+
+def test_cifras_de_hib_coinciden_con_la_confirmacion_v2():
+    """Las cifras clave de HIB salen de los resultados de la confirmación v2 (25 pliegues)."""
+    from tablero.paginas.mejoras import BEYOND_ROWS
+    v2 = next(r for r in BEYOND_ROWS if r[0].startswith("HIB, confirmación v2"))
+    assert v2[2] == 0.5505 and v2[3] == 0.0037 and v2[6] == "21/25"
+    assert all(r[9] < 0.05 for r in BEYOND_ROWS if r[10] in ("hib", "ens"))   # todos pasan Wilcoxon-Holm frente a XGBoost
+    assert all(r[7] > 0.04 for r in BEYOND_ROWS if r[10] in ("ens", "hib"))    # y ninguno pasa Nadeau-Bengio con holgura (v2: 0.049)
+
+
+@pytest.mark.parametrize("q, lang, tema", [
+    ("¿qué es HIB?", "es", "hib"), ("explícame el pipeline del proyecto", "es", "pipeline"),
+    ("¿qué es Wilcoxon con Holm?", "es", "wilcoxon_holm"), ("what is HIB?", "en", "hib"),
+    ("what is the project pipeline?", "en", "pipeline")])
+def test_kyo_conoce_hib_y_el_pipeline(app_mod, q, lang, tema):
+    assert app_mod.BOT.responder(q, "/modelo-original", lang=lang)["i"] == tema

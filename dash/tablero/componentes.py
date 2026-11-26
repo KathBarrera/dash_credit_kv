@@ -8,6 +8,7 @@ from dash import dcc, html
 from tablero.config import L, tx
 from tablero.datos import (BILL_COLS, PAYAMT_COLS, PAY_COLS, TARGET, pretty)
 from tablero.iconos import PAGE_ICONS, icon, zoom_btn
+from tablero.pipeline import pipeline_btn
 from tablero.prediccion import SEX_OTHER
 
 
@@ -46,9 +47,13 @@ def ico_opts(tiles):
     return [{"label": html.Span([icon(ic), L(txt)], className="opt-ico"), "value": v} for v, txt, ic in tiles]
 
 
-def page_title(title, sub):
+def page_title(title, sub, stage=None):
+    """Título de la página; con `stage` (etapa del pipeline) agrega el botón «Pipeline» al lado."""
     ic = PAGE_ICONS.get(title)
-    return html.Div(html.H2([icon(ic, "pt-ico"), title] if ic else title), className="page-title")
+    h2 = html.H2([icon(ic, "pt-ico"), title] if ic else title)
+    if stage:
+        return html.Div([h2, pipeline_btn(stage)], className="page-title pt-row")
+    return html.Div(h2, className="page-title")
 
 
 def var_options(cols):

@@ -10,6 +10,7 @@ from tablero.config import (
     BASE_DIR, CREAM, DEEP_NAVY, DEEP_RGBA, GREY_BLUE, L, PALE_GOLD, REPO_PROJECT, WARM_GOLD, WHITE, tx)
 from tablero.datos import DF, TARGET
 from tablero.eda_multi import CORR
+from tablero.glosario import CSFOF, HIB, V, eqv_hint, fx
 from tablero.iconos import icon
 from tablero.paginas.mejoras import csfof_beyond
 from tablero.resultados import CSFOF_CM, minfo
@@ -166,7 +167,7 @@ def fig_csfof_toy(kind):
 
 def _cs_step(n, title, body, formula=None):
     return html.Div([html.Span(str(n), className="cs-num"), html.H4(title), html.P(body),
-                     dcc.Markdown(f"$${formula}$$", mathjax=True, className="formula") if formula else None],
+                     fx(formula) if formula else None],
                     className="cs-step")
 
 
@@ -443,7 +444,7 @@ def _py_between(src, start, end):
     return textwrap.dedent("\n".join(lines[i:j])).rstrip()
 
 
-def py_code(src):
+def py_code(src, scope=None):
     """Bloque de código Python con colores de sintaxis (tokenize de la librería estándar, sin dependencias)."""
     import io, keyword, tokenize
     lines = src.splitlines(keepends=True)
@@ -454,7 +455,7 @@ def py_code(src):
     try:
         toks = list(tokenize.generate_tokens(io.StringIO(src).readline))
     except (tokenize.TokenError, IndentationError, SyntaxError):
-        return html.Pre(html.Code(src), className="pf-code cs-code")
+        return html.Pre(html.Code(src), className="pf-code cs-code", **({"data-scope": scope} if scope else {}))
     for tk in toks:
         if tk.type in (tokenize.ENDMARKER,):
             continue
@@ -484,7 +485,7 @@ def py_code(src):
             prev = None
         pos = b
     out.append(src[pos:])
-    return html.Pre(html.Code(out), className="pf-code cs-code")
+    return html.Pre(html.Code(out), className="pf-code cs-code", **({"data-scope": scope} if scope else {}))
 
 
 # ----- Ecuaciones en el código: cada ecuación se muestra justo antes de las líneas que la implementan -----
@@ -520,7 +521,7 @@ def _code_rows(a, b, hl=False):
     partes = []
     for k, ln in enumerate(CSFOF_LINES[a - 1:b]):
         partes += (["\n"] if k else []) + _hl_line(ln)
-    return html.Div(html.Pre(html.Code(partes), className="pf-code cs-code"),
+    return html.Div(html.Pre(html.Code(partes), className="pf-code cs-code", **{"data-scope": CSFOF}),
                     className="cs-code-rows" + (" hl" if hl else ""))
 
 
@@ -528,7 +529,7 @@ def _eq_en_codigo(num, tex, que, a, b):
     """La ecuación, lo que hace esa parte del código y el enlace a sus líneas."""
     return html.Div([
         html.Div(f"({num})", className="cs-eq-n"),
-        html.Div([dcc.Markdown(f"$${tex}$$", mathjax=True, className="formula"),
+        html.Div([fx(tex),
                   html.P([html.B(tx(f"Líneas {_rango(a, b)}: ", f"Lines {_rango(a, b)}: ")), que, " · ",
                           html.A(tx("ver en GitHub", "see on GitHub"), href=_gh(a, b), target="_blank",
                                  rel="noopener noreferrer")], className="cs-eq-why")], className="cs-eq-body"),
@@ -577,8 +578,8 @@ def _eq(n, tex, why):
              else tx(f"líneas {_rango(a, b)} de original_model.py", f"lines {_rango(a, b)} of original_model.py"))
     return html.Div([
         html.Div(f"({n})", className="cs-eq-n"),
-        html.Div([dcc.Markdown(f"$${tex}$$", mathjax=True, className="formula"),
-                  html.P([html.B(tx("Por qué: ", "Why: ")), why], className="cs-eq-why"),
+        html.Div([fx(tex),
+                  html.P([html.B(tx("Por qué: ", "Why: ")), *(why if isinstance(why, list) else [why])], className="cs-eq-why"),
                   html.P([html.B(tx("En el código: ", "In the code: ")), donde, " (",
                           tx("pestaña 3 · Código", "tab 3 · Code"), " · ",
                           html.A("GitHub", href=_gh(a, b) if n != 5 else _gh(a), target="_blank",
@@ -653,20 +654,20 @@ def csfof_method():
                               className="cs-flow-item") for i, (tt, dd) in enumerate(METH_FLOW)], className="cs-flow")
     eqs = [
         _eq(1, r"w_i = c\,\mathbb{1}\{y_i=1\}+\mathbb{1}\{y_i=0\},\quad c=\frac{n_0}{n_1}",
-            tx("con 22 % de morosos, no detectar a uno cuesta más que una falsa alarma; c ≈ 3.5 iguala el peso de las dos clases.",
-               "with 22% defaulters, missing one costs more than a false alarm; c ≈ 3.5 equalizes the weight of both classes.")),
+            tx(["con 22 % de morosos, no detectar a uno cuesta más que una falsa alarma; ", V("c"), " ≈ 3.5 iguala el peso total de las dos clases."],
+               ["with 22% defaulters, missing one costs more than a false alarm; ", V("c"), " ≈ 3.5 equalizes the total weight of both classes."])),
         _eq(2, r"G(L,R)=W_L\,2p_L(1-p_L)+W_R\,2p_R(1-p_R),\quad p_A=\frac{\sum_{i\in A}w_iy_i}{\sum_{i\in A}w_i}",
-            tx("un solo criterio, con los mismos pesos, para comparar con justicia cortes rectos y oblicuos.",
-               "a single criterion, with the same weights, to compare straight and oblique cuts fairly.")),
+            tx(["un solo criterio (", V("G"), "), con los mismos pesos ", V("w_i"), ", para comparar con justicia cortes rectos y oblicuos."],
+               ["a single criterion (", V("G"), "), with the same weights ", V("w_i"), ", to compare straight and oblique cuts fairly."])),
         _eq(3, r"S_w=\frac{1}{\sum_i w_i}\sum_i w_i(\mathbf{x}_{i,F}-\mu_{y_i})(\mathbf{x}_{i,F}-\mu_{y_i})^\top+\varepsilon\,\frac{\operatorname{tr}S}{q}\,I_q",
-            tx("los montos facturados son casi colineales y los nodos profundos tienen pocos clientes: ε evita que S_w sea casi singular.",
-               "billed amounts are nearly collinear and deep nodes have few clients: ε keeps S_w from being nearly singular.")),
+            tx(["los montos facturados son casi colineales y los nodos profundos tienen pocos clientes: ", V("ε"), " evita que ", V("S_w"), " sea casi singular."],
+               ["billed amounts are nearly collinear and deep nodes have few clients: ", V("ε"), " keeps ", V("S_w"), " from being nearly singular."])),
         _eq(4, r"\mathbf{v}=\frac{S_w^{-1}(\mu_1-\mu_0)}{\lVert S_w^{-1}(\mu_1-\mu_0)\rVert}",
-            tx("es la dirección que mejor separa a las dos clases en el nodo (Proposición 2), calculada solo con sus clientes.",
-               "it is the direction that best separates the two classes in the node (Proposition 2), computed only with its clients.")),
+            tx([V("v"), " es la dirección que mejor separa a las dos clases en el nodo (Proposición 2), calculada solo con sus clientes."],
+               [V("v"), " is the direction that best separates the two classes in the node (Proposition 2), computed only with its clients."])),
         _eq(5, r"f(\mathbf{x})=\frac1T\sum_{t=1}^{T}\hat p_t(\mathbf{x}),\quad \hat p_{\text{hoja}}=\frac{\sum_{i\in\text{hoja}}w_iy_i}{\sum_{i\in\text{hoja}}w_i}",
-            tx("promediar árboles entrenados con muestras bootstrap distintas reduce la varianza, como en Random Forest.",
-               "averaging trees trained on different bootstrap samples reduces variance, as in Random Forest.")),
+            tx(["promediar los ", V("T"), " árboles, entrenados con muestras bootstrap distintas, reduce la varianza, como en Random Forest."],
+               ["averaging the ", V("T"), " trees, trained on different bootstrap samples, reduces variance, as in Random Forest."])),
     ]
     hp = _tbl([tx("Hiperparámetro", "Hyperparameter"), tx("Rango buscado", "Search range"), tx("Modelo final", "Final model")],
               [("n_estimators (T)", "100-500", "359"), ("max_depth (d)", "6-14", "11"),
@@ -699,6 +700,7 @@ def csfof_method():
             html.P(tx("Datos D = {(xᵢ, yᵢ)}, i = 1…n, con xᵢ ∈ ℝᵖ y yᵢ ∈ {0, 1}. Cada componente lleva su justificación.",
                       "Data D = {(xᵢ, yᵢ)}, i = 1…n, with xᵢ ∈ ℝᵖ and yᵢ ∈ {0, 1}. Each component comes with its justification."),
                    className="muted"),
+            eqv_hint(),
             *eqs]),
         card(tx("Pseudocódigo", "Pseudocode"), [html.Pre(PSEUDO, className="pf-code cs-pseudo")]),
         html.Div([
@@ -863,7 +865,7 @@ print(modelo[-1].fraccion_cortes_oblicuos())        # 0.71 en el modelo final"""
                 kpi(tx("Ajuste de un bosque", "Fitting one forest"), "≈ 13 s", tx("29 965 clientes, 4 procesos", "29,965 clients, 4 processes"), "clock"),
                 kpi(tx("Modelo serializado", "Serialized model"), "5 MB", tx("artifacts/cs_fof.joblib", "artifacts/cs_fof.joblib"), "save"),
             ], className="kpi-row k4"),
-            links]),
+            eqv_hint(), links]),
         *tarjetas,
         card(tx("Cómo se usa", "How to use it"), [
                 html.P(tx("Igual que cualquier modelo de scikit-learn, con los hiperparámetros del modelo final.",
@@ -958,27 +960,28 @@ def page_original():
     tab = lambda lbl, val, kids: dcc.Tab(label=lbl, value=val, children=html.Div(kids, className="cs-pane"),
                                          className="cs-tab", selected_className="cs-tab--on")
     return html.Div([
-        page_title(tx("Modelo original", "Original model"), ""),
-        card("CS-FOF · Cost-Sensitive Fisher Oblique Forest", [
-            html.P(tx("Es el modelo propuesto en este proyecto: un bosque aleatorio programado desde cero, sin redes "
-                      "neuronales, cuyos árboles pueden cortar en diagonal combinando varias variables, en la dirección "
-                      "de Fisher ponderada por el costo de no detectar a quien incumple. Las pestañas siguen el orden de "
-                      "una presentación: la idea (Teoría), cómo se construyó y evaluó (Metodología), el código y cómo le fue "
-                      "(Resultados).",
-                      "It is the model proposed in this project: a random forest programmed from scratch, without neural "
-                      "networks, whose trees can cut diagonally by combining several variables, along the Fisher "
-                      "direction weighted by the cost of missing a defaulter. The tabs follow the order of a "
-                      "presentation: the idea (Theory), how it was built and evaluated (Methodology), the code and how it "
-                      "performed (Results).")),
+        page_title(tx("Modelo original", "Original model"), "", stage="csfof"),
+        card(tx("CS-FOF y HIB: el modelo original y su mejora", "CS-FOF and HIB: the original model and its improvement"), [
+            html.P(tx("CS-FOF (Cost-Sensitive Fisher Oblique Forest) es el modelo propuesto en este proyecto: un bosque aleatorio programado "
+                      "desde cero, sin redes neuronales, cuyos árboles pueden cortar en diagonal combinando varias variables, en la dirección "
+                      "de Fisher ponderada por el costo de no detectar a quien incumple. Obtuvo el mayor F1 medio, pero empató con XGBoost. "
+                      "Para mejorar el F1, a partir de CS-FOF se hizo un ensamble (stacking) con XGBoost, CatBoost, LightGBM, Random Forest, "
+                      "Extra Trees, HistGradientBoosting y regresión logística: HIB. Las pestañas siguen el orden de una presentación: la idea "
+                      "(Teoría), cómo se construyó y evaluó (Metodología), el código, cómo le fue (Resultados) y cómo se mejoró (Del CS-FOF al HIB).",
+                      "CS-FOF (Cost-Sensitive Fisher Oblique Forest) is the model proposed in this project: a random forest programmed "
+                      "from scratch, without neural networks, whose trees can cut diagonally by combining several variables, along the Fisher "
+                      "direction weighted by the cost of missing a defaulter. It got the highest mean F1 but tied with XGBoost. To raise F1, "
+                      "an ensemble (stacking) was built from CS-FOF with XGBoost, CatBoost, LightGBM, Random Forest, Extra Trees, "
+                      "HistGradientBoosting and logistic regression: HIB. The tabs follow the order of a presentation: the idea (Theory), "
+                      "how it was built and evaluated (Methodology), the code, how it performed (Results) and how it was improved (From CS-FOF to HIB).")),
             html.Div([
-                kpi("F1", "0.548 ± 0.005", tx("el mayor de los 8 modelos; sin diferencia significativa con XGBoost",
-                                              "the highest of the 8 models; no significant difference with XGBoost"), "trophy"),
-                kpi("ROC-AUC", "0.785", tx("el mayor de los 8 modelos", "the highest of the 8 models"), "target"),
-                kpi(tx("Cortes oblicuos", "Oblique splits"), "71 %",
-                    tx("de los nodos del modelo final", "of the final model's nodes"), "layers"),
-                kpi(tx("Incumplimientos detectados", "Defaults detected"), f"{c['tp'] / pos:.0%}",
-                    tx(f"{c['tp']:,} de {pos:,}; {c['fp']:,} falsas alarmas",
-                       f"{c['tp']:,} of {pos:,}; {c['fp']:,} false alarms"), "bars"),
+                kpi("CS-FOF · F1", "0.548 ± 0.005", tx("el mayor de los 8 modelos; sin diferencia significativa con XGBoost",
+                                                        "the highest of the 8 models; no significant difference with XGBoost"), "trophy"),
+                kpi("CS-FOF · ROC-AUC", "0.785", tx("el mayor de los 8 modelos", "the highest of the 8 models"), "target"),
+                kpi("HIB · F1", "0.5505", tx("ensamble que parte de CS-FOF: +0.0037 sobre XGBoost; gana a los 7 modelos base con Wilcoxon-Holm",
+                                             "ensemble built from CS-FOF: +0.0037 over XGBoost; beats the 7 baseline models with Wilcoxon-Holm"), "layers"),
+                kpi(tx("CS-FOF · cortes oblicuos", "CS-FOF · oblique splits"), "71 %",
+                    tx("de los nodos del modelo final", "of the final model's nodes"), "tree"),
             ], className="kpi-row k4"),
         ]),
         dcc.Tabs(value="teoria", className="cs-tabs", parent_className="cs-tabs-wrap", mobile_breakpoint=0, children=[
@@ -986,6 +989,6 @@ def page_original():
             tab(tx("2 · Metodología", "2 · Methodology"), "metodologia", csfof_method()),
             tab(tx("3 · Código", "3 · Code"), "codigo", csfof_code()),
             tab(tx("4 · Resultados", "4 · Results"), "resultados", _csfof_results()),
-            tab(tx("5 · ¿Se puede mejorar?", "5 · Can it be improved?"), "mejorar", csfof_beyond()),
+            tab(tx("5 · Del CS-FOF al HIB", "5 · From CS-FOF to HIB"), "mejorar", csfof_beyond()),
         ]),
     ])

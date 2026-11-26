@@ -19,6 +19,11 @@ from sklearn.model_selection import StratifiedKFold
 
 # (pregunta nueva, intención esperada, página abierta)
 PRUEBA = [
+    ("¿qué es HIB y cómo mejoró el F1?", "hib", "/modelo-original"),
+    ("¿con qué modelos hicieron el stacking?", "hib", "/modelo-original"),
+    ("¿por qué usan Wilcoxon con la corrección de Holm?", "wilcoxon_holm", "/modelo-original"),
+    ("¿cuáles son las etapas del proyecto, de los datos al tablero?", "pipeline", "/"),
+    ("¿qué significa cada símbolo de las ecuaciones?", "simbolos_ecuaciones", "/modelo-original"),
     ("hola, ¿quién eres tú?", "quien_eres", "/"),
     ("¿con qué algoritmo te entrenaron?", "quien_eres", "/"),
     ("¿qué cosas te puedo preguntar?", "ayuda", "/"),
@@ -104,6 +109,11 @@ PRUEBA = [
 ]
 
 PRUEBA_EN = [
+    ("what is HIB and how did it raise F1?", "hib", "/modelo-original"),
+    ("which models are in the stacking?", "hib", "/modelo-original"),
+    ("why use Wilcoxon with the Holm correction?", "wilcoxon_holm", "/modelo-original"),
+    ("what are the project stages, from data to dashboard?", "pipeline", "/"),
+    ("what does each symbol in the equations mean?", "simbolos_ecuaciones", "/modelo-original"),
     ("hey, who are you?", "quien_eres", "/"),
     ("what kind of questions can I ask?", "ayuda", "/"),
     ("explain what is on this screen", "esta_pagina", "/modelos"),
