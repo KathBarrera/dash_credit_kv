@@ -487,12 +487,104 @@ def py_code(src):
     return html.Pre(html.Code(out), className="pf-code cs-code")
 
 
+# ----- Ecuaciones en el código: cada ecuación se muestra justo antes de las líneas que la implementan -----
+CSFOF_LINES = CSFOF_SRC.splitlines()
+
+
+def _linea(patron, desde=1):
+    """Número de línea (desde 1) de la primera línea del archivo, a partir de `desde`, que contiene `patron`."""
+    for k in range(desde - 1, len(CSFOF_LINES)):
+        if patron in CSFOF_LINES[k]:
+            return k + 1
+    raise KeyError(patron)
+
+
+def _gh(a, b=None):
+    """Enlace a esas líneas de original_model.py en GitHub."""
+    return CSFOF_URL + f"#L{a}" + (f"-L{b}" if b and b != a else "")
+
+
+def _rango(a, b):
+    return f"{a}" if a == b else f"{a}–{b}"
+
+
+def _hl_line(linea):
+    """Una línea con colores de sintaxis; un fragmento suelto (docstring, línea de continuación) queda sin colores."""
+    sangria = linea[:len(linea) - len(linea.lstrip())]
+    resto = py_code(linea.lstrip()).children.children
+    return [sangria] + (resto if isinstance(resto, list) else [resto])
+
+
+def _code_rows(a, b, hl=False):
+    """Líneas a..b del archivo, con su número real a la izquierda; hl resalta las que implementan la ecuación."""
+    nums = "\n".join(str(k) for k in range(a, b + 1))
+    partes = []
+    for k, ln in enumerate(CSFOF_LINES[a - 1:b]):
+        partes += (["\n"] if k else []) + _hl_line(ln)
+    return html.Div([html.Pre(nums, className="cs-ln", **{"aria-hidden": "true"}),
+                     html.Pre(html.Code(partes), className="pf-code cs-code")],
+                    className="cs-code-rows" + (" hl" if hl else ""))
+
+
+def _eq_en_codigo(num, tex, que, a, b):
+    """La ecuación, lo que hace esa parte del código y el enlace a sus líneas."""
+    return html.Div([
+        html.Div(f"({num})", className="cs-eq-n"),
+        html.Div([dcc.Markdown(f"$${tex}$$", mathjax=True, className="formula"),
+                  html.P([html.B(tx(f"Líneas {_rango(a, b)}: ", f"Lines {_rango(a, b)}: ")), que, " · ",
+                          html.A(tx("ver en GitHub", "see on GitHub"), href=_gh(a, b), target="_blank",
+                                 rel="noopener noreferrer")], className="cs-eq-why")], className="cs-eq-body"),
+    ], className="cs-eq cs-eqc")
+
+
+def _card_eq_codigo(titulo, nota, segmentos):
+    """Tarjeta con el código de original_model.py y cada ecuación insertada justo antes de su línea.
+
+    segmentos: [(subtítulo o None, línea inicial, línea final, [(patrón, n_líneas, número, tex, qué hace), ...])].
+    """
+    hijos = [html.P(nota, className="muted")]
+    for sub, a, b, marcas in segmentos:
+        if sub:
+            hijos.append(html.H4([sub, html.Span(tx(f" · líneas {_rango(a, b)}", f" · lines {_rango(a, b)}"),
+                                                 className="muted")], className="cs-code-sub"))
+        bloque, pos = [], a
+        for patron, n, num, tex, que in marcas:
+            l = _linea(patron, pos)
+            if l > pos:
+                bloque.append(_code_rows(pos, l - 1))
+            bloque.append(_eq_en_codigo(num, tex, que, l, l + n - 1))
+            bloque.append(_code_rows(l, l + n - 1, hl=True))
+            pos = l + n
+        if pos <= b:
+            bloque.append(_code_rows(pos, b))
+        hijos.append(html.Div(bloque, className="cs-code-eqs"))
+    return card(titulo, hijos)
+
+
+def _lineas_eq():
+    """Dónde está cada ecuación de la metodología en original_model.py: {número: (línea inicial, línea final)}."""
+    return {
+        1: (_linea("n1 = max(int(y.sum()), 1)"), _linea("return np.where(y == 1, n0 / n1, 1.0)")),
+        2: (_linea("pL = np.where(WL > 0"), _linea("return WL * 2 * pL * (1 - pL)")),
+        3: (_linea("D = Xs - np.where(y[:, None] == 1"), _linea("Sw += (eps * traza")),
+        4: (_linea("V = np.linalg.solve(Sw"), _linea("V /= np.linalg.norm(V")),
+        5: (_linea("valor[ids_nivel[k]] = W1[k] / W[k]"), _linea("p1 = np.mean([a.proba1(Z)")),
+    }
+
+
 def _eq(n, tex, why):
-    """Ecuación numerada con la razón de ser del componente (la guía pide justificar cada uno)."""
+    """Ecuación numerada con la razón de ser del componente y las líneas del código que la implementan."""
+    a, b = _lineas_eq()[n]
+    donde = (tx(f"líneas {a} y {b} de original_model.py", f"lines {a} and {b} of original_model.py") if n == 5
+             else tx(f"líneas {_rango(a, b)} de original_model.py", f"lines {_rango(a, b)} of original_model.py"))
     return html.Div([
         html.Div(f"({n})", className="cs-eq-n"),
         html.Div([dcc.Markdown(f"$${tex}$$", mathjax=True, className="formula"),
-                  html.P([html.B(tx("Por qué: ", "Why: ")), why], className="cs-eq-why")], className="cs-eq-body"),
+                  html.P([html.B(tx("Por qué: ", "Why: ")), why], className="cs-eq-why"),
+                  html.P([html.B(tx("En el código: ", "In the code: ")), donde, " (",
+                          tx("pestaña 3 · Código", "tab 3 · Code"), " · ",
+                          html.A("GitHub", href=_gh(a, b) if n != 5 else _gh(a), target="_blank",
+                                 rel="noopener noreferrer"), ")"], className="cs-eq-why")], className="cs-eq-body"),
     ], className="cs-eq")
 
 
@@ -658,21 +750,87 @@ def csfof_method():
 
 def csfof_code():
     n_lines = len(CSFOF_SRC.splitlines())
-    bloques = [
-        (tx("Ecuación (1): pesos de costo", "Equation (1): cost weights"), _py_seg(CSFOF_SRC, "_pesos_de_clase"),
-         tx("El moroso pesa c = n₀/n₁ cuando class_weight = «balanced».", "A defaulter weighs c = n₀/n₁ when class_weight = “balanced”.")),
-        (tx("Ecuación (2): Gini ponderado", "Equation (2): weighted Gini"), _py_seg(CSFOF_SRC, "_gini_ponderado"),
-         tx("El mismo criterio para los dos tipos de corte.", "The same criterion for both cut types.")),
-        (tx("Ecuaciones (3) y (4): dirección de Fisher por nodo", "Equations (3) and (4): Fisher direction per node"),
-         _py_seg(CSFOF_SRC, "direccion_fisher_por_nodo"),
-         tx("Vectorizada: calcula a la vez la dirección de todos los nodos de un nivel con np.bincount.",
-            "Vectorized: it computes the direction of every node in a level at once with np.bincount.")),
-        (tx("El corazón del modelo: los cortes compiten", "The heart of the model: cuts compete"),
-         _py_between(CSFOF_SRC, "# --- candidatos por ejes", "# --- aplicar cortes"),
-         tx("Primero los cortes rectos; luego el oblicuo reemplaza al ganador solo si tiene menor G (Proposición 1).",
-            "First the straight cuts; then the oblique one replaces the winner only if it has a lower G (Proposition 1).")),
-        (tx("Ecuación (5): predicción del bosque", "Equation (5): forest prediction"), _py_between(CSFOF_SRC, "def predict_proba", "def predict(self"),
-         tx("Promedio de las probabilidades de hoja de los T árboles.", "Average of the leaf probabilities of the T trees.")),
+    L1 = _linea
+    eq1 = r"w_i = c\,\mathbb{1}\{y_i=1\}+\mathbb{1}\{y_i=0\},\quad c=\frac{n_0}{n_1}"
+    tarjetas = [
+        _card_eq_codigo(tx("Ecuación (1): pesos de costo", "Equation (1): cost weights"),
+                        tx("El moroso pesa c = n₀/n₁ cuando class_weight = «balanced»; el peso se calcula una vez en fit.",
+                           "A defaulter weighs c = n₀/n₁ when class_weight = “balanced”; the weight is computed once in fit."), [
+            (tx("Función _pesos_de_clase", "Function _pesos_de_clase"), L1("def _pesos_de_clase"),
+             L1('raise ValueError(f"class_weight no válido'), [
+                ("n1 = max(int(y.sum()), 1)", 3, 1, eq1,
+                 tx("cuenta morosos (n₁) y no morosos (n₀) y da peso n₀/n₁ a cada moroso y 1 a los demás.",
+                    "counts defaulters (n₁) and non-defaulters (n₀) and gives weight n₀/n₁ to each defaulter and 1 to the rest."))]),
+            (tx("Dónde se usa: CSFisherObliqueForest.fit", "Where it is used: CSFisherObliqueForest.fit"),
+             L1("w = _pesos_de_clase(y01"), L1("w = w * np.asarray(sample_weight"), [
+                ("w = _pesos_de_clase(y01", 1, 1, r"\mathbf{w}=(w_1,\dots,w_n)",
+                 tx("el vector de pesos que usan el Gini (2), la dirección de Fisher (3)–(4) y las hojas (5).",
+                    "the weight vector used by the Gini (2), the Fisher direction (3)–(4) and the leaves (5)."))]),
+        ]),
+        _card_eq_codigo(tx("Ecuación (2): Gini ponderado", "Equation (2): weighted Gini"),
+                        tx("El mismo criterio para los dos tipos de corte.", "The same criterion for both cut types."), [
+            (tx("Función _gini_ponderado", "Function _gini_ponderado"), L1("def _gini_ponderado"),
+             L1("return WL * 2 * pL * (1 - pL)"), [
+                ("pL = np.where(WL > 0", 2, 2, r"p_A=\frac{\sum_{i\in A}w_iy_i}{\sum_{i\in A}w_i},\quad A\in\{L,R\}",
+                 tx("proporción ponderada de morosos a cada lado del corte (W1L / WL y W1R / WR).",
+                    "weighted share of defaulters on each side of the cut (W1L / WL and W1R / WR).")),
+                ("return WL * 2 * pL * (1 - pL)", 1, 2, r"G(L,R)=W_L\,2p_L(1-p_L)+W_R\,2p_R(1-p_R)",
+                 tx("impureza de Gini ponderada del corte; el nodo elige el corte de menor G.",
+                    "weighted Gini impurity of the cut; the node picks the cut with the lowest G."))]),
+        ]),
+        _card_eq_codigo(tx("Ecuaciones (3) y (4): dirección de Fisher por nodo", "Equations (3) and (4): Fisher direction per node"),
+                        tx("Vectorizada: calcula a la vez la dirección de todos los nodos de un nivel con np.bincount.",
+                           "Vectorized: it computes the direction of every node in a level at once with np.bincount."), [
+            (tx("Función direccion_fisher_por_nodo", "Function direccion_fisher_por_nodo"),
+             L1("def direccion_fisher_por_nodo"), L1("return V, valido"), [
+                ("mu1 = np.stack(", 2, 3, r"\mu_k=\frac{\sum_{i:\,y_i=k}w_i\,\mathbf{x}_{i,F}}{\sum_{i:\,y_i=k}w_i},\quad k\in\{0,1\}",
+                 tx("medias ponderadas por costo de los que pagan (μ₀) y de los que incumplen (μ₁) en cada nodo.",
+                    "cost-weighted means of payers (μ₀) and defaulters (μ₁) in each node.")),
+                ("D = Xs - np.where(y[:, None] == 1", 10, 3,
+                 r"S=\frac{1}{\sum_i w_i}\sum_i w_i(\mathbf{x}_{i,F}-\mu_{y_i})(\mathbf{x}_{i,F}-\mu_{y_i})^\top",
+                 tx("dispersión intra-clase ponderada: D son las desviaciones a la media de su clase y Sw se arma por pares de variables.",
+                    "weighted within-class scatter: D are deviations from the class mean and Sw is built pair by pair.")),
+                ("traza = np.trace(Sw", 2, 3, r"S_w=S+\varepsilon\,\frac{\operatorname{tr}S}{q}\,I_q",
+                 tx("regularización: suma ε veces la traza media a la diagonal para que S_w sea invertible.",
+                    "regularization: adds ε times the mean trace to the diagonal so S_w is invertible.")),
+                ("V = np.linalg.solve(Sw", 2, 4, r"\mathbf{v}=\frac{S_w^{-1}(\mu_1-\mu_0)}{\lVert S_w^{-1}(\mu_1-\mu_0)\rVert}",
+                 tx("resuelve S_w v = μ₁ − μ₀ (sin invertir la matriz) y normaliza la dirección.",
+                    "solves S_w v = μ₁ − μ₀ (without inverting the matrix) and normalizes the direction."))]),
+        ]),
+        _card_eq_codigo(tx("El corazón del modelo: los cortes compiten", "The heart of the model: cuts compete"),
+                        tx("En cada nivel del árbol: primero el mejor corte recto; luego el oblicuo lo reemplaza solo si tiene menor G.",
+                           "At each tree level: first the best straight cut; then the oblique one replaces it only if it has a lower G."), [
+            (tx("Método _ArbolCSFOF.fit", "Method _ArbolCSFOF.fit"), L1("# --- candidatos por ejes"),
+             L1("# --- aplicar cortes") - 2, [
+                ("G, b = _mejor_umbral_por_histograma(nodo_de, Zb", 1, 2, r"\min_{j\in F,\;t}\;G(L,R)",
+                 tx("mejor corte recto sobre las q variables sorteadas, con umbrales en 64 cuantiles.",
+                    "best straight cut over the q drawn variables, with thresholds on 64 quantiles.")),
+                ("V, valido = direccion_fisher_por_nodo", 1, 4, r"\mathbf{v}=\frac{S_w^{-1}(\mu_1-\mu_0)}{\lVert S_w^{-1}(\mu_1-\mu_0)\rVert}",
+                 tx("dirección de Fisher de cada nodo, con las ecuaciones (3) y (4).",
+                    "Fisher direction of each node, with equations (3) and (4).")),
+                ('z = np.einsum("ij,ij->i", Xs, V[nodo_de])', 1, 4, r"z_i=\mathbf{v}^\top\mathbf{x}_{i,F}",
+                 tx("proyecta cada cliente sobre la dirección: el corte oblicuo es un umbral sobre z.",
+                    "projects each client onto the direction: the oblique cut is a threshold on z.")),
+                ("G, b = _mejor_umbral_por_histograma(nodo_de, bz", 1, 2, r"\min_{t}\;G(L,R)\ \text{con}\ L=\{i:\,z_i\le t\}",
+                 tx("mejor umbral sobre la proyección, con el mismo Gini ponderado.",
+                    "best threshold on the projection, with the same weighted Gini.")),
+                ("m = np.flatnonzero(G < mejor_G)", 1, "P1", r"G_{\text{oblicuo}}<G_{\text{recto}}\ \Rightarrow\ \text{gana el corte oblicuo}",
+                 tx("la competencia: el oblicuo reemplaza al recto solo si tiene menor impureza (Proposición 1).",
+                    "the competition: the oblique cut replaces the straight one only if its impurity is lower (Proposition 1)."))]),
+        ]),
+        _card_eq_codigo(tx("Ecuación (5): hojas y predicción del bosque", "Equation (5): leaves and forest prediction"),
+                        tx("Cada hoja guarda la proporción ponderada de morosos; el bosque promedia las hojas de sus T árboles.",
+                           "Each leaf stores the weighted share of defaulters; the forest averages the leaves of its T trees."), [
+            (tx("Valor de cada hoja (_ArbolCSFOF.fit)", "Value of each leaf (_ArbolCSFOF.fit)"), L1("ww, wy = wf * cf"),
+             L1("puede = (C >= 2 * min_leaf)") - 1, [
+                ("valor[ids_nivel[k]] = W1[k] / W[k]", 1, 5,
+                 r"\hat p_{\text{hoja}}=\frac{\sum_{i\in\text{hoja}}w_iy_i}{\sum_{i\in\text{hoja}}w_i}",
+                 tx("W1 es el peso de los morosos del nodo y W su peso total.", "W1 is the weight of the node's defaulters and W its total weight."))]),
+            (tx("Predicción (CSFisherObliqueForest.predict_proba)", "Prediction (CSFisherObliqueForest.predict_proba)"),
+             L1("def predict_proba"), L1("def predict(self") - 2, [
+                ("p1 = np.mean([a.proba1(Z)", 1, 5, r"f(\mathbf{x})=\frac1T\sum_{t=1}^{T}\hat p_t(\mathbf{x})",
+                 tx("promedio de las probabilidades de hoja de los T árboles.", "average of the leaf probabilities of the T trees."))]),
+        ]),
     ]
     uso = """from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -708,7 +866,7 @@ print(modelo[-1].fraccion_cortes_oblicuos())        # 0.71 en el modelo final"""
                 kpi(tx("Modelo serializado", "Serialized model"), "5 MB", tx("artifacts/cs_fof.joblib", "artifacts/cs_fof.joblib"), "save"),
             ], className="kpi-row k4"),
             links]),
-        *[card(tit, [html.P(nota, className="muted"), py_code(src)]) for tit, src, nota in bloques],
+        *tarjetas,
         card(tx("Cómo se usa", "How to use it"), [
                 html.P(tx("Igual que cualquier modelo de scikit-learn, con los hiperparámetros del modelo final.",
                           "Like any scikit-learn model, with the final model's hyperparameters."), className="muted"),
