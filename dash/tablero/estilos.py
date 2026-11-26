@@ -477,12 +477,9 @@ button.tc-link { width:100%; font:inherit; font-size:13px; text-align:left; curs
 .cs-code { max-height:520px; overflow:auto; font-size:12.6px; line-height:1.55; }
 .cs-code-sub { margin:16px 0 6px; font-size:14px; } .cs-code-sub .muted { font-weight:500; }
 .cs-code-eqs { border:1px solid var(--line); border-radius:10px; overflow:hidden; }
-.cs-code-rows { display:grid; grid-template-columns:auto minmax(0,1fr); background:var(--tech-bg); }
-.cs-code-rows .pf-code { margin:0; border-radius:0; border-left:none; padding:2px 14px 2px 10px; max-height:none;
+.cs-code-rows { background:var(--tech-bg); }
+.cs-code-rows .pf-code { margin:0; border-radius:0; border-left:none; padding:2px 16px; max-height:none;
   overflow-x:auto; background:transparent; font-size:13px; line-height:1.6; }
-.cs-ln { margin:0; padding:2px 8px 2px 12px; text-align:right; color:var(--muted); opacity:.75; user-select:none;
-  font-family:Consolas,'Courier New',monospace; font-size:13px; line-height:1.6;
-  border-right:1px solid var(--line-strong); }
 .cs-code-rows.hl { background:var(--note-bg); box-shadow:inset 3px 0 0 var(--accent-2); }
 .cs-eqc { margin:0; padding:6px 12px 8px 4px; background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
 .cs-sum { cursor:pointer; font-weight:600; margin:4px 0 8px; }

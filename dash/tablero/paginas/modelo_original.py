@@ -516,13 +516,11 @@ def _hl_line(linea):
 
 
 def _code_rows(a, b, hl=False):
-    """Líneas a..b del archivo, con su número real a la izquierda; hl resalta las que implementan la ecuación."""
-    nums = "\n".join(str(k) for k in range(a, b + 1))
+    """Líneas a..b del archivo; hl resalta las que implementan la ecuación."""
     partes = []
     for k, ln in enumerate(CSFOF_LINES[a - 1:b]):
         partes += (["\n"] if k else []) + _hl_line(ln)
-    return html.Div([html.Pre(nums, className="cs-ln", **{"aria-hidden": "true"}),
-                     html.Pre(html.Code(partes), className="pf-code cs-code")],
+    return html.Div(html.Pre(html.Code(partes), className="pf-code cs-code"),
                     className="cs-code-rows" + (" hl" if hl else ""))
 
 
