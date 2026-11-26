@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Pestaña «5 · ¿Se puede mejorar?» del Modelo original: ensambles, HIB y redes neuronales frente a XGBoost."""
+"""Pestaña «5 · ¿Se puede mejorar?» del Modelo original: ensambles, stacking y HIB frente a XGBoost."""
 
 import plotly.graph_objects as go
 from dash import dcc, html
 
 from tablero.componentes import _tbl, card, interp_block, kpi
-from tablero.config import BROWN, DEEP_NAVY, DEEP_RGBA, GREY_BLUE, L, NAVY, WARM_GOLD, WHITE, tx
+from tablero.config import DEEP_NAVY, DEEP_RGBA, GREY_BLUE, L, NAVY, WARM_GOLD, WHITE, tx
 from tablero.iconos import icon
 from tablero.utilidades import style_fig
 
 
-# --- Pestaña 5: ¿se puede mejorar? (ensambles, HIB y redes neuronales) -----------------------
-# Fuentes: Tabla_combinaciones.xlsx y el documento de HIB (corridas de ensambles, 25 pliegues) y
-# results/redes_repeated/metricas.csv del repositorio del proyecto (redes neuronales, 50 pliegues).
+# --- Pestaña 5: ¿se puede mejorar? (ensambles, stacking y HIB) --------------------------------
+# Fuentes: Tabla_combinaciones.xlsx y el documento de HIB (corridas de ensambles, 25 pliegues).
+# Las redes neuronales (TabM, TabM-Fisher, TabPFN) se reportan solo en el paper, por indicación del profesor.
 # Diferencia = modelo − XGBoost de su propia corrida; IC 95 % de la t corregida de Nadeau-Bengio.
 # Los IC de HIB se reconstruyeron a partir de la diferencia y del p sin ajustar reportados.
 BEYOND_DIFF = [  # (etiqueta es, etiqueta en, diferencia, IC inf, IC sup, p NB, grupo)
@@ -26,25 +26,20 @@ BEYOND_DIFF = [  # (etiqueta es, etiqueta en, diferencia, IC inf, IC sup, p NB, 
     ("FWLS por PAY_0 sin CS-FOF", "FWLS by PAY_0 without CS-FOF", 0.0024, -0.0011, 0.0059, 0.17, "ens"),
     ("CS-FOF (umbral interno)", "CS-FOF (inner threshold)", 0.0016, -0.0018, 0.0049, 0.35, "ens"),
     ("Rotation Forest propio", "Own Rotation Forest", -0.0036, -0.0087, 0.0015, 0.16, "ens"),
-    ("TabPFN v2.5", "TabPFN v2.5", 0.0023, -0.0023, 0.0070, 0.32, "red"),
-    ("TabM", "TabM", -0.0025, -0.0088, 0.0038, 0.43, "red"),
-    ("TabM-Fisher", "TabM-Fisher", -0.0025, -0.0095, 0.0044, 0.47, "red"),
 ]
 BEYOND_PLATEAU = [  # (modelo, F1 medio, grupo)
     ("Regresión logística|Logistic regression", 0.5230, "ens"), ("Rotation Forest", 0.5421, "ens"),
-    ("TabM-Fisher", 0.5439, "red"), ("TabM", 0.5439, "red"), ("XGBoost (ensambles)|XGBoost (ensembles)", 0.5457, "ens"),
-    ("Random Forest", 0.5461, "ens"), ("XGBoost (redes)|XGBoost (networks)", 0.5464, "red"), ("LightGBM", 0.5467, "ens"),
-    ("CS-FOF", 0.5473, "ens"), ("TabPFN v2.5", 0.5487, "red"), ("CatBoost", 0.5494, "ens"),
+    ("XGBoost", 0.5457, "ens"), ("Random Forest", 0.5461, "ens"), ("LightGBM", 0.5467, "ens"),
+    ("CS-FOF", 0.5473, "ens"), ("CatBoost", 0.5494, "ens"),
     ("Mejor stacking (fase B)|Best stacking (phase B)", 0.5501, "ens"), ("HIB v2", 0.5505, "hib"),
 ]
-BEYOND_COLORS = {"ens": NAVY, "hib": WARM_GOLD, "red": BROWN}
-BEYOND_SYMBOLS = {"ens": "circle", "hib": "diamond", "red": "square"}
+BEYOND_COLORS = {"ens": NAVY, "hib": WARM_GOLD}
+BEYOND_SYMBOLS = {"ens": "circle", "hib": "diamond"}
 
 
 def _beyond_group(g):
     return {"ens": tx("Ensambles y modelos base (25 pliegues)", "Ensembles and base models (25 folds)"),
-            "hib": tx("HIB, ensamble propuesto (25 pliegues)", "HIB, proposed ensemble (25 folds)"),
-            "red": tx("Redes neuronales (50 pliegues)", "Neural networks (50 folds)")}[g]
+            "hib": tx("HIB, ensamble propuesto (25 pliegues)", "HIB, proposed ensemble (25 folds)")}[g]
 
 
 def fig_beyond_diff():
@@ -80,7 +75,7 @@ def fig_beyond_plateau():
     rows = sorted(BEYOND_PLATEAU, key=lambda r: r[1])
     nombre = lambda s: tx(*s.split("|")) if "|" in s else s
     fig = go.Figure()
-    fig.add_vrect(x0=0.5439, x1=0.5505, fillcolor=f"{DEEP_RGBA}0.06)", line_width=0, layer="below")
+    fig.add_vrect(x0=0.5457, x1=0.5505, fillcolor=f"{DEEP_RGBA}0.06)", line_width=0, layer="below")
     vistos = set()
     for s, v, g in rows:
         fig.add_trace(go.Scatter(
@@ -90,8 +85,8 @@ def fig_beyond_plateau():
             name=_beyond_group(g), legendgroup=g, showlegend=g not in vistos,
             hovertemplate=f"<b>{nombre(s)}</b><br>F1: {v:.4f}<extra></extra>"))
         vistos.add(g)
-    fig.add_annotation(x=0.5472, y=1.0, yref="paper", showarrow=False, yanchor="bottom", font=dict(size=11, color=GREY_BLUE),
-                       text=tx("11 de 13 modelos en 0.0066 de F1", "11 of 13 models within 0.0066 of F1"))
+    fig.add_annotation(x=0.5481, y=1.0, yref="paper", showarrow=False, yanchor="bottom", font=dict(size=11, color=GREY_BLUE),
+                       text=tx("7 de 9 modelos en 0.0048 de F1", "7 of 9 models within 0.0048 of F1"))
     style_fig(fig, h=520, title=tx("La meseta del F1", "The F1 plateau"),
               xaxis=dict(title=tx("F1 medio de la clase default", "Mean F1 of the default class"), range=[0.52, 0.558]),
               yaxis=dict(automargin=True))
@@ -193,36 +188,6 @@ BEYOND_MODELS = [
       "a cada uno y el árbol se entrena sobre las componentes. Aquí quedó por debajo de XGBoost (−0.0036).",
       "Rodríguez et al. (2006): for each tree the features are split into random subsets, PCA is applied to each and "
       "the tree is trained on the components. Here it fell below XGBoost (−0.0036).")),
-    ("TabM", "TabM", ("Red neuronal", "Neural network"),
-     ("Una red neuronal que en realidad son 32 redes pequeñas que comparten casi todo su «cerebro» y votan juntas.",
-      "A neural network that is really 32 small networks sharing almost all of their «brain» and voting together."),
-     ("Gorishniy et al. (ICLR 2025): MLP con BatchEnsemble, k = 32 miembros que comparten los pesos y solo difieren en "
-      "adaptadores multiplicativos. Cada miembro se entrena con su propia pérdida y la predicción promedia los k. Aquí: "
-      "entropía cruzada ponderada por el costo del moroso, AdamW y parada temprana.",
-      "Gorishniy et al. (ICLR 2025): MLP with BatchEnsemble, k = 32 members that share the weights and differ only in "
-      "multiplicative adapters. Each member is trained with its own loss and the prediction averages the k. Here: "
-      "cross-entropy weighted by the cost of a defaulter, AdamW and early stopping.")),
-    ("TabM-Fisher", "TabM-Fisher", ("Red neuronal propia", "Own neural network"),
-     ("TabM al que le damos como pista las «líneas diagonales» que ya encontró CS-FOF, para que se concentre en lo "
-      "que CS-FOF no ve.",
-      "TabM given, as a hint, the «diagonal lines» that CS-FOF already found, so it can focus on what CS-FOF misses."),
-     ("Dentro de cada entrenamiento se ajusta un CS-FOF auxiliar (50 árboles, cortes de profundidad ≤ 2). Sus 16 "
-      "cortes oblicuos (v, t) se convierten en variables vᵀx − t (distancia con signo a cada frontera) y se agregan a "
-      "las 20 variables. La ablación contra TabM mide si esas variables aportan.",
-      "Inside each training set an auxiliary CS-FOF is fitted (50 trees, splits of depth ≤ 2). Its 16 oblique splits "
-      "(v, t) become features vᵀx − t (signed distance to each boundary) added to the 20 features. The ablation "
-      "against TabM measures whether those features help.")),
-    ("TabPFN v2.5", "TabPFN v2.5", ("Red preentrenada", "Pretrained network"),
-     ("Un modelo que ya «vio» millones de problemas inventados y resuelve el nuestro sin entrenarse: mira nuestros "
-      "clientes como ejemplos y predice.",
-      "A model that has already «seen» millions of made-up problems and solves ours without training: it looks at our "
-      "clients as examples and predicts."),
-     ("Transformer preentrenado sobre tablas sintéticas generadas desde un prior bayesiano (Grinsztajn et al., 2025). "
-      "Hace aprendizaje en contexto: aproxima la distribución predictiva posterior en una sola pasada, sin búsqueda "
-      "de hiperparámetros. Al ser preentrenado, no cuenta como modelo original en el curso.",
-      "Transformer pretrained on synthetic tables generated from a Bayesian prior (Grinsztajn et al., 2025). It does "
-      "in-context learning: it approximates the posterior predictive distribution in one pass, with no "
-      "hyperparameter search. Being pretrained, it does not count as an original model in the course.")),
 ]
 
 
@@ -242,17 +207,18 @@ def csfof_beyond():
     sig = lambda s: html.B(s)
     return [
         card(tx("¿Se puede superar a XGBoost?", "Can XGBoost be beaten?"), [
-            html.P(tx("Como CS-FOF empató con XGBoost, el equipo probó dos caminos más: combinar modelos (ensambles, "
-                      "stacking y un ensamble propio, HIB) y redes neuronales (TabM, TabM-Fisher y TabPFN). Esta pestaña "
-                      "resume qué se probó, cómo funciona cada modelo y qué se encontró.",
-                      "Since CS-FOF tied with XGBoost, the team tried two more paths: combining models (ensembles, "
-                      "stacking and an own ensemble, HIB) and neural networks (TabM, TabM-Fisher and TabPFN). This tab "
-                      "summarizes what was tried, how each model works and what was found."), className="muted"),
+            html.P(tx("Como CS-FOF empató con XGBoost, el equipo probó si combinar modelos podía superarlo: promedios, "
+                      "stacking, pesos según el atraso del cliente, selección de Caruana y un ensamble propio, HIB. Esta "
+                      "pestaña resume qué se probó, cómo funciona cada combinación y qué se encontró.",
+                      "Since CS-FOF tied with XGBoost, the team tested whether combining models could beat it: averages, "
+                      "stacking, weights by the client's delay, Caruana selection and an own ensemble, HIB. This tab "
+                      "summarizes what was tried, how each combination works and what was found."), className="muted"),
             html.Div([
                 kpi("HIB", "+0.0037", tx("F1 sobre XGBoost; gana en 21 de 25 pliegues", "F1 over XGBoost; wins 21 of 25 folds"), "trophy"),
                 kpi(tx("HIB frente al promedio simple", "HIB vs plain average"), "+0.0004",
                     tx("p = 0.33: la regla de pesos no aporta", "p = 0.33: the weighting rule adds nothing"), "layers"),
-                kpi("TabM-Fisher", "−0.0025", tx("F1 frente a XGBoost; p = 0.47", "F1 vs XGBoost; p = 0.47"), "bars"),
+                kpi(tx("Combinaciones probadas", "Combinations tried"), "2 582",
+                    tx("13 congeladas y confirmadas con semillas nuevas", "13 frozen and confirmed with new seeds"), "bars"),
                 kpi(tx("Techo del dato", "Data ceiling"), "0.54–0.55",
                     tx("F1 de casi todos los modelos, sin importar la familia", "F1 of almost every model, whatever the family"), "target"),
             ], className="kpi-row k4"),
@@ -264,8 +230,6 @@ def csfof_beyond():
             html.Div([_beyond_model_card(*m[:3], *m[3:]) for m in BEYOND_MODELS[:5]], className="grid g3"),
             html.H4(tx("Modelos base añadidos", "Added base models"), className="beyond-sub"),
             html.Div([_beyond_model_card(*m[:3], *m[3:]) for m in BEYOND_MODELS[5:10]], className="grid g3"),
-            html.H4(tx("Redes neuronales", "Neural networks"), className="beyond-sub"),
-            html.Div([_beyond_model_card(*m[:3], *m[3:]) for m in BEYOND_MODELS[10:]], className="grid g3"),
         ]),
         card(tx("Diferencia frente a XGBoost", "Difference vs XGBoost"), [
             dcc.Graph(id="cs-beyond-diff", figure=fig_beyond_diff(), config=gcfg),
@@ -287,16 +251,16 @@ def csfof_beyond():
         card(tx("La meseta del F1", "The F1 plateau"), [
             dcc.Graph(id="cs-beyond-plateau", figure=fig_beyond_plateau(), config=gcfg),
             interp_block(
-                tx("Bosques, boosting, ensambles, redes y un modelo preentrenado terminan casi en el mismo F1. Cuando "
+                tx("Bosques, boosting, nuestro bosque oblicuo y los ensambles terminan casi en el mismo F1. Cuando "
                    "modelos tan distintos chocan con el mismo techo, el límite está en la información de los datos, no "
                    "en el modelo.",
-                   "Forests, boosting, ensembles, networks and a pretrained model end up at almost the same F1. When such "
+                   "Forests, boosting, our oblique forest and the ensembles end up at almost the same F1. When such "
                    "different models hit the same ceiling, the limit is in the information in the data, not in the model."),
                 tx("F1 medio con el umbral elegido en el entrenamiento. Excepto la regresión logística y Rotation Forest, "
-                   "los otros 11 modelos caen en 0.0066 de F1, cuando el F1 de un mismo modelo varía unos 0.01 entre pliegues. "
+                   "los otros 7 modelos caen en 0.0048 de F1, cuando el F1 de un mismo modelo varía unos 0.01 entre pliegues. "
                    "La literatura sobre este conjunto reporta el mismo techo (F1 ≈ 0.55, AUC ≈ 0.78).",
                    "Mean F1 with the threshold chosen on training data. Except logistic regression and Rotation Forest, "
-                   "the other 11 models fall within 0.0066 of F1, while a single model's F1 varies about 0.01 across folds. "
+                   "the other 7 models fall within 0.0048 of F1, while a single model's F1 varies about 0.01 across folds. "
                    "The literature on this dataset reports the same ceiling (F1 ≈ 0.55, AUC ≈ 0.78).")),
         ]),
         card(tx("HIB: confirmación v2 (semillas nuevas, 25 pliegues)", "HIB: v2 confirmation (new seeds, 25 folds)"), [
@@ -341,29 +305,6 @@ def csfof_beyond():
                         "the same. Removing CS-FOF does not change anything either (0.5505 without it, 0.5502 with it)."),
                      className="callout"),
         ]),
-        card(tx("Redes neuronales (50 pliegues)", "Neural networks (50 folds)"), [
-            html.P(tx("10 repeticiones × 5 pliegues con las mismas particiones para los cuatro modelos, en GPU.",
-                      "10 repetitions × 5 folds with the same partitions for the four models, on GPU."), className="muted"),
-            _tbl([tx("Modelo", "Model"), "F1", tx("Dif. F1 [IC 95 %]", "F1 diff. [95% CI]"), "p Nadeau-Bengio",
-                  tx("Gana en", "Wins in"), "AUC-ROC"],
-                 [("TabPFN v2.5", "0.5487", "+0.0023 [−0.0023, 0.0070]", "0.32", "38/50", html.B("0.7894")),
-                  ("XGBoost", "0.5464", "—", "—", "—", "0.7850"),
-                  ("TabM", "0.5439", "−0.0025 [−0.0088, 0.0038]", "0.43", "17/50", "0.7826"),
-                  (html.B("TabM-Fisher"), "0.5439", "−0.0025 [−0.0095, 0.0044]", "0.47", "18/50", "0.7824")]),
-            interp_block(
-                tx("Ninguna red le gana a XGBoost en F1, y darle a TabM las «líneas» de CS-FOF no cambia nada. TabPFN "
-                   "ordena mejor a los clientes por riesgo, pero eso no se traduce en más aciertos.",
-                   "No network beats XGBoost in F1, and giving TabM the «lines» from CS-FOF changes nothing. TabPFN ranks "
-                   "clients by risk better, but that does not turn into more hits."),
-                tx("Prueba bayesiana con ROPE ±0.01: 98 a 100 % de probabilidad de equivalencia práctica en F1. Ablación "
-                   "TabM-Fisher − TabM: 0.0000 [−0.0043, 0.0043], p = 0.99. TabPFN supera a XGBoost en AUC-ROC (+0.0045, "
-                   "p = 0.0001, 49/50 pliegues) y AUC-PR (+0.0083, p = 0.003): mejora el orden global, pero casi no "
-                   "mueve clientes cerca del umbral.",
-                   "Bayesian test with ROPE ±0.01: 98 to 100% probability of practical equivalence in F1. TabM-Fisher − "
-                   "TabM ablation: 0.0000 [−0.0043, 0.0043], p = 0.99. TabPFN beats XGBoost in ROC-AUC (+0.0045, "
-                   "p = 0.0001, 49/50 folds) and PR-AUC (+0.0083, p = 0.003): it improves the overall ranking but barely "
-                   "moves clients near the threshold.")),
-        ]),
         card(tx("¿Por qué no mejora el score?", "Why doesn't the score improve?"), [
             html.Ul([
                 html.Li([html.B(tx("Las diferencias son del tamaño del ruido. ", "The differences are noise-sized. ")),
@@ -380,8 +321,10 @@ def csfof_beyond():
                          tx("Por eso combinarlos suma poco y quitar CS-FOF no cambia nada.",
                             "That is why combining them adds little and removing CS-FOF changes nothing.")]),
                 html.Li([html.B(tx("Ordenar mejor no es clasificar mejor. ", "Ranking better is not classifying better. ")),
-                         tx("Una mejora del AUC reordena pocos clientes cerca del umbral, así que el F1 casi no cambia.",
-                            "An AUC gain reorders few clients near the threshold, so F1 barely changes.")]),
+                         tx("Balancear o combinar modelos cambia sobre todo el orden de los clientes (AUC); una mejora "
+                            "del orden reordena pocos clientes cerca del umbral, así que el F1 casi no cambia.",
+                            "Balancing or combining models mostly changes the ranking of clients (AUC); a better ranking "
+                            "reorders few clients near the threshold, so F1 barely changes.")]),
             ], className="beyond-list"),
             html.Div(tx("Con estos datos, una mejora sustancial del score es muy improbable: la única vía realista sería "
                         "agregar información nueva (otras variables u otros periodos), no cambiar de modelo.",
