@@ -1200,24 +1200,26 @@ def _construir(A, EN):
         mood="explaining"))
     add(Intencion(
         "pipeline", t("Pipeline del proyecto", "Project pipeline"),
-        t(["explícame el pipeline del proyecto", "cuál es el pipeline", "qué es el botón de pipeline", "cuáles son las etapas del proyecto",
+        t(["explícame el pipeline del proyecto", "cuál es el pipeline", "qué es el botón de pipeline", "muéstrame el código del pipeline",
            "cómo fue el flujo de trabajo", "de los datos al tablero", "qué pasos siguió el proyecto", "cómo se hizo el proyecto de principio a fin",
            "dónde veo el flujo completo", "qué hace el botón Pipeline"],
           ["explain the project pipeline", "what is the pipeline", "what is the pipeline button", "what are the stages of the project",
            "what was the workflow", "from data to dashboard", "which steps did the project follow", "how was the project done from start to finish",
            "where do I see the whole flow", "what does the Pipeline button do"]),
-        t("El botón **Pipeline** (en la barra superior y junto al título de varias páginas) abre una ventana con las 11 etapas del proyecto:\n\n"
-          "1. **Datos:** 30 000 → 29 965 clientes, 20 variables.\n2. **EDA.**\n3. **Validación anidada 5 × 5.**\n"
-          "4. **112 combinaciones** de referencia (7 modelos × 4 balanceos × 4 optimizadores).\n5. **CS-FOF**, el modelo original.\n"
-          "6. **Pruebas estadísticas.**\n7. **Del CS-FOF a los ensambles** (2 582 combinaciones).\n8. **13 candidatos congelados.**\n"
-          "9. **HIB.**\n10. **Confirmación pre-registrada.**\n11. **Interpretación y entrega** (este tablero).\n\n"
-          "Si lo abres desde una página, deja resaltada la etapa que estás mirando.",
-          "The **Pipeline** button (in the top bar and next to the title of several pages) opens a window with the 11 stages of the project:\n\n"
-          "1. **Data:** 30,000 → 29,965 clients, 20 variables.\n2. **EDA.**\n3. **Nested 5 × 5 validation.**\n"
-          "4. **112 baseline combinations** (7 models × 4 balancing × 4 optimizers).\n5. **CS-FOF**, the original model.\n"
-          "6. **Statistical tests.**\n7. **From CS-FOF to ensembles** (2,582 combinations).\n8. **13 frozen candidates.**\n"
-          "9. **HIB.**\n10. **Pre-registered confirmation.**\n11. **Interpretation and delivery** (this dashboard).\n\n"
-          "If you open it from a page, it highlights the stage you are looking at."),
+        t("El botón **Pipeline** (en la barra superior y junto al título de varias páginas) abre una ventana con el **código real** del pipeline del proyecto:\n\n"
+          "1. **Preprocesamiento** dentro de cada pliegue (one-hot y escalado).\n"
+          "2. **build_pipeline:** preprocesamiento + balanceo (SMOTE, ADASYN o pesos de clase) + modelo, con un `Pipeline` de imblearn.\n"
+          "3. **run_nested_cv:** la validación anidada 5 × 5.\n4. **CS-FOF** dentro del mismo pipeline.\n"
+          "5. **Pruebas estadísticas:** Wilcoxon con Holm y δ de Cliff.\n6. **HIB:** los logits fuera de muestra y la regla de pesos.\n"
+          "7. **Entrega:** el pipeline serializado con joblib.\n\n"
+          "Si lo abres desde una página, deja resaltada la sección que corresponde.",
+          "The **Pipeline** button (in the top bar and next to the title of several pages) opens a window with the **real code** of the project pipeline:\n\n"
+          "1. **Preprocessing** inside each fold (one-hot and scaling).\n"
+          "2. **build_pipeline:** preprocessing + balancing (SMOTE, ADASYN or class weights) + model, with an imblearn `Pipeline`.\n"
+          "3. **run_nested_cv:** the nested 5 × 5 validation.\n4. **CS-FOF** inside the same pipeline.\n"
+          "5. **Statistical tests:** Wilcoxon with Holm and Cliff's δ.\n6. **HIB:** the out-of-sample logits and the weight rule.\n"
+          "7. **Delivery:** the pipeline serialized with joblib.\n\n"
+          "If you open it from a page, it highlights the matching section."),
         pagina="/modelo-original", sug=t(["¿Qué es HIB?", "¿Qué es la validación cruzada anidada?"],
                                          ["What is HIB?", "What is nested cross-validation?"]), mood="explaining"))
     add(Intencion(

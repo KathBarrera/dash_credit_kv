@@ -304,7 +304,7 @@ def csfof_beyond():
                 kpi(tx("Combinaciones probadas", "Combinations tried"), "2 582",
                     tx("13 candidatos congelados, confirmados con semillas nuevas → HIB", "13 frozen candidates, confirmed with new seeds → HIB"), "bars"),
             ], className="kpi-row k4"),
-            html.Div(pipeline_btn("hib", label=tx("Ver el pipeline de esta mejora", "See this improvement's pipeline")),
+            html.Div(pipeline_btn("hib", label=tx("Ver el código del pipeline de esta mejora", "See this improvement's pipeline code")),
                      className="hib-pipe"),
         ]),
         card(tx("Las ecuaciones de HIB", "HIB's equations"), [

@@ -1015,6 +1015,7 @@ g.eqv:hover, g.eqv.eqv-on { fill:var(--eqv-hl); stroke:var(--eqv-hl); filter:dro
 .pipe-chip { font-size:12px; padding:2px 9px; border-radius:999px; border:1px solid var(--line-strong); color:var(--muted); background:var(--surface); }
 .pipe-link { display:inline-flex; align-items:center; gap:6px; margin-top:8px; font-size:13.5px; font-weight:600; color:var(--accent); text-decoration:none; }
 .pipe-link .ico { width:14px; height:14px; } .pipe-link:hover { color:var(--accent-2); }
+.pipe-body > .pipe-stage { margin-top:18px; } .pipe-body .pipe-stage .pf-code { margin:8px 0 0; max-height:430px; overflow:auto; }
 .pipe-stage.pipe-hl { border-color:var(--accent-2); background:var(--note-bg); box-shadow:0 0 0 3px rgba(184,143,61,.38); }
 html.pipe-open { overflow:hidden; }
 @media (min-width:900px) { .pipe-group:not(:first-of-type) .pipe-flow { grid-template-columns:1fr 1fr; } .pipe-group:not(:first-of-type) .pipe-stage::before { display:none; } }
