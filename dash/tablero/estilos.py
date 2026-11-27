@@ -630,6 +630,21 @@ html.focus-open, html.focus-open body { overflow:hidden; }
 .dash-dropdown-content, [data-radix-popper-content-wrapper], .dash-tooltip { z-index:10030 !important; }
 /* el menú se posiciona en píxeles de pantalla; dentro de la tarjeta con zoom hay que deshacer el zoom */
 .card-zoomed [data-radix-popper-content-wrapper] { zoom:calc(1 / var(--fz)); }
+/* modo foco de cada ecuación (Modelo original › 2 · Metodología) */
+.eq-zoom { position:relative; padding-right:40px; border-radius:10px; }
+.eq-zoom > .card-zoom { opacity:0; }
+.eq-zoom:hover > .card-zoom, .eq-zoom > .card-zoom:focus-visible { opacity:1; }
+.eq-zoom.card-zoomed { --fz:1.6; background:var(--surface); border:1px solid var(--line-strong); border-radius:14px;
+  display:flex; align-items:center; justify-content:center; gap:20px; padding:40px 72px 40px 40px; }
+.eq-zoom.card-zoomed > .cs-eq-n { padding-top:0; font-size:22px; width:auto; }
+.eq-zoom.card-zoomed > .cs-eq-body { flex:0 1 auto; min-width:0; max-width:100%; }
+.eq-zoom.card-zoomed .formula { font-size:118%; overflow-x:auto; }
+.eq-zoom.card-zoomed .cs-eq-why { font-size:15px; }
+@media (max-width:600px) {
+  .eq-zoom.card-zoomed { --fz:1; flex-direction:column; align-items:stretch; justify-content:center; gap:8px; padding:64px 16px 20px; }
+  .eq-zoom.card-zoomed .formula { font-size:100%; }
+  .eq-zoom.card-zoomed > .cs-eq-n { text-align:left; }
+}
 @media (prefers-reduced-motion:reduce) { .focus-overlay, .focus-overlay.on { transition:none; } }
 .ef-card { padding:0; }
 .ef-summary { display:flex; align-items:center; gap:12px; padding:14px 22px; cursor:pointer; list-style:none; }

@@ -11,7 +11,7 @@ from tablero.config import (
 from tablero.datos import DF, TARGET
 from tablero.eda_multi import CORR
 from tablero.glosario import CSFOF, HIB, V, eqv_hint, fx
-from tablero.iconos import icon
+from tablero.iconos import icon, zoom_btn
 from tablero.paginas.mejoras import csfof_beyond
 from tablero.resultados import CSFOF_CM, minfo
 from tablero.utilidades import GLOBAL_RATE, style_fig
@@ -577,6 +577,7 @@ def _eq(n, tex, why):
     donde = (tx(f"líneas {a} y {b} de original_model.py", f"lines {a} and {b} of original_model.py") if n == 5
              else tx(f"líneas {_rango(a, b)} de original_model.py", f"lines {_rango(a, b)} of original_model.py"))
     return html.Div([
+        zoom_btn(),   # modo foco de cada ecuación (assets/card_focus.js)
         html.Div(f"({n})", className="cs-eq-n"),
         html.Div([fx(tex),
                   html.P([html.B(tx("Por qué: ", "Why: ")), *(why if isinstance(why, list) else [why])], className="cs-eq-why"),
@@ -584,7 +585,7 @@ def _eq(n, tex, why):
                           tx("pestaña 3 · Código", "tab 3 · Code"), " · ",
                           html.A("GitHub", href=_gh(a, b) if n != 5 else _gh(a), target="_blank",
                                  rel="noopener noreferrer"), ")"], className="cs-eq-why")], className="cs-eq-body"),
-    ], className="cs-eq")
+    ], className="cs-eq eq-zoom")
 
 
 METH_FLOW = [  # (título, texto) — los 8 pasos de la guía, aplicados a este proyecto
