@@ -169,13 +169,20 @@ def test_el_glosario_llega_a_la_pagina(client):
 
 
 @pytest.mark.parametrize("lang", ["es", "en"])
-def test_pipeline_tiene_todas_las_etapas(app_mod, lang):
-    from tablero.pipeline import ETAPAS, pipeline_body
+def test_pipeline_muestra_el_codigo_real(app_mod, lang):
+    from tablero.pipeline import ETAPAS, codigo_pipeline, pipeline_body
     app_mod.set_lang(lang)
     try:
-        cuerpo = pipeline_body()
-        assert len(ETAPAS) == 11
-        assert _texto(cuerpo).count("HIB") >= 2
+        secciones = codigo_pipeline()
+        assert len(secciones) == 7
+        # cada etapa de un botón apunta a alguna sección, y el código es el del repositorio
+        cubiertas = {e for _, etapas, *_ in secciones for e in etapas.split()}
+        assert set(ETAPAS) <= cubiertas
+        codigo = "\n".join(c for *_, c in secciones)
+        for pista in ("def build_pipeline", "ImbPipeline(steps=steps", "def run_nested_cv", "StratifiedKFold", "def build_column_transformer",
+                      "def holm", "stats.wilcoxon", "def hib_scores", "L-BFGS-B", "joblib.dump"):
+            assert pista in codigo, pista
+        assert "Construye el pipeline completo" not in codigo and "Corre validación cruzada anidada completa" not in codigo   # sin docstrings
     finally:
         app_mod.set_lang("es")
 
@@ -183,7 +190,7 @@ def test_pipeline_tiene_todas_las_etapas(app_mod, lang):
 @pytest.mark.parametrize("lang", ["es", "en"])
 def test_botones_de_pipeline_apuntan_a_etapas_que_existen(app_mod, lang):
     from tablero.pipeline import ETAPAS
-    ids = {e[0] for e in ETAPAS}
+    ids = set(ETAPAS)
     for ruta in ("/introduccion", "/univariado", "/multivariado", "/modelos", "/modelo-original", "/predecir", "/conclusiones"):
         pagina = app_mod.route(ruta, lang)
         encontrados = set()

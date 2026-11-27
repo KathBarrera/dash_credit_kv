@@ -11,7 +11,7 @@
     document.documentElement.classList.add('pipe-open');
     var stages = m.querySelectorAll('.pipe-stage'), hit = null;
     Array.prototype.forEach.call(stages, function (s) {
-      var on = !!stage && s.getAttribute('data-stage') === stage;
+      var on = !!stage && (s.getAttribute('data-stage') || '').split(' ').indexOf(stage) >= 0;
       s.classList.toggle('pipe-hl', on);
       if (on) hit = s;
     });

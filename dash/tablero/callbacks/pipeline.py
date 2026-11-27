@@ -11,4 +11,4 @@ from tablero.servidor import app
 @app.callback(Output("pipe-title", "children"), Output("pipe-body", "children"), Input("lang", "data"))
 def cb_pipeline(lang):
     set_lang(lang)
-    return tx("Pipeline del proyecto", "Project pipeline"), pipeline_body()
+    return tx("Pipeline del proyecto: el código", "Project pipeline: the code"), pipeline_body()
