@@ -16,7 +16,7 @@ def page_intro():
     n_def = int(DF[TARGET].sum())
     I = DATA_INFO
     return html.Div([
-        page_title(tx("Introducción", "Introduction"), ""),
+        page_title(tx("Introducción", "Introduction"), "", stage="datos"),
         quick_look(),
         html.Div([
             kpi(tx("Clientes analizados", "Clients analyzed"), f"{len(DF):,}", tx("tras la limpieza", "after cleaning"),
@@ -56,7 +56,9 @@ def page_intro():
                           f"superar el mejor F1 de esas {N_BASE}. La mejor de las {N_BASE} es "
                           f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}). CS-FOF obtiene el mayor "
                           f"F1 medio ({BEST['f1_mean']:.3f}), pero la diferencia es menor que 0.002 y "
-                          "ninguna prueba estadística las separa. Por último, la página Predecir usa XGBoost con pesos de "
+                          "ninguna prueba estadística las separa. Para mejorar el F1 se hizo, a partir de CS-FOF, un ensamble "
+                          "(stacking) con XGBoost, CatBoost, LightGBM, Random Forest, Extra Trees, HistGradientBoosting y "
+                          "regresión logística, llamado HIB (F1 0.5505). Por último, la página Predecir usa XGBoost con pesos de "
                           "clase, el mejor modelo de referencia, o CS-FOF, para estimar el riesgo de un cliente nuevo.",
                           "First the data is explored (univariate and multivariate EDA) to see which variables "
                           f"anticipate default. Then {N_BASE} traditional model combinations are compared (factorial "
@@ -65,7 +67,9 @@ def page_intro():
                           f"beat the best F1 of those {N_BASE}. The best of the {N_BASE} is "
                           f"{minfo(BEST_BASE['model'], 'label')} (F1 {BEST_BASE['f1_mean']:.3f}). CS-FOF has the highest "
                           f"mean F1 ({BEST['f1_mean']:.3f}), but the difference is below 0.002 and no "
-                          "statistical test separates them. Finally, the Predict page uses XGBoost with class weights, the "
+                          "statistical test separates them. To raise F1, an ensemble (stacking) was built from CS-FOF with "
+                          "XGBoost, CatBoost, LightGBM, Random Forest, Extra Trees, HistGradientBoosting and logistic regression, "
+                          "called HIB (F1 0.5505). Finally, the Predict page uses XGBoost with class weights, the "
                           "best baseline model, or CS-FOF, to estimate the risk of a new client.")),
                 html.P(tx("Cada gráfico trae una interpretación básica (lenguaje cotidiano) y una técnica "
                           "(estadísticos y recomendaciones de modelado).",

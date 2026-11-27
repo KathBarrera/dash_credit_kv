@@ -48,6 +48,7 @@ ICONS = {
     "safe": '<rect x="3" y="3" width="18" height="16" rx="2"/><circle cx="12" cy="11" r="3.5"/>'
             '<path d="M12 7.5v1M12 13.5v1M8.5 11h1M14.5 11h1M6 19v2M18 19v2"/>',
     # --- página Modelos ---
+    "pipeline": '<circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7.4 6h9.2M6.4 8.2l4.6 7.6M17.6 8.2l-4.6 7.6"/>',
     "layers": '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
     "trophy": '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
     "chevron": '<path d="m9 6 6 6-6 6"/>',

@@ -28,7 +28,9 @@ El análisis incluye:
 - **Español e inglés**: botón **ES | EN** en la barra superior (y en la portada) que traduce todo el tablero — textos, interpretaciones, gráficas, formulario y a Kyo — y se recuerda en el navegador
 - Modo claro y oscuro, y menú lateral plegable
 - **Kyo, asistente del tablero**: una mascota fija en la esquina inferior derecha; al tocarla se abre a la derecha un panel de chat (estilo Copilot de VS Code) que explica cada página, gráfica, variable, modelo y concepto del dash. Es un bot **entrenado** con scikit-learn (TF-IDF + regresión logística) sobre preguntas de ejemplo, usa las mismas cifras que dibujan las gráficas y reconoce cuando una pregunta no es del tablero
-- Sección **Modelo original**, pestaña **5 · ¿Se puede mejorar?**: qué se probó para superar a XGBoost combinando modelos (promedios, stacking, FWLS, selección de Caruana y el ensamble propio HIB), con una explicación sencilla y otra técnica de cada modelo, la diferencia de F1 frente a XGBoost con su IC 95 %, la «meseta» de F1 en la que quedan todos, la confirmación de HIB y de dónde sale su ventaja, y por qué con estos datos el score no mejora de forma clara
+- Sección **Modelo original**, con **CS-FOF** (el modelo original) y **HIB** como protagonistas. La pestaña **5 · Del CS-FOF al HIB** cuenta cómo, a partir de CS-FOF, se hizo un ensamble (stacking) con XGBoost, CatBoost, LightGBM, Random Forest, Extra Trees, HistGradientBoosting y regresión logística para mejorar el F1: las ecuaciones de HIB, su código, los candidatos congelados, la prueba de Wilcoxon con Holm frente a XGBoost, la confirmación con semillas nuevas, la diferencia de F1 con su IC 95 %, la «meseta» de F1, de dónde sale la ventaja y qué hay que decir con honestidad. Los resultados salen de `Tabla_combinaciones.xlsx` y de `entregables_profesor/` (rama `claude/wonderful-planck-tq6tc2` de Credit_Card_Project); las redes neuronales no se muestran en el tablero (solo van al paper)
+- **Botón Pipeline**: en la barra superior y junto al título de varias páginas abre una ventana con las 11 etapas del proyecto, de los datos al tablero, y resalta la etapa que se está mirando (`tablero/pipeline.py`, `assets/pipeline.js`)
+- **Símbolos de las ecuaciones**: al pasar el cursor (o tocar) un símbolo de las ecuaciones de CS-FOF o HIB aparece una burbuja con su significado y se iluminan todos los lugares donde se usa (otras ecuaciones, textos e identificadores del código). El glosario bilingüe está en `tablero/glosario.py` y la lógica en `assets/ecuaciones.js`
 - Sección **Modelos**: carrusel deslizable con los siete clasificadores del proyecto (mejor combinación de cada uno), el mejor modelo resaltado, F1 por técnica de balanceo, F1 frente a ROC-AUC de las 112 combinaciones (validación cruzada anidada 5 × 5), matriz de confusión del mejor modelo (XGBoost con pesos de clase), estabilidad de SHAP en los 5 folds, comparación LIME frente a SHAP y curvas anytime de los optimizadores (con Hyperband)
 
 ---
@@ -61,6 +63,7 @@ dash_credit_kv/
     │   ├── paginas/                         # Una página (o grupo de páginas) por archivo
     │   ├── servidor.py                      # La app Dash y las rutas /ping y /health
     │   ├── estilos.py · tema.py             # CSS y JS; tema claro / oscuro de las figuras
+    │   ├── glosario.py · pipeline.py        # Glosario de símbolos de las ecuaciones; botón y ventana del pipeline
     │   ├── kyo.py · layout.py               # Panel de Kyo; barra lateral, barra superior y layout
     │   └── callbacks/                       # Callbacks por sección (navegación, EDA, modelos, Predecir, Kyo)
     ├── results/

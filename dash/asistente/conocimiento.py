@@ -1099,7 +1099,7 @@ def _construir(A, EN):
            "what is an oblique cut", "explain the CS-FOF theory", "what is the Fisher direction",
            "does CS-FOF beat Random Forest", "explain the animated chart",
            "show me the CS-FOF code", "what is the methodology of the original model", "where is the pseudocode"]),
-        t("**Modelo original** presenta **CS-FOF**, el bosque aleatorio propuesto en el proyecto, en cuatro pestañas:\n\n"
+        t("**Modelo original** presenta **CS-FOF**, el bosque aleatorio propuesto en el proyecto, y su mejora con el ensamble **HIB**, en cinco pestañas:\n\n"
           "1. **Teoría:** con clientes reales, un árbol clásico necesita una escalera de cortes rectos y CS-FOF traza un "
           "solo **corte oblicuo** (en diagonal) en la dirección de Fisher, pesando más a quienes incumplen. Con 1 corte "
           "separa 58 % más; con 3, solo 5 % más, porque la escalera se acerca a la diagonal.\n"
@@ -1108,9 +1108,11 @@ def _construir(A, EN):
           "3. **Código:** los fragmentos reales del archivo original_model.py y sus pruebas.\n"
           "4. **Resultados:** una gráfica animada frente a **Random Forest** (gana en 4 de 5 pliegues), las pruebas "
           "frente a los 7 modelos de referencia y los otros tres conjuntos de crédito.\n\n"
-          "Veredicto: F1 0.548, el mayor de los 8 modelos (XGBoost 0.547), y el mayor ROC-AUC. **No es superior de forma "
-          "significativa**.",
-          "**Original model** presents **CS-FOF**, the random forest proposed in the project, in four tabs:\n\n"
+          "5. **Del CS-FOF al HIB:** cómo, a partir de CS-FOF, se hizo un ensamble (stacking) con XGBoost, CatBoost, LightGBM, "
+          "Random Forest, Extra Trees, HistGradientBoosting y regresión logística para mejorar el F1.\n\n"
+          "Veredicto de CS-FOF: F1 0.548, el mayor de los 8 modelos (XGBoost 0.547), y el mayor ROC-AUC. **No es superior de forma "
+          "significativa**. HIB sube a 0.5505 y gana a los 7 modelos base con Wilcoxon-Holm.",
+          "**Original model** presents **CS-FOF**, the random forest proposed in the project, and its improvement with the **HIB** ensemble, in five tabs:\n\n"
           "1. **Theory:** with real clients, a classic tree needs a staircase of straight cuts while CS-FOF draws a "
           "single **oblique (diagonal) cut** along the Fisher direction, weighting defaulters more. With 1 cut it "
           "separates 58% more; with 3, only 5% more, because the staircase approaches the diagonal.\n"
@@ -1119,7 +1121,10 @@ def _construir(A, EN):
           "3. **Code:** the real excerpts of original_model.py and its tests.\n"
           "4. **Results:** an animated chart against **Random Forest** (it wins in 4 of 5 folds), the tests against "
           "the 7 baseline models and the three other credit datasets.\n\n"
-          "Verdict: F1 0.548, the highest of the 8 models (XGBoost 0.547), and the highest ROC-AUC. **Not significantly superior**."),
+          "5. **From CS-FOF to HIB:** how, starting from CS-FOF, an ensemble (stacking) was built with XGBoost, CatBoost, LightGBM, "
+          "Random Forest, Extra Trees, HistGradientBoosting and logistic regression to raise F1.\n\n"
+          "CS-FOF verdict: F1 0.548, the highest of the 8 models (XGBoost 0.547), and the highest ROC-AUC. **Not significantly superior**. "
+          "HIB rises to 0.5505 and beats the 7 baseline models with Wilcoxon-Holm."),
         tecnico=t("Validación anidada 5×5. Frente a Random Forest: Nadeau-Bengio con Holm p = 0.619, δ de Cliff 0.36, "
                   "DeLong p = 0.171. Friedman sobre 8 modelos χ² = 32.9; rangos medios CS-FOF 1.4 y XGBoost 2.2.",
                   "Nested 5×5 validation. Against Random Forest: Nadeau-Bengio with Holm p = 0.619, Cliff's δ 0.36, "
@@ -1128,6 +1133,113 @@ def _construir(A, EN):
                                           "¿Qué es la validación cruzada anidada?"],
                                          ["Which is the best model?", "How did Random Forest do?",
                                           "What is nested cross-validation?"]), mood="proud"))
+    add(Intencion(
+        "hib", t("HIB, el ensamble que mejora el F1", "HIB, the ensemble that raises F1"),
+        t(["qué es HIB", "explícame HIB", "qué es el ensamble", "qué es el stacking del proyecto", "cómo mejoraron el F1",
+           "cómo se mejoró el score", "qué modelos combinaron", "con qué modelos hicieron el ensamble", "por qué hicieron un ensamble",
+           "qué es el ensamble híbrido", "cómo se pasó de CS-FOF a HIB", "HIB le gana a XGBoost", "qué mejora trae HIB",
+           "cuántas combinaciones probaron", "qué es el F1 suave", "cómo se calculan los pesos de HIB", "quién gana, HIB o CS-FOF"],
+          ["what is HIB", "explain HIB", "what is the ensemble", "what is the project's stacking", "how did you improve F1",
+           "how was the score improved", "which models did you combine", "which models are in the ensemble", "why did you build an ensemble",
+           "what is the hybrid ensemble", "how did you go from CS-FOF to HIB", "does HIB beat XGBoost", "what improvement does HIB bring",
+           "how many combinations did you try", "what is the soft F1", "how are HIB's weights computed", "who wins, HIB or CS-FOF"]),
+        t("**HIB** es el ensamble (stacking) que se hizo a partir del modelo original para **mejorar el F1**.\n\n"
+          "- **Miembros (8):** CS-FOF + XGBoost, CatBoost, LightGBM, Random Forest, Extra Trees, HistGradientBoosting y regresión logística.\n"
+          "- **Cómo se llegó:** CS-FOF empató con XGBoost (0.5479 frente a 0.5466). Se exploraron **2 582 combinaciones** (promedios, logit "
+          "ponderado, pesos por PAY_0, selección de Caruana), se **congelaron los 13 mejores** y, con semillas nuevas, se probó HIB.\n"
+          "- **La regla:** aprende cuánto pesa cada modelo para maximizar un **F1 suave**, con una penalización que acerca los pesos al promedio "
+          "uniforme.\n"
+          "- **Resultado (semillas 7100–7104, 25 pliegues):** F1 **0.5505** frente a 0.5468 de XGBoost (+0.0037); gana a los 7 modelos base con "
+          "Wilcoxon-Holm, DeLong y McNemar.\n\n"
+          "Con honestidad: la ventaja es pequeña, Nadeau-Bengio no rechaza frente a XGBoost y un promedio simple de los mismos 8 modelos logra casi lo "
+          "mismo (+0.0004, p = 0.33). Está en **Modelo original → 5 · Del CS-FOF al HIB**.",
+          "**HIB** is the ensemble (stacking) built from the original model to **raise F1**.\n\n"
+          "- **Members (8):** CS-FOF + XGBoost, CatBoost, LightGBM, Random Forest, Extra Trees, HistGradientBoosting and logistic regression.\n"
+          "- **How it came about:** CS-FOF tied with XGBoost (0.5479 vs 0.5466). **2,582 combinations** were explored (averages, weighted logit, "
+          "weights by PAY_0, Caruana selection), the **13 best were frozen** and, with new seeds, HIB was tested.\n"
+          "- **The rule:** it learns how much each model weighs to maximize a **soft F1**, with a penalty that pulls the weights toward the uniform "
+          "average.\n"
+          "- **Result (seeds 7100–7104, 25 folds):** F1 **0.5505** vs XGBoost's 0.5468 (+0.0037); it beats the 7 baseline models with "
+          "Wilcoxon-Holm, DeLong and McNemar.\n\n"
+          "Honestly: the advantage is small, Nadeau-Bengio does not reject against XGBoost and a plain average of the same 8 models gets almost "
+          "the same (+0.0004, p = 0.33). It is in **Original model → 5 · From CS-FOF to HIB**."),
+        tecnico=t("w = softmax(θ), s = Zw, qᵢ = σ((sᵢ − t)/τ). Se maximiza 2Σqᵢyᵢ/(Σqᵢ + Σyᵢ) − λM‖w − 1/M‖² con L-BFGS-B (60 iteraciones, "
+                  "τ = 0.3, λ = 0.05) sobre los logits fuera de muestra (3 pliegues internos) y 45 variables. El umbral final maximiza el F1 duro. "
+                  "Friedman global p ≈ 10⁻³⁰; rango medio 1.48 (Random Forest 2.28, XGBoost 2.52). Wilcoxon-Holm frente a XGBoost p = 0.0001; "
+                  "Nadeau-Bengio p = 0.049 sin ajustar.",
+                  "w = softmax(θ), s = Zw, qᵢ = σ((sᵢ − t)/τ). It maximizes 2Σqᵢyᵢ/(Σqᵢ + Σyᵢ) − λM‖w − 1/M‖² with L-BFGS-B (60 iterations, "
+                  "τ = 0.3, λ = 0.05) on the out-of-sample logits (3 inner folds) and 45 features. The final threshold maximizes the hard F1. "
+                  "Global Friedman p ≈ 10⁻³⁰; mean rank 1.48 (Random Forest 2.28, XGBoost 2.52). Wilcoxon-Holm vs XGBoost p = 0.0001; "
+                  "Nadeau-Bengio p = 0.049 unadjusted."),
+        pagina="/modelo-original", sug=t(["¿Por qué no mejora más el score?", "¿Qué es Wilcoxon con Holm?", "Explícame el pipeline del proyecto"],
+                                         ["Why doesn't the score improve more?", "What is Wilcoxon with Holm?", "Explain the project pipeline"]),
+        mood="proud"))
+    add(Intencion(
+        "wilcoxon_holm", t("Wilcoxon con Holm", "Wilcoxon with Holm"),
+        t(["qué es Wilcoxon", "qué es la prueba de Wilcoxon con Holm", "por qué usaron Wilcoxon", "qué es la corrección de Holm",
+           "cómo se prueba que HIB es superior", "qué pruebas estadísticas usaron para el ensamble", "qué es Nadeau-Bengio",
+           "por qué Nadeau-Bengio no rechaza", "qué es DeLong", "qué es McNemar", "qué es el p ajustado"],
+          ["what is Wilcoxon", "what is the Wilcoxon test with Holm", "why did you use Wilcoxon", "what is the Holm correction",
+           "how do you prove HIB is superior", "which statistical tests did you use for the ensemble", "what is Nadeau-Bengio",
+           "why doesn't Nadeau-Bengio reject", "what is DeLong", "what is McNemar", "what is the adjusted p"]),
+        t("**Wilcoxon con Holm** es la prueba pareada con la que se muestra que el ensamble supera a XGBoost.\n\n"
+          "- **Wilcoxon de rangos con signo:** compara, pliegue a pliegue, el F1 de los dos modelos (25 diferencias) sin suponer una distribución normal.\n"
+          "- **Holm:** corrige el p-valor cuando se hacen varias comparaciones a la vez (HIB contra 7 modelos).\n"
+          "- **Resultado:** HIB frente a XGBoost p = 0.0001 y frente a Random Forest p = 0.015; DeLong (sobre el AUC) y McNemar (sobre los aciertos) también "
+          "son significativos.\n\n"
+          "**Salvedad:** Wilcoxon trata los 25 pliegues como independientes aunque comparten datos, así que es optimista; la t corregida de "
+          "**Nadeau-Bengio** lo tiene en cuenta y no rechaza frente a XGBoost (p = 0.049 sin ajustar).",
+          "**Wilcoxon with Holm** is the paired test that shows the ensemble beats XGBoost.\n\n"
+          "- **Wilcoxon signed-rank:** it compares, fold by fold, the F1 of the two models (25 differences) without assuming a normal distribution.\n"
+          "- **Holm:** it corrects the p-value when several comparisons are made at once (HIB against 7 models).\n"
+          "- **Result:** HIB vs XGBoost p = 0.0001 and vs Random Forest p = 0.015; DeLong (on AUC) and McNemar (on hits) are also "
+          "significant.\n\n"
+          "**Caveat:** Wilcoxon treats the 25 folds as independent although they share data, so it is optimistic; the Nadeau-Bengio corrected t "
+          "accounts for that and does not reject against XGBoost (p = 0.049 unadjusted)."),
+        pagina="/modelo-original", sug=t(["¿Qué es HIB?", "¿Por qué no mejora más el score?"], ["What is HIB?", "Why doesn't the score improve more?"]),
+        mood="explaining"))
+    add(Intencion(
+        "pipeline", t("Pipeline del proyecto", "Project pipeline"),
+        t(["explícame el pipeline del proyecto", "cuál es el pipeline", "qué es el botón de pipeline", "cuáles son las etapas del proyecto",
+           "cómo fue el flujo de trabajo", "de los datos al tablero", "qué pasos siguió el proyecto", "cómo se hizo el proyecto de principio a fin",
+           "dónde veo el flujo completo", "qué hace el botón Pipeline"],
+          ["explain the project pipeline", "what is the pipeline", "what is the pipeline button", "what are the stages of the project",
+           "what was the workflow", "from data to dashboard", "which steps did the project follow", "how was the project done from start to finish",
+           "where do I see the whole flow", "what does the Pipeline button do"]),
+        t("El botón **Pipeline** (en la barra superior y junto al título de varias páginas) abre una ventana con las 11 etapas del proyecto:\n\n"
+          "1. **Datos:** 30 000 → 29 965 clientes, 20 variables.\n2. **EDA.**\n3. **Validación anidada 5 × 5.**\n"
+          "4. **112 combinaciones** de referencia (7 modelos × 4 balanceos × 4 optimizadores).\n5. **CS-FOF**, el modelo original.\n"
+          "6. **Pruebas estadísticas.**\n7. **Del CS-FOF a los ensambles** (2 582 combinaciones).\n8. **13 candidatos congelados.**\n"
+          "9. **HIB.**\n10. **Confirmación pre-registrada.**\n11. **Interpretación y entrega** (este tablero).\n\n"
+          "Si lo abres desde una página, deja resaltada la etapa que estás mirando.",
+          "The **Pipeline** button (in the top bar and next to the title of several pages) opens a window with the 11 stages of the project:\n\n"
+          "1. **Data:** 30,000 → 29,965 clients, 20 variables.\n2. **EDA.**\n3. **Nested 5 × 5 validation.**\n"
+          "4. **112 baseline combinations** (7 models × 4 balancing × 4 optimizers).\n5. **CS-FOF**, the original model.\n"
+          "6. **Statistical tests.**\n7. **From CS-FOF to ensembles** (2,582 combinations).\n8. **13 frozen candidates.**\n"
+          "9. **HIB.**\n10. **Pre-registered confirmation.**\n11. **Interpretation and delivery** (this dashboard).\n\n"
+          "If you open it from a page, it highlights the stage you are looking at."),
+        pagina="/modelo-original", sug=t(["¿Qué es HIB?", "¿Qué es la validación cruzada anidada?"],
+                                         ["What is HIB?", "What is nested cross-validation?"]), mood="explaining"))
+    add(Intencion(
+        "simbolos_ecuaciones", t("Símbolos de las ecuaciones", "Equation symbols"),
+        t(["qué significa este símbolo", "cómo veo qué significa cada variable de la ecuación", "qué significa w_i", "qué es S_w",
+           "qué es epsilon en la ecuación", "qué significa tau", "qué es lambda en HIB", "cómo funcionan las burbujas de las ecuaciones",
+           "qué significa la iluminación de los símbolos", "dónde se explican las variables de las ecuaciones"],
+          ["what does this symbol mean", "how do I see what each variable in the equation means", "what does w_i mean", "what is S_w",
+           "what is epsilon in the equation", "what does tau mean", "what is lambda in HIB", "how do the equation bubbles work",
+           "what does the symbol highlighting mean", "where are the equation variables explained"]),
+        t("En las ecuaciones de **CS-FOF** y de **HIB** puedes **pasar el cursor (o tocar)** cualquier símbolo: una burbuja dice qué significa y se "
+          "**iluminan todos los lugares donde se usa**: las demás ecuaciones, los textos y los identificadores del código.\n\n"
+          "Algunos ejemplos: **wᵢ** es el peso de costo del cliente (c si incumple, 1 si paga); **S_w** es la dispersión intra-clase; **ε** regulariza S_w; "
+          "**v** es la dirección de Fisher; en HIB, **w** son los pesos de los 8 modelos, **τ** la temperatura del F1 suave y **λ** la fuerza de la "
+          "penalización.",
+          "In the **CS-FOF** and **HIB** equations you can **hover over (or tap)** any symbol: a bubble says what it means and **every place where it "
+          "is used lights up**: the other equations, the texts and the code identifiers.\n\n"
+          "A few examples: **wᵢ** is the client's cost weight (c if it defaults, 1 if it pays); **S_w** is the within-class scatter; **ε** regularizes S_w; "
+          "**v** is the Fisher direction; in HIB, **w** are the weights of the 8 models, **τ** the temperature of the soft F1 and **λ** the strength of the "
+          "penalty."),
+        pagina="/modelo-original", sug=t(["¿Qué es HIB?", "¿Qué es la dirección de Fisher?"], ["What is HIB?", "What is the Fisher direction?"]),
+        mood="explaining"))
     add(Intencion(
         "mejor_modelo", t("Mejor modelo", "Best model"),
         t(["cuál es el mejor modelo", "mejor modelo del ranking", "modelo campeón", "cuál fue el mejor F1",

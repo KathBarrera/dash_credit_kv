@@ -951,6 +951,77 @@ COVER_JS = """
 })();
 """
 CSS += NEW_CSS
+
+# ---------- CSS: símbolos de las ecuaciones (burbuja + iluminación) y ventana del pipeline ----------
+EQ_PIPE_CSS = """
+:root { --eqv-hl:#9A6700; --eqv-bg:rgba(212,170,70,.34); --eqv-glow:rgba(212,170,70,.85); }
+[data-theme="dark"] { --eqv-hl:#F6DC96; --eqv-bg:rgba(246,220,150,.26); --eqv-glow:rgba(246,220,150,.8); }
+.eqw { max-width:100%; }
+/* símbolos en textos y código */
+.eqv { cursor:help; border-radius:3px; transition:background .12s, box-shadow .12s; }
+span.eqv { border-bottom:1px dotted var(--accent-2); }
+span.eqv-on { background:var(--eqv-bg); box-shadow:0 0 0 2px var(--eqv-bg); border-bottom-color:transparent; }
+.eqv-code { border-bottom:1px dotted var(--accent-2); }
+/* símbolos dentro de las ecuaciones (SVG de MathJax) */
+g.eqv { transition:fill .12s; }
+g.eqv:hover, g.eqv.eqv-on { fill:var(--eqv-hl); stroke:var(--eqv-hl); filter:drop-shadow(0 0 3px var(--eqv-glow)); }
+.hib-flow { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; margin:14px 0 18px; padding:16px;
+  border:1px solid var(--line-strong); border-radius:12px; background:var(--surface-2); }
+.hib-col { display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; } .hib-col small { color:var(--muted); font-size:12px; max-width:160px; }
+.hib-mem { flex-direction:row; flex-wrap:wrap; justify-content:center; max-width:430px; }
+.hib-chip { display:inline-block; padding:6px 12px; border-radius:999px; font-size:13px; font-weight:600; border:1px solid var(--line-strong); background:var(--surface); }
+.hib-orig { background:var(--deep); color:#fff; border-color:var(--deep); } [data-theme="dark"] .hib-orig { background:var(--pale); color:#1A233D; border-color:var(--pale); }
+.hib-main { background:var(--accent-2); color:#1A233D; border-color:var(--accent-2); font-size:15px; }
+.hib-res { border-color:var(--accent-2); color:var(--accent-2); font-size:15px; }
+.hib-op { font-size:22px; font-weight:700; color:var(--accent-2); }
+.hib-pipe { margin-top:14px; }
+.eqv-hint { display:flex; align-items:center; gap:8px; margin:0 0 6px; font-size:13px; color:var(--muted); }
+.eqv-hint .ico { width:15px; height:15px; color:var(--accent-2); }
+#eqv-tip { position:fixed; z-index:10040; max-width:340px; padding:10px 13px; border-radius:10px; pointer-events:none;
+  background:var(--surface); color:var(--text); border:1px solid var(--accent-2); box-shadow:0 10px 30px rgba(8,12,24,.28);
+  font-size:13.5px; line-height:1.45; opacity:0; visibility:hidden; transition:opacity .12s; }
+#eqv-tip.on { opacity:1; visibility:visible; }
+#eqv-tip .eqv-h { display:flex; align-items:baseline; gap:8px; margin-bottom:4px; }
+#eqv-tip .eqv-h b { font-size:16px; color:var(--accent-2); font-family:'Cambria Math','STIX Two Math',Georgia,serif; white-space:nowrap; }
+#eqv-tip .eqv-h span { font-weight:700; }
+#eqv-tip .eqv-w { margin-top:6px; padding-top:6px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
+/* botón y ventana del pipeline */
+.page-title.pt-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.pipe-btn { white-space:nowrap; }
+.pipe-btn.compact { padding:6px 12px; font-size:13px; gap:7px; } .pipe-btn.compact .ico { width:15px; height:15px; }
+.pipe-btn:hover { border-color:var(--accent-2); }
+.pipe-modal { position:fixed; inset:0; z-index:10020; display:none; align-items:center; justify-content:center; padding:16px; }
+.pipe-modal.on { display:flex; }
+.pipe-bg { position:absolute; inset:0; background:rgba(8,12,24,.72); }
+.pipe-dialog { position:relative; width:min(1040px,100%); max-height:92vh; display:flex; flex-direction:column; background:var(--surface);
+  color:var(--text); border-radius:14px; border:1px solid var(--line-strong); box-shadow:0 24px 70px rgba(0,0,0,.45); }
+.pipe-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line); }
+.pipe-head h3 { margin:0; font-size:19px; }
+.pipe-body { overflow:auto; padding:6px 20px 22px; }
+.pipe-intro { margin:12px 0 4px; }
+.pipe-phase { margin:18px 0 10px; padding:6px 12px; border-radius:8px; font-size:13.5px; font-weight:700; letter-spacing:.02em;
+  background:var(--th-bg); color:#fff; display:inline-block; }
+.pipe-phase-mejora { background:var(--accent-2); color:#1A233D; }
+.pipe-flow { display:grid; gap:14px; position:relative; }
+.pipe-stage { position:relative; padding:12px 16px 12px 16px; border:1px solid var(--line-strong); border-radius:10px; background:var(--surface-2);
+  transition:box-shadow .2s, border-color .2s, background .2s; }
+.pipe-stage + .pipe-stage::before { content:"↓"; position:absolute; top:-15px; left:26px; font-size:15px; line-height:14px; color:var(--accent-2); font-weight:700; }
+.pipe-stage p { margin:6px 0 8px; font-size:14px; }
+.pipe-st-head { display:flex; align-items:center; gap:10px; }
+.pipe-st-head h4 { margin:0; font-size:15.5px; }
+.pipe-num { flex:none; width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--accent); color:var(--on-accent); font-size:13px; font-weight:700; }
+.pipe-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.pipe-chip { font-size:12px; padding:2px 9px; border-radius:999px; border:1px solid var(--line-strong); color:var(--muted); background:var(--surface); }
+.pipe-link { display:inline-flex; align-items:center; gap:6px; margin-top:8px; font-size:13.5px; font-weight:600; color:var(--accent); text-decoration:none; }
+.pipe-link .ico { width:14px; height:14px; } .pipe-link:hover { color:var(--accent-2); }
+.pipe-stage.pipe-hl { border-color:var(--accent-2); background:var(--note-bg); box-shadow:0 0 0 3px rgba(184,143,61,.38); }
+html.pipe-open { overflow:hidden; }
+@media (min-width:900px) { .pipe-group:not(:first-of-type) .pipe-flow { grid-template-columns:1fr 1fr; } .pipe-group:not(:first-of-type) .pipe-stage::before { display:none; } }
+@media (max-width:700px) { .pipe-btn.compact .pipe-btn-txt { display:none; } .pipe-btn.compact { padding:6px 9px; } }
+@media (prefers-reduced-motion:reduce) { #eqv-tip, .pipe-stage, g.eqv { transition:none; } }
+"""
+CSS += EQ_PIPE_CSS
 CSS += _icon_css()
 
 BOT_W = 400   # ancho del panel en px

@@ -7,7 +7,9 @@ from tablero.config import (
     AUTHORS, INSTITUTION, L, LINKS, NAV, NOTEBOOK_URL, PROJECT_SUBTITLE, PROJECT_TITLE, REPO_PROJECT, tx)
 from tablero.estilos import (BOT_JS, COVER_JS, CSS, WALKER_HTML)
 from tablero.iconos import icon
+from tablero.glosario import glossary_script
 from tablero.kyo import bot_panel
+from tablero.pipeline import pipeline_btn, pipeline_modal
 from tablero.servidor import app
 
 
@@ -21,6 +23,7 @@ app.index_string = f"""<!DOCTYPE html>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   {{%css%}}
   <style>{CSS}</style>
+  {glossary_script()}
 </head>
 <body>
   {{%app_entry%}}
@@ -83,6 +86,8 @@ topbar = html.Div([
     ], className="tb-left"),
     html.Div([
         html.Div(id="tb-badge", className="badge"),
+        pipeline_btn(label="Pipeline", compact=True, cls="tb-pipe",
+                     title="Pipeline · de los datos al tablero / from data to dashboard"),
         html.A(icon("notebook"), id="tb-nb", href=NOTEBOOK_URL, target="_blank", rel="noopener noreferrer",
                className="icon-btn"),
         html.A(icon("github"), id="tb-gh", href=REPO_PROJECT, target="_blank", rel="noopener noreferrer",
@@ -108,5 +113,6 @@ app.layout = html.Div([
     html.Div([topbar, html.Div(id="page", className="content"), footer], className="main"),
     dcc.Store(id="bot-store", storage_type="session", data=[]),
     dcc.Store(id="eda-filter", storage_type="session", data=None),
+    pipeline_modal(),
     bot_panel(),
 ], id="shell", className="app")

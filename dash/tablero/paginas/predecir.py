@@ -122,7 +122,7 @@ def _flow():
 
 
 def page_predict():
-    head = page_title(tx("Predecir", "Predict"), "")
+    head = page_title(tx("Predecir", "Predict"), "", stage="entrega")
     if MODELO is None:
         return html.Div([head, card(tx("El modelo no está disponible", "The model is not available"), [
             html.P([tx("No se encontró ", "Could not find "), html.Code("modelo/modelo_xgboost.pkl"),

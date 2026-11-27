@@ -103,7 +103,7 @@ def page_models():
     pos, flagged = c["tp"] + c["fn"], c["tp"] + c["fp"]
     gcfg = {"displaylogo": False, "displayModeBar": False}
     return html.Div([
-        page_title(tx("Modelos", "Models"), ""),
+        page_title(tx("Modelos", "Models"), "", stage="base"),
         html.Div([
             kpi(tx("Combinaciones evaluadas", "Combinations evaluated"), f"{N_BASE} + {N_EXTRA}",
                 tx(f"{N_BASE} del diseño factorial (7 × 4 × 4) y, aparte, {N_EXTRA} corridas de CS-FOF",
